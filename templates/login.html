@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Login - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Dark Reader compatibility - site is already dark themed */
+        html[data-darkreader-mode] body,
+        html[data-darkreader-scheme="dark"] body {
+            background: var(--bg-dark) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        html[data-darkreader-mode] .card,
+        html[data-darkreader-scheme="dark"] .card {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Ensure text remains legible with any color inversion */
+        html[data-darkreader-mode] * {
+            --darkreader-text--text-primary: #f1f5f9 !important;
+            --darkreader-bg--bg-dark: #0f172a !important;
+        }
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --primary-light: #38bdf8;
+            --accent-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .auth-container {
+            width: 100%;
+            max-width: 460px;
+            padding: 24px;
+        }
+        
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 44px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4), 0 0 80px rgba(14, 165, 233, 0.05);
+        }
+        
+        .brand-logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        
+        .brand-logo i {
+            font-size: 56px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .brand-logo h1 {
+            font-size: 1.6rem;
+            margin-top: 14px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff !important;
+        }
+
+        .form-control {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            color: var(--text-primary);
+            padding: 16px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15), 0 0 30px rgba(14, 165, 233, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        .form-label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            letter-spacing: 0.01em;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(14, 165, 233, 0.4), 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+        
+        .form-check-input {
+            background-color: rgba(148, 163, 184, 0.15);
+            border-color: var(--border-color);
+            width: 18px;
+            height: 18px;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .form-check-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-left: 4px;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 28px 0;
+            color: var(--text-muted);
+        }
+        
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+        
+        .divider span {
+            padding: 0 18px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .auth-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .auth-link:hover {
+            color: var(--primary-light);
+            text-decoration: underline;
+        }
+        
+        .alert {
+            border-radius: 14px;
+            border: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        .password-toggle:hover {
+            color: var(--text-primary);
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .tab-switcher {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 6px;
+            margin-bottom: 32px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            color: var(--text-primary);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        /* Plan Selection Styles */
+        .plan-selection {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .plan-option {
+            flex: 1;
+            min-width: 120px;
+            cursor: pointer;
+        }
+        
+        .plan-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            height: 100%;
+        }
+        
+        .plan-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .plan-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(14, 165, 233, 0.1);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+        
+        .plan-badge {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .plan-header {
+            text-align: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .plan-name {
+            display: block;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .plan-price {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+        
+        .plan-price small {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        
+        .plan-features li {
+            padding: 4px 0;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .plan-features li i {
+            color: var(--success-color, #10b981);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 500px) {
+            .plan-selection {
+                flex-direction: column;
+            }
+            .plan-option {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="brand-logo">
+                <i class="bi bi-shield-check"></i>
+                <h1>SecureLink</h1>
+            </div>
+            
+            <div class="tab-switcher">
+                <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+                <button class="tab-btn" onclick="switchTab('register')">Sign Up</button>
+            </div>
+            
+            <div id="alertBox" style="display: none;"></div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label class="form-label">Email or Username</label>
+                    <input type="text" class="form-control" id="loginEmail" placeholder="Enter email or username" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="loginPassword" placeholder="Enter password" required>
+                        <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="remember-forgot">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" checked>
+                        <label class="form-check-label" for="rememberMe">
+                            Keep me signed in
+                        </label>
+                    </div>
+                    <a href="#" class="auth-link">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </button>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form" onsubmit="handleRegister(event)">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="registerName" placeholder="Enter your full name">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" id="registerUsername" placeholder="Choose a username" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="registerEmail" placeholder="Enter your email" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="registerPassword" placeholder="Create a password" required minlength="8">
+                        <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <small class="text-secondary">Minimum 8 characters</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="registerPasswordConfirm" placeholder="Confirm your password" required>
+                </div>
+                
+                <!-- Subscription Plan Selection -->
+                <div class="mb-4">
+                    <label class="form-label">Choose Your Plan</label>
+                    <div class="plan-selection">
+                        <div class="plan-option" onclick="selectPlan('free')">
+                            <input type="radio" name="subscriptionPlan" id="planFree" value="free" checked hidden>
+                            <div class="plan-card selected" id="planFreeCard">
+                                <div class="plan-header">
+                                    <span class="plan-name">Free</span>
+                                    <span class="plan-price">$0</span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="bi bi-check"></i> 25 scans/day</li>
+                                    <li><i class="bi bi-check"></i> Basic threat detection</li>
+                                    <li><i class="bi bi-check"></i> Browser extension</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="plan-option" onclick="selectPlan('pro')">
+                            <input type="radio" name="subscriptionPlan" id="planPro" value="pro" hidden>
+                            <div class="plan-card" id="planProCard">
+                                <div class="plan-badge">Popular</div>
+                                <div class="plan-header">
+                                    <span class="plan-name">Pro</span>
+                                    <span class="plan-price">$9.99<small>/mo</small></span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="bi bi-check"></i> Unlimited scans</li>
+                                    <li><i class="bi bi-check"></i> Email monitoring</li>
+                                    <li><i class="bi bi-check"></i> Priority support</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="plan-option" onclick="selectPlan('enterprise')">
+                            <input type="radio" name="subscriptionPlan" id="planEnterprise" value="enterprise" hidden>
+                            <div class="plan-card" id="planEnterpriseCard">
+                                <div class="plan-header">
+                                    <span class="plan-name">Enterprise</span>
+                                    <span class="plan-price">$49.99<small>/mo</small></span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="bi bi-check"></i> Everything in Pro</li>
+                                    <li><i class="bi bi-check"></i> API access</li>
+                                    <li><i class="bi bi-check"></i> Team management</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                    <label class="form-check-label" for="agreeTerms">
+                        I agree to the <a href="#" class="auth-link">Terms of Service</a> and <a href="#" class="auth-link">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100" id="registerBtn">
+                    <i class="bi bi-person-plus me-2"></i>Create Account
+                </button>
+            </form>
+            
+            <!-- Pending OAuth signup form (hidden by default) -->
+            <form id="oauthSignupForm" class="auth-form" onsubmit="completeOAuthSignup(event)" style="display: none;">
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span id="oauthSignupMessage">Complete your signup with <span id="oauthProviderName"></span></span>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="oauthEmail" readonly>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Choose a Username</label>
+                    <input type="text" class="form-control" id="oauthUsername" placeholder="Choose a username" required>
+                </div>
+                
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="oauthAgreeTerms" required>
+                    <label class="form-check-label" for="oauthAgreeTerms">
+                        I agree to the <a href="#" class="auth-link">Terms of Service</a> and <a href="#" class="auth-link">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100" id="oauthSignupBtn">
+                    <i class="bi bi-person-plus me-2"></i>Complete Signup
+                </button>
+            </form>
+            
+            <div class="divider">
+                <span>or continue with</span>
+            </div>
+            
+            <div id="oauthButtons" class="d-grid gap-2">
+                <!-- OAuth buttons will be loaded dynamically -->
+                <button class="btn btn-outline-light" disabled>
+                    <span class="spinner-border spinner-border-sm me-2"></span>Loading...
+                </button>
+            </div>
+        </div>
+        
+        <p class="text-center mt-4 text-secondary">
+            <i class="bi bi-shield-lock me-1"></i>
+            Your data is encrypted and secure
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check if already logged in - show message instead of auto-redirect
+        const token = localStorage.getItem('auth_token');
+        let isLoggedIn = false;
+        
+        if (token) {
+            // Verify token is still valid
+            fetch('/api/auth/validate', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.valid) {
+                    isLoggedIn = true;
+                    showLoggedInMessage(data.user);
+                }
+            });
+        }
+        
+        function showLoggedInMessage(user) {
+            const authCard = document.querySelector('.auth-card');
+            const displayName = user.display_name || user.email.split('@')[0];
+            authCard.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="mb-4">
+                        <i class="bi bi-person-check-fill" style="font-size: 4rem; color: var(--success-color);"></i>
+                    </div>
+                    <h3 class="mb-3">Welcome back, ${displayName}!</h3>
+                    <p class="text-secondary mb-4">You're already signed in to your account.</p>
+                    <div class="d-grid gap-3">
+                        <a href="/home" class="btn btn-primary btn-lg">
+                            <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="signInAsDifferentUser()">
+                            <i class="bi bi-person-plus me-2"></i>Sign in as Different User
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function signInAsDifferentUser() {
+            localStorage.removeItem('auth_token');
+            window.location.reload();
+        }
+        
+        // Load OAuth providers
+        async function loadOAuthProviders() {
+            try {
+                const response = await fetch('/api/auth/oauth/providers');
+                const data = await response.json();
+                
+                const container = document.getElementById('oauthButtons');
+                container.innerHTML = '';
+                
+                const currentTab = document.getElementById('loginForm').classList.contains('active') ? 'login' : 'register';
+                const actionText = currentTab === 'login' ? 'Sign in' : 'Sign up';
+                
+                data.providers.forEach(provider => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline-light oauth-btn';
+                    btn.style.cssText = `border-color: ${provider.color}40; transition: all 0.3s ease;`;
+                    
+                    if (provider.configured) {
+                        btn.onclick = () => startOAuth(provider.id);
+                        btn.innerHTML = `<i class="${provider.icon} me-2" style="color: ${provider.color}"></i>${actionText} with ${provider.name}`;
+                        btn.onmouseover = () => { btn.style.borderColor = provider.color; btn.style.backgroundColor = provider.color + '20'; };
+                        btn.onmouseout = () => { btn.style.borderColor = provider.color + '40'; btn.style.backgroundColor = 'transparent'; };
+                    } else {
+                        btn.disabled = true;
+                        btn.innerHTML = `<i class="${provider.icon} me-2" style="opacity: 0.5;"></i>${provider.name} (Coming Soon)`;
+                    }
+                    
+                    container.appendChild(btn);
+                });
+            } catch (error) {
+                console.error('Error loading OAuth providers:', error);
+            }
+        }
+        
+        function startOAuth(provider) {
+            const currentTab = document.getElementById('loginForm').classList.contains('active') ? 'login' : 'register';
+            window.location.href = `/auth/oauth/${provider}?action=${currentTab}`;
+        }
+        
+        // Check for pending OAuth signup
+        async function checkPendingOAuth() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('oauth') === 'pending') {
+                try {
+                    const response = await fetch('/api/auth/oauth/pending');
+                    const data = await response.json();
+                    
+                    if (data.pending) {
+                        showOAuthSignupForm(data);
+                    }
+                } catch (error) {
+                    console.error('Error checking pending OAuth:', error);
+                }
+            }
+            
+            // Check for tab parameter
+            if (urlParams.get('tab') === 'register') {
+                switchTab('register');
+            }
+            
+            // Check for error parameter
+            const error = urlParams.get('error');
+            if (error) {
+                showAlert(decodeURIComponent(error), 'danger');
+            }
+        }
+        
+        function showOAuthSignupForm(data) {
+            // Hide login/register forms and show OAuth signup
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.querySelector('.tab-switcher').style.display = 'none';
+            
+            const form = document.getElementById('oauthSignupForm');
+            form.style.display = 'block';
+            form.classList.add('active');
+            
+            document.getElementById('oauthEmail').value = data.email;
+            document.getElementById('oauthProviderName').textContent = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+            
+            // Suggest username from email
+            const suggestedUsername = data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+            document.getElementById('oauthUsername').value = suggestedUsername;
+        }
+        
+        async function completeOAuthSignup(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('oauthSignupBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
+            
+            try {
+                const response = await fetch('/api/auth/oauth/complete-signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('oauthUsername').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/home?welcome=true';
+                } else {
+                    showAlert(data.error || 'Failed to create account', 'danger');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                showAlert('An error occurred. Please try again.', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOAuthProviders();
+            checkPendingOAuth();
+        });
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            
+            // Reset OAuth signup form visibility
+            document.getElementById('oauthSignupForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = '';
+            document.getElementById('registerForm').style.display = '';
+            document.querySelector('.tab-switcher').style.display = '';
+            
+            if (tab === 'login') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+            
+            // Update OAuth button text
+            loadOAuthProviders();
+            hideAlert();
+        }
+        
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+        
+        function showAlert(message, type = 'danger') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = `<i class="bi bi-${type === 'danger' ? 'exclamation-circle' : 'check-circle'} me-2"></i>${message}`;
+            alertBox.style.display = 'block';
+        }
+        
+        function hideAlert() {
+            document.getElementById('alertBox').style.display = 'none';
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_or_username: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value,
+                        remember_me: document.getElementById('rememberMe').checked
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store token for persistent login
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('plan_limits', JSON.stringify(data.plan_limits));
+                    
+                    // Check if there's a pending upgrade from registration
+                    const pendingUpgrade = sessionStorage.getItem('pending_upgrade');
+                    if (pendingUpgrade && pendingUpgrade !== 'free') {
+                        sessionStorage.removeItem('pending_upgrade');
+                        showAlert('Login successful! Redirecting to complete your subscription...', 'success');
+                        setTimeout(() => {
+                            // Redirect to profile subscription tab to complete upgrade
+                            window.location.href = '/profile?upgrade=' + pendingUpgrade + '#subscription-tab';
+                        }, 1500);
+                    } else {
+                        showAlert('Login successful! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/home';
+                        }, 1000);
+                    }
+                } else {
+                    showAlert(data.error || 'Login failed');
+                }
+            } catch (error) {
+                showAlert('Connection error. Please try again.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Sign In';
+                btn.disabled = false;
+            }
+        }
+        
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerPasswordConfirm').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match');
+                return;
+            }
+            
+            // Get selected plan
+            const selectedPlan = document.querySelector('input[name="subscriptionPlan"]:checked')?.value || 'free';
+            
+            const btn = document.getElementById('registerBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: document.getElementById('registerName').value,
+                        username: document.getElementById('registerUsername').value,
+                        email: document.getElementById('registerEmail').value,
+                        password: password,
+                        subscription_tier: selectedPlan
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // If Pro or Enterprise was selected, redirect to payment after login
+                    if (selectedPlan !== 'free') {
+                        showAlert('Account created! Please sign in to complete your ' + selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' subscription.', 'success');
+                        // Store the selected plan for after login
+                        sessionStorage.setItem('pending_upgrade', selectedPlan);
+                    } else {
+                        showAlert('Account created! Please sign in.', 'success');
+                    }
+                    setTimeout(() => {
+                        switchTab('login');
+                        document.getElementById('loginEmail').value = document.getElementById('registerEmail').value;
+                    }, 1500);
+                } else {
+                    showAlert(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                showAlert('Connection error. Please try again.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-person-plus me-2"></i>Create Account';
+                btn.disabled = false;
+            }
+        }
+        
+        // Plan selection function
+        function selectPlan(plan) {
+            // Update radio buttons
+            document.querySelectorAll('input[name="subscriptionPlan"]').forEach(radio => {
+                radio.checked = radio.value === plan;
+            });
+            
+            // Update visual selection
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById('plan' + plan.charAt(0).toUpperCase() + plan.slice(1) + 'Card').classList.add('selected');
+        }
+    </script>
+</body>
+</html>

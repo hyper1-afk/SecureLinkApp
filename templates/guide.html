@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>User Guide - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --primary-light: #38bdf8;
+            --accent-color: #8b5cf6;
+            --accent-light: #a78bfa;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        
+        body {
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .guide-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            padding: 60px 0;
+            margin-bottom: 40px;
+        }
+        
+        .guide-header h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+        
+        .guide-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .guide-sidebar {
+            position: sticky;
+            top: 100px;
+        }
+        
+        .guide-nav {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+        }
+        
+        .guide-nav-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .guide-nav a {
+            display: block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+        
+        .guide-nav a:hover, .guide-nav a.active {
+            background: rgba(14, 165, 233, 0.15);
+            color: var(--primary-light);
+        }
+        
+        .guide-nav a i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .guide-section {
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 36px;
+            margin-bottom: 30px;
+        }
+        
+        .guide-section h2 {
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .guide-section h2 i {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+        }
+        
+        .guide-section h3 {
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-top: 28px;
+            margin-bottom: 14px;
+            color: var(--text-primary);
+        }
+        
+        .guide-section p, .guide-section li {
+            color: var(--text-secondary);
+        }
+        
+        .guide-section ul, .guide-section ol {
+            padding-left: 24px;
+        }
+        
+        .guide-section li {
+            margin-bottom: 10px;
+        }
+        
+        .step-card {
+            background: rgba(14, 165, 233, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 20px 24px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+        
+        .step-card h4 {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        
+        .tip-box {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success-color);
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 16px 0;
+        }
+        
+        .tip-box strong {
+            color: var(--success-color);
+        }
+        
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning-color);
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 16px 0;
+        }
+        
+        .warning-box strong {
+            color: var(--warning-color);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 24px 0;
+        }
+        
+        .feature-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .feature-item:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+        
+        .feature-item i {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+        }
+        
+        .feature-item h4 {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        
+        .feature-item p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .risk-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin: 4px;
+        }
+        
+        .risk-safe { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .risk-low { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+        .risk-medium { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .risk-high { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .risk-critical { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--text-muted);
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top:hover {
+            transform: translateY(-3px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .btn-outline-light {
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        @media (max-width: 991px) {
+            .guide-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/home">
+                <i class="bi bi-shield-check me-2"></i>SecureLink
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="/home" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left me-2"></i>Back to App
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="guide-header text-center text-white" style="padding-top: 120px;">
+        <div class="container">
+            <h1><i class="bi bi-book me-3"></i>User Guide</h1>
+            <p>Everything you need to know about using SecureLink to protect yourself from malicious links and phishing attempts.</p>
+            <div class="mt-4">
+                <a href="/?welcome=true" class="btn btn-outline-light">
+                    <i class="bi bi-play-circle me-2"></i>Replay Tutorial
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container pb-5">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-lg-3">
+                <div class="guide-sidebar">
+                    <nav class="guide-nav">
+                        <div class="guide-nav-title">Contents</div>
+                        <a href="#getting-started"><i class="bi bi-rocket-takeoff"></i>Getting Started</a>
+                        <a href="#verify-links"><i class="bi bi-search"></i>Verifying Links</a>
+                        <a href="#understanding-results"><i class="bi bi-graph-up"></i>Understanding Results</a>
+                        <a href="#email-monitoring"><i class="bi bi-envelope-check"></i>Email Monitoring</a>
+                        <a href="#it-support"><i class="bi bi-headset"></i>IT Support</a>
+                        <a href="#account-settings"><i class="bi bi-gear"></i>Account Settings</a>
+                        <a href="#security-tips"><i class="bi bi-shield-check"></i>Security Tips</a>
+                        <a href="#faq"><i class="bi bi-question-circle"></i>FAQ</a>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Guide Content -->
+            <div class="col-lg-9">
+                <!-- Getting Started -->
+                <section id="getting-started" class="guide-section">
+                    <h2><i class="bi bi-rocket-takeoff"></i>Getting Started</h2>
+                    <p>Welcome to SecureLink! This guide will help you get the most out of our link verification and security platform.</p>
+                    
+                    <h3>What is SecureLink?</h3>
+                    <p>SecureLink is a comprehensive security tool designed to protect you from malicious links, phishing attempts, and other online threats. Our AI-powered analysis examines URLs in real-time to determine their safety.</p>
+                    
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <i class="bi bi-search"></i>
+                            <h4>Link Verification</h4>
+                            <p>Paste any suspicious link to instantly check if it's safe to click.</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="bi bi-envelope-check"></i>
+                            <h4>Email Monitoring</h4>
+                            <p>Connect your email to automatically scan incoming messages for dangerous links.</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="bi bi-bell"></i>
+                            <h4>Instant Alerts</h4>
+                            <p>Get notified immediately when a threat is detected in your emails.</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <h4>Weekly Reports</h4>
+                            <p>Receive detailed security reports summarizing your activity.</p>
+                        </div>
+                    </div>
+                    
+                    <h3>Quick Start Guide</h3>
+                    <div class="step-card">
+                        <h4><span class="step-number">1</span>Create Your Account</h4>
+                        <p>Sign up with your email address or use Google sign-in for quick access. Your account lets us save your verification history and preferences.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">2</span>Verify Your First Link</h4>
+                        <p>Go to the main page, paste any URL into the search box, and click "Verify Link". Within seconds, you'll see a comprehensive safety analysis.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">3</span>Set Up Email Monitoring (Optional)</h4>
+                        <p>For Pro users: Connect your email account in Profile settings to enable automatic scanning of incoming emails for suspicious links.</p>
+                    </div>
+                </section>
+
+                <!-- Verifying Links -->
+                <section id="verify-links" class="guide-section">
+                    <h2><i class="bi bi-search"></i>Verifying Links</h2>
+                    <p>The core feature of SecureLink is our powerful link verification system. Here's how to use it effectively:</p>
+                    
+                    <h3>How to Verify a Link</h3>
+                    <ol>
+                        <li><strong>Copy the suspicious link</strong> - Right-click on a link and select "Copy link address" (don't click the link itself!)</li>
+                        <li><strong>Paste it into SecureLink</strong> - Go to the main page and paste the URL in the verification box</li>
+                        <li><strong>Click "Verify Link"</strong> - Our AI will analyze the link in seconds</li>
+                        <li><strong>Review the results</strong> - Check the risk score and any warnings before deciding to visit the link</li>
+                    </ol>
+                    
+                    <div class="tip-box">
+                        <strong><i class="bi bi-lightbulb me-2"></i>Pro Tip:</strong> You can verify links from emails, text messages, social media, or anywhere else. When in doubt, always check first!
+                    </div>
+                    
+                    <h3>What We Analyze</h3>
+                    <ul>
+                        <li><strong>Domain reputation</strong> - Is this domain known for malicious activity?</li>
+                        <li><strong>SSL certificate</strong> - Does the site have valid security certificates?</li>
+                        <li><strong>URL patterns</strong> - Does the URL contain suspicious patterns or misspellings?</li>
+                        <li><strong>Redirect chains</strong> - Does the link redirect through suspicious servers?</li>
+                        <li><strong>Phishing indicators</strong> - Does the page try to impersonate a legitimate site?</li>
+                        <li><strong>Malware databases</strong> - Is this URL flagged in known threat databases?</li>
+                    </ul>
+                </section>
+
+                <!-- Understanding Results -->
+                <section id="understanding-results" class="guide-section">
+                    <h2><i class="bi bi-graph-up"></i>Understanding Results</h2>
+                    <p>After verification, you'll receive a detailed analysis. Here's how to interpret the results:</p>
+                    
+                    <h3>Risk Levels</h3>
+                    <p>Each link receives a risk score from 0-100%, categorized as follows:</p>
+                    
+                    <div style="margin: 24px 0;">
+                        <span class="risk-indicator risk-safe"><i class="bi bi-check-circle me-2"></i>Safe (0-20%)</span>
+                        <span class="risk-indicator risk-low"><i class="bi bi-shield-check me-2"></i>Low Risk (21-40%)</span>
+                        <span class="risk-indicator risk-medium"><i class="bi bi-exclamation-triangle me-2"></i>Medium (41-60%)</span>
+                        <span class="risk-indicator risk-high"><i class="bi bi-exclamation-circle me-2"></i>High Risk (61-80%)</span>
+                        <span class="risk-indicator risk-critical"><i class="bi bi-x-circle me-2"></i>Critical (81-100%)</span>
+                    </div>
+                    
+                    <h3>What Each Level Means</h3>
+                    <ul>
+                        <li><strong>Safe:</strong> The link appears to be legitimate. You can likely proceed safely.</li>
+                        <li><strong>Low Risk:</strong> Minor concerns detected, but generally safe. Exercise normal caution.</li>
+                        <li><strong>Medium Risk:</strong> Some suspicious indicators found. Verify the source before clicking.</li>
+                        <li><strong>High Risk:</strong> Multiple warning signs detected. Avoid unless you're certain of the source.</li>
+                        <li><strong>Critical:</strong> Confirmed or highly suspected malicious link. Do not visit!</li>
+                    </ul>
+                    
+                    <div class="warning-box">
+                        <strong><i class="bi bi-exclamation-triangle me-2"></i>Warning:</strong> Even "Safe" results don't guarantee 100% safety. New threats emerge constantly. Always use your judgment and consider the context of where you received the link.
+                    </div>
+                </section>
+
+                <!-- Email Monitoring -->
+                <section id="email-monitoring" class="guide-section">
+                    <h2><i class="bi bi-envelope-check"></i>Email Monitoring</h2>
+                    <p>Pro and Enterprise users can connect their email accounts for automatic link scanning.</p>
+                    
+                    <h3>Setting Up Email Monitoring</h3>
+                    <div class="step-card">
+                        <h4><span class="step-number">1</span>Go to Profile Settings</h4>
+                        <p>Click on your profile icon and select "Profile" to access your account settings.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">2</span>Navigate to Email Settings</h4>
+                        <p>Scroll down to the "Email Monitoring" section and click "Add Email Account".</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">3</span>Create an App Password</h4>
+                        <p>For security, most email providers require an "App Password" instead of your regular password. Follow the provider-specific instructions shown.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">4</span>Enable Monitoring</h4>
+                        <p>Once connected, toggle the monitoring switch to ON. Your emails will now be automatically scanned.</p>
+                    </div>
+                    
+                    <h3>Supported Email Providers</h3>
+                    <ul>
+                        <li><strong>Gmail</strong> - Full support with app password</li>
+                        <li><strong>Outlook/Hotmail</strong> - Full support with app password</li>
+                        <li><strong>Yahoo Mail</strong> - Full support with app password</li>
+                        <li><strong>Custom IMAP</strong> - Any email provider with IMAP access</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                        <strong><i class="bi bi-shield-lock me-2"></i>Privacy Note:</strong> We only scan links in your emails - we never read or store your email content. Your credentials are encrypted and stored securely.
+                    </div>
+                </section>
+
+                <!-- IT Support -->
+                <section id="it-support" class="guide-section">
+                    <h2><i class="bi bi-headset"></i>Reporting IT Issues</h2>
+                    <p>If you encounter any problems or need assistance, you can submit an IT support ticket directly from the app.</p>
+                    
+                    <h3>How to Submit a Support Ticket</h3>
+                    <div class="step-card">
+                        <h4><span class="step-number">1</span>Click the Support Button</h4>
+                        <p>Look for the <i class="bi bi-exclamation-triangle"></i> button in the bottom-right corner of any page.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">2</span>Describe Your Issue</h4>
+                        <p>Fill in the issue summary and provide detailed information about the problem you're experiencing.</p>
+                    </div>
+                    <div class="step-card">
+                        <h4><span class="step-number">3</span>Submit Your Ticket</h4>
+                        <p>Click "Submit IT Ticket". You'll receive a ticket number for tracking purposes.</p>
+                    </div>
+                    
+                    <h3>What to Include in Your Report</h3>
+                    <ul>
+                        <li>A clear description of the issue</li>
+                        <li>Steps to reproduce the problem</li>
+                        <li>Any error messages you see</li>
+                        <li>What you were trying to do when the issue occurred</li>
+                        <li>Your browser and device type</li>
+                    </ul>
+                </section>
+
+                <!-- Account Settings -->
+                <section id="account-settings" class="guide-section">
+                    <h2><i class="bi bi-gear"></i>Account Settings</h2>
+                    <p>Manage your account, security settings, and preferences from your Profile page.</p>
+                    
+                    <h3>Profile Settings</h3>
+                    <ul>
+                        <li><strong>Display Name</strong> - Customize how your name appears</li>
+                        <li><strong>Email Address</strong> - Your login email (can be updated)</li>
+                        <li><strong>Password</strong> - Change your password regularly for security</li>
+                        <li><strong>Two-Factor Authentication</strong> - Add an extra layer of security</li>
+                    </ul>
+                    
+                    <h3>Notification Preferences</h3>
+                    <ul>
+                        <li><strong>Email Alerts</strong> - Get notified about threats via email</li>
+                        <li><strong>Weekly Reports</strong> - Receive weekly security summaries</li>
+                        <li><strong>Desktop Notifications</strong> - Browser notifications for real-time alerts</li>
+                    </ul>
+                    
+                    <h3>Subscription Plans</h3>
+                    <ul>
+                        <li><strong>Free</strong> - Basic link verification, limited history</li>
+                        <li><strong>Pro</strong> - Email monitoring, extended history, weekly reports</li>
+                        <li><strong>Enterprise</strong> - Multiple email accounts, priority support, API access</li>
+                    </ul>
+                </section>
+
+                <!-- Security Tips -->
+                <section id="security-tips" class="guide-section">
+                    <h2><i class="bi bi-shield-check"></i>Security Best Practices</h2>
+                    <p>Protect yourself online with these essential security tips:</p>
+                    
+                    <h3>Link Safety</h3>
+                    <ul>
+                        <li><strong>Hover before clicking</strong> - Check where a link actually goes before clicking</li>
+                        <li><strong>Be wary of shortened URLs</strong> - Services like bit.ly can hide malicious destinations</li>
+                        <li><strong>Check for HTTPS</strong> - Secure sites should have a padlock icon</li>
+                        <li><strong>Watch for misspellings</strong> - "amaz0n.com" is not "amazon.com"</li>
+                        <li><strong>Verify unexpected links</strong> - Even if from a known contact, their account may be compromised</li>
+                    </ul>
+                    
+                    <h3>Email Safety</h3>
+                    <ul>
+                        <li><strong>Don't trust urgent requests</strong> - Scammers create false urgency</li>
+                        <li><strong>Verify sender addresses</strong> - Check the actual email address, not just the display name</li>
+                        <li><strong>Never download unexpected attachments</strong> - These may contain malware</li>
+                        <li><strong>When in doubt, verify</strong> - Contact the company directly through their official website</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                        <strong><i class="bi bi-lightbulb me-2"></i>Remember:</strong> Legitimate companies will never ask for your password, Social Security number, or credit card details via email or text message.
+                    </div>
+                </section>
+
+                <!-- FAQ -->
+                <section id="faq" class="guide-section">
+                    <h2><i class="bi bi-question-circle"></i>Frequently Asked Questions</h2>
+                    
+                    <h3>Is SecureLink free to use?</h3>
+                    <p>Yes! Basic link verification is completely free. Pro features like email monitoring and weekly reports require a subscription.</p>
+                    
+                    <h3>How accurate is the link analysis?</h3>
+                    <p>Our AI-powered analysis is highly accurate, combining multiple threat databases and real-time analysis. However, no system is 100% perfect. New threats emerge constantly, so always use caution.</p>
+                    
+                    <h3>Do you store my email content?</h3>
+                    <p>No. We only scan for links and analyze them. Your actual email content is never stored or read by our team.</p>
+                    
+                    <h3>What if a safe link is marked as dangerous?</h3>
+                    <p>False positives can occasionally occur. If you believe a link was incorrectly flagged, please report it through the IT support system and our team will review it.</p>
+                    
+                    <h3>Can I use SecureLink on mobile?</h3>
+                    <p>Yes! SecureLink is fully responsive and works on smartphones, tablets, and desktop computers.</p>
+                    
+                    <h3>How do I cancel my subscription?</h3>
+                    <p>You can cancel anytime from your Profile page under Subscription settings. You'll retain access until the end of your billing period.</p>
+                    
+                    <h3>Is my data secure?</h3>
+                    <p>Absolutely. We use industry-standard encryption for all data. Your passwords are hashed and never stored in plain text.</p>
+                </section>
+
+                <!-- Need More Help -->
+                <section class="guide-section text-center">
+                    <h2><i class="bi bi-chat-dots"></i>Need More Help?</h2>
+                    <p class="mb-4">Can't find what you're looking for? Our support team is here to help!</p>
+                    <button class="btn btn-primary" onclick="openSupportFromGuide()">
+                        <i class="bi bi-headset me-2"></i>Contact IT Support
+                    </button>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Back to top button
+        const backToTop = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+            
+            // Update active nav
+            updateActiveNav();
+        });
+        
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Smooth scroll for nav links
+        document.querySelectorAll('.guide-nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Update active nav based on scroll position
+        function updateActiveNav() {
+            const sections = document.querySelectorAll('.guide-section[id]');
+            const navLinks = document.querySelectorAll('.guide-nav a');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 150;
+                if (window.scrollY >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+        
+        // Open support (redirect to main page with support modal trigger)
+        function openSupportFromGuide() {
+            window.location.href = '/?openSupport=true';
+        }
+    </script>
+</body>
+</html>

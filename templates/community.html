@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Reports - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .badge-bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+        .badge-silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
+        .badge-gold { background: linear-gradient(135deg, #ffd700, #daa520); }
+        .badge-platinum { background: linear-gradient(135deg, #e5e4e2, #8e8e8e); }
+        .badge-diamond { background: linear-gradient(135deg, #b9f2ff, #4169e1); }
+        .vote-btn {
+            transition: all 0.2s ease;
+        }
+        .vote-btn:hover {
+            transform: scale(1.1);
+        }
+        .vote-btn.voted {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-700">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <a href="/home" class="text-2xl font-bold">
+                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/home" class="hover:text-blue-400 transition">Home</a>
+                <a href="/breach-checker" class="hover:text-blue-400 transition">Breach Checker</a>
+                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
+                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">
+                    <i class="fas fa-users text-green-400 mr-2"></i>Community Reports
+                </h1>
+                <p class="text-gray-400">Help keep the internet safe by reporting suspicious links</p>
+            </div>
+            <button onclick="showReportModal()" 
+                    class="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                <i class="fas fa-flag mr-2"></i>Report a Link
+            </button>
+        </div>
+
+        <!-- Stats and Leaderboard Row -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <!-- Your Stats -->
+            <div class="card-glass rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-user-circle text-blue-400 mr-2"></i>Your Reputation
+                </h3>
+                <div id="myReputation" class="text-center">
+                    <p class="text-gray-400">Log in to see your stats</p>
+                </div>
+            </div>
+
+            <!-- Community Stats -->
+            <div class="card-glass rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-chart-line text-yellow-400 mr-2"></i>Community Stats
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Total Reports</span>
+                        <span class="font-bold" id="totalReports">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Verified Today</span>
+                        <span class="font-bold text-green-400" id="verifiedToday">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Active Reporters</span>
+                        <span class="font-bold text-blue-400" id="activeReporters">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Contributors -->
+            <div class="card-glass rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-trophy text-yellow-400 mr-2"></i>Top Contributors
+                </h3>
+                <div id="leaderboard" class="space-y-2">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex space-x-2 mb-6 overflow-x-auto">
+            <button onclick="filterReports('pending')" class="filter-btn px-4 py-2 rounded-lg bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400" data-status="pending">
+                <i class="fas fa-clock mr-2"></i>Pending
+            </button>
+            <button onclick="filterReports('verified')" class="filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300" data-status="verified">
+                <i class="fas fa-check mr-2"></i>Verified
+            </button>
+            <button onclick="filterReports('rejected')" class="filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300" data-status="rejected">
+                <i class="fas fa-times mr-2"></i>Rejected
+            </button>
+        </div>
+
+        <!-- Reports List -->
+        <div id="reportsList" class="space-y-4">
+            <p class="text-gray-400 text-center py-8">Loading reports...</p>
+        </div>
+    </main>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">
+                    <i class="fas fa-flag text-red-400 mr-2"></i>Report Suspicious Link
+                </h2>
+                <button onclick="hideReportModal()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="reportForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Suspicious URL *</label>
+                    <input type="url" id="reportUrl" required
+                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                           placeholder="https://suspicious-site.com">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Type of Threat *</label>
+                    <select id="reportType" required
+                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <option value="phishing">Phishing</option>
+                        <option value="malware">Malware</option>
+                        <option value="scam">Scam</option>
+                        <option value="spam">Spam</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Description</label>
+                    <textarea id="reportDescription" rows="3"
+                              class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+                              placeholder="Describe why you think this link is suspicious..."></textarea>
+                </div>
+
+                <button type="submit" 
+                        class="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg font-semibold hover:opacity-90 transition">
+                    <i class="fas fa-paper-plane mr-2"></i>Submit Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+        let currentFilter = 'pending';
+
+        // Show/hide report modal
+        function showReportModal() {
+            if (!token) {
+                alert('Please log in to report links');
+                window.location.href = '/login';
+                return;
+            }
+            document.getElementById('reportModal').classList.remove('hidden');
+            document.getElementById('reportModal').classList.add('flex');
+        }
+
+        function hideReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            document.getElementById('reportModal').classList.remove('flex');
+        }
+
+        // Submit report
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const url = document.getElementById('reportUrl').value;
+            const reportType = document.getElementById('reportType').value;
+            const description = document.getElementById('reportDescription').value;
+
+            try {
+                const response = await fetch('/api/community/report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url, report_type: reportType, description })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    hideReportModal();
+                    loadReports();
+                    loadMyReputation();
+                    document.getElementById('reportForm').reset();
+                } else {
+                    alert(data.error || 'Failed to submit report');
+                }
+            } catch (error) {
+                alert('Error submitting report');
+            }
+        });
+
+        // Load reports
+        async function loadReports() {
+            try {
+                const response = await fetch(`/api/community/reports?status=${currentFilter}&limit=50`);
+                const data = await response.json();
+
+                const container = document.getElementById('reportsList');
+                const reports = data.reports || [];
+
+                if (reports.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 text-center py-8">No reports found</p>';
+                    return;
+                }
+
+                container.innerHTML = reports.map(report => `
+                    <div class="card-glass rounded-xl p-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="px-2 py-1 rounded text-xs font-semibold ${getTypeColor(report.report_type)}">
+                                        ${report.report_type}
+                                    </span>
+                                    <span class="px-2 py-1 rounded text-xs ${getStatusColor(report.status)}">
+                                        ${report.status}
+                                    </span>
+                                </div>
+                                <p class="text-blue-400 break-all mb-2">${escapeHtml(report.url)}</p>
+                                ${report.description ? `<p class="text-gray-400 text-sm">${escapeHtml(report.description)}</p>` : ''}
+                                <p class="text-gray-500 text-xs mt-2">
+                                    Reported ${formatTimeAgo(report.created_at)}
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex flex-col items-center">
+                                    <button onclick="vote(${report.id}, true)" 
+                                            class="vote-btn text-2xl ${report.user_voted === true ? 'text-green-400 voted' : 'text-gray-500 hover:text-green-400'}">
+                                        <i class="fas fa-arrow-up"></i>
+                                    </button>
+                                    <span class="font-bold text-lg">${(report.votes_up || 0) - (report.votes_down || 0)}</span>
+                                    <button onclick="vote(${report.id}, false)" 
+                                            class="vote-btn text-2xl ${report.user_voted === false ? 'text-red-400 voted' : 'text-gray-500 hover:text-red-400'}">
+                                        <i class="fas fa-arrow-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        // Vote on report
+        async function vote(reportId, isUpvote) {
+            if (!token) {
+                alert('Please log in to vote');
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/community/report/${reportId}/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ is_upvote: isUpvote })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadReports();
+                }
+            } catch (error) {
+                console.error('Error voting:', error);
+            }
+        }
+
+        // Load leaderboard
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('/api/community/leaderboard?limit=5');
+                const data = await response.json();
+
+                const container = document.getElementById('leaderboard');
+                const leaderboard = data.leaderboard || [];
+
+                if (leaderboard.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400">No contributors yet</p>';
+                    return;
+                }
+
+                container.innerHTML = leaderboard.map((user, index) => `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="w-6 text-center font-bold ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-orange-400' : 'text-gray-500'}">
+                                ${index + 1}
+                            </span>
+                            <span class="ml-2">${escapeHtml(user.username)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="px-2 py-0.5 rounded text-xs ${getBadgeClass(user.badge_level)}">${user.badge_level}</span>
+                            <span class="ml-2 text-yellow-400">${user.karma}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+            }
+        }
+
+        // Load my reputation
+        async function loadMyReputation() {
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/community/my-reputation', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                const container = document.getElementById('myReputation');
+                
+                if (data.karma !== undefined) {
+                    container.innerHTML = `
+                        <div class="mb-4">
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${getBadgeClass(data.badge_level)}">
+                                ${data.badge_level}
+                            </span>
+                        </div>
+                        <div class="text-4xl font-bold text-yellow-400 mb-2">${data.karma}</div>
+                        <div class="text-gray-400">Karma Points</div>
+                        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <div class="text-2xl font-bold">${data.reports_submitted || 0}</div>
+                                <div class="text-gray-400">Reports</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold">${data.reports_verified || 0}</div>
+                                <div class="text-gray-400">Verified</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading reputation:', error);
+            }
+        }
+
+        // Filter reports
+        function filterReports(status) {
+            currentFilter = status;
+            
+            // Update button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.status === status) {
+                    btn.className = `filter-btn px-4 py-2 rounded-lg bg-${getStatusBgColor(status)} border border-${getStatusBorderColor(status)} text-${getStatusTextColor(status)}`;
+                } else {
+                    btn.className = 'filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300';
+                }
+            });
+
+            loadReports();
+        }
+
+        // Helper functions
+        function getTypeColor(type) {
+            const colors = {
+                'phishing': 'bg-blue-500 bg-opacity-20 text-blue-400',
+                'malware': 'bg-red-500 bg-opacity-20 text-red-400',
+                'scam': 'bg-yellow-500 bg-opacity-20 text-yellow-400',
+                'spam': 'bg-purple-500 bg-opacity-20 text-purple-400',
+                'other': 'bg-gray-500 bg-opacity-20 text-gray-400'
+            };
+            return colors[type] || colors['other'];
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'pending': 'bg-yellow-500 bg-opacity-20 text-yellow-400',
+                'verified': 'bg-green-500 bg-opacity-20 text-green-400',
+                'rejected': 'bg-red-500 bg-opacity-20 text-red-400'
+            };
+            return colors[status] || colors['pending'];
+        }
+
+        function getStatusBgColor(status) {
+            return status === 'pending' ? 'yellow-500' : status === 'verified' ? 'green-500' : 'red-500';
+        }
+
+        function getStatusBorderColor(status) {
+            return getStatusBgColor(status);
+        }
+
+        function getStatusTextColor(status) {
+            return status === 'pending' ? 'yellow-400' : status === 'verified' ? 'green-400' : 'red-400';
+        }
+
+        function getBadgeClass(badge) {
+            const classes = {
+                'Newcomer': 'bg-gray-600',
+                'Bronze': 'badge-bronze',
+                'Silver': 'badge-silver',
+                'Gold': 'badge-gold',
+                'Platinum': 'badge-platinum',
+                'Diamond': 'badge-diamond'
+            };
+            return classes[badge] || 'bg-gray-600';
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadReports();
+            loadLeaderboard();
+            loadMyReputation();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Breach Checker - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .breach-danger {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+        }
+        .breach-safe {
+            background: linear-gradient(135deg, #00C851 0%, #007E33 100%);
+        }
+        .pulse-danger {
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 20px rgba(255, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-700">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <a href="/home" class="text-2xl font-bold">
+                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/home" class="hover:text-blue-400 transition">Home</a>
+                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
+                <a href="/community" class="hover:text-blue-400 transition">Community</a>
+                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="inline-block p-4 rounded-full bg-red-500 bg-opacity-20 mb-4">
+                <i class="fas fa-user-secret text-5xl text-red-400"></i>
+            </div>
+            <h1 class="text-4xl font-bold mb-4">Password Breach Checker</h1>
+            <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                Check if your password has been exposed in known data breaches. 
+                We use secure k-Anonymity to check without ever sending your actual password.
+            </p>
+        </div>
+
+        <!-- Password Check Card -->
+        <div class="card-glass rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6">
+                <i class="fas fa-key text-yellow-400 mr-2"></i>Check Your Password
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="passwordInput" 
+                           class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                           placeholder="Enter password to check...">
+                    <button onclick="togglePassword()" 
+                            class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+                        <i class="fas fa-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+                
+                <button onclick="checkPassword()" 
+                        class="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
+                    <i class="fas fa-search mr-2"></i>Check for Breaches
+                </button>
+            </div>
+
+            <!-- Result Area -->
+            <div id="passwordResult" class="mt-6 hidden">
+                <!-- Results will be inserted here -->
+            </div>
+
+            <!-- Security Note -->
+            <div class="mt-6 p-4 bg-blue-500 bg-opacity-10 rounded-lg border border-blue-500 border-opacity-30">
+                <p class="text-sm text-blue-300">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Your privacy is protected:</strong> We never send your actual password. 
+                    We use a technique called k-Anonymity where only the first 5 characters of a hash are sent 
+                    to check against the database.
+                </p>
+            </div>
+        </div>
+
+        <!-- Email Check Card (Pro Feature) -->
+        <div class="card-glass rounded-2xl p-8 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold">
+                    <i class="fas fa-envelope text-purple-400 mr-2"></i>Email Breach Check
+                </h2>
+                <span class="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-sm font-semibold">
+                    PRO
+                </span>
+            </div>
+            
+            <div class="space-y-4">
+                <input type="email" id="emailInput" 
+                       class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                       placeholder="Enter email to check...">
+                
+                <button onclick="checkEmail()" 
+                        class="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-semibold text-lg hover:opacity-90 transition">
+                    <i class="fas fa-search mr-2"></i>Check Email Breaches
+                </button>
+            </div>
+
+            <!-- Email Result Area -->
+            <div id="emailResult" class="mt-6 hidden">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="card-glass rounded-2xl p-8">
+            <h2 class="text-2xl font-semibold mb-6">
+                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Password Security Tips
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-800 rounded-lg">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                    <strong>Use a password manager</strong>
+                    <p class="text-gray-400 text-sm mt-1">Let it generate and store unique passwords for each site.</p>
+                </div>
+                <div class="p-4 bg-gray-800 rounded-lg">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                    <strong>Enable 2FA everywhere</strong>
+                    <p class="text-gray-400 text-sm mt-1">Two-factor authentication adds an extra layer of security.</p>
+                </div>
+                <div class="p-4 bg-gray-800 rounded-lg">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                    <strong>Never reuse passwords</strong>
+                    <p class="text-gray-400 text-sm mt-1">One breach can compromise all your accounts.</p>
+                </div>
+                <div class="p-4 bg-gray-800 rounded-lg">
+                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                    <strong>Use passphrases</strong>
+                    <p class="text-gray-400 text-sm mt-1">Long phrases are easier to remember and harder to crack.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+
+        function togglePassword() {
+            const input = document.getElementById('passwordInput');
+            const icon = document.getElementById('toggleIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        async function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) {
+                alert('Please enter a password to check');
+                return;
+            }
+
+            const resultDiv = document.getElementById('passwordResult');
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-blue-400"></i><p class="mt-2">Checking securely...</p></div>';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/breach/password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (data.breached) {
+                    resultDiv.innerHTML = `
+                        <div class="breach-danger rounded-lg p-6 pulse-danger">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-4xl mr-4"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">Password Compromised!</h3>
+                                    <p class="text-lg">Found in <strong>${data.count.toLocaleString()}</strong> data breaches</p>
+                                </div>
+                            </div>
+                            <p class="mt-4">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                You should change this password immediately on all sites where you use it.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="breach-safe rounded-lg p-6">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-4xl mr-4"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">Password Not Found</h3>
+                                    <p>This password hasn't appeared in any known data breaches.</p>
+                                </div>
+                            </div>
+                            <p class="mt-4 text-sm opacity-80">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                This doesn't guarantee it's a strong password - just that it hasn't been leaked yet.
+                            </p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-4">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        Error checking password. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        async function checkEmail() {
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                alert('Please enter an email to check');
+                return;
+            }
+
+            if (!token) {
+                alert('Please log in to use this feature');
+                window.location.href = '/login';
+                return;
+            }
+
+            const resultDiv = document.getElementById('emailResult');
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-purple-400"></i><p class="mt-2">Checking breaches...</p></div>';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/breach/email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 403) {
+                    resultDiv.innerHTML = `
+                        <div class="bg-purple-500 bg-opacity-20 border border-purple-500 rounded-lg p-4">
+                            <i class="fas fa-crown mr-2"></i>
+                            This feature requires a Pro subscription. 
+                            <a href="/profile" class="underline">Upgrade now</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (data.breaches && data.breaches.length > 0) {
+                    let breachList = data.breaches.map(b => `
+                        <div class="p-3 bg-gray-800 rounded-lg">
+                            <strong>${b.Name}</strong>
+                            <span class="text-gray-400 text-sm ml-2">${b.BreachDate || 'Unknown date'}</span>
+                        </div>
+                    `).join('');
+
+                    resultDiv.innerHTML = `
+                        <div class="breach-danger rounded-lg p-6">
+                            <div class="flex items-center mb-4">
+                                <i class="fas fa-exclamation-triangle text-4xl mr-4"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">Email Found in ${data.breaches.length} Breach${data.breaches.length > 1 ? 'es' : ''}</h3>
+                                    <p>Your email has been exposed in data breaches.</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                ${breachList}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="breach-safe rounded-lg p-6">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-4xl mr-4"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">No Breaches Found</h3>
+                                    <p>This email hasn't appeared in any known data breaches.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-4">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        Error checking email. Please try again.
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

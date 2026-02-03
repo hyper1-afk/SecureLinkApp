@@ -1,0 +1,129 @@
+/* SecureLink Browser Extension - Content Styles */
+
+/* Link Indicators */
+.securelink-indicator {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 12px;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* Toast Notifications */
+.securelink-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 999999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.securelink-toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.securelink-toast-success {
+    border-left: 4px solid #22c55e;
+}
+
+.securelink-toast-warning {
+    border-left: 4px solid #eab308;
+}
+
+.securelink-toast-danger {
+    border-left: 4px solid #ef4444;
+}
+
+.securelink-toast-info {
+    border-left: 4px solid #3b82f6;
+}
+
+/* Inline Popup */
+.securelink-popup {
+    position: absolute;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-width: 250px;
+    animation: securelink-popup-in 0.2s ease;
+}
+
+@keyframes securelink-popup-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.securelink-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.securelink-popup-icon {
+    font-size: 24px;
+}
+
+.securelink-popup-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.securelink-popup-score {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-bottom: 8px;
+}
+
+.securelink-popup-threats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.securelink-threat-tag {
+    padding: 2px 8px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.securelink-popup-close {
+    font-size: 11px;
+    opacity: 0.5;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* Link Highlighting */
+a[data-securelink-checked="done"].securelink-danger {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-bottom: 2px solid #ef4444 !important;
+}
+
+a[data-securelink-checked="done"].securelink-warning {
+    background: rgba(234, 179, 8, 0.1) !important;
+    border-bottom: 2px solid #eab308 !important;
+}

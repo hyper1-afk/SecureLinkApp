@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Dashboard - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .api-key {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/home" class="text-2xl font-bold">
+                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/home" class="hover:text-blue-400 transition">Home</a>
+                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
+                <a href="/community" class="hover:text-blue-400 transition">Community</a>
+                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6">
+        <!-- No Organization View -->
+        <div id="noOrgView" class="hidden">
+            <div class="text-center py-16">
+                <i class="fas fa-building text-6xl text-gray-600 mb-6"></i>
+                <h1 class="text-3xl font-bold mb-4">Organization Dashboard</h1>
+                <p class="text-gray-400 mb-8 max-w-lg mx-auto">
+                    Create an organization to manage team security, get webhook notifications, 
+                    and access enterprise features.
+                </p>
+                <button onclick="showCreateOrgModal()" 
+                        class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
+                    <i class="fas fa-plus mr-2"></i>Create Organization
+                </button>
+            </div>
+        </div>
+
+        <!-- Organization View -->
+        <div id="orgView" class="hidden">
+            <!-- Header -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">
+                        <i class="fas fa-building text-purple-400 mr-2"></i>
+                        <span id="orgName">Organization</span>
+                    </h1>
+                    <p class="text-gray-400">Manage your team's security</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <span id="userRole" class="px-3 py-1 bg-blue-500 bg-opacity-20 border border-blue-500 rounded-full text-sm"></span>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="card-glass rounded-xl p-4">
+                    <p class="text-gray-400 text-sm">Total Scans</p>
+                    <p class="text-3xl font-bold" id="totalScans">-</p>
+                </div>
+                <div class="card-glass rounded-xl p-4">
+                    <p class="text-gray-400 text-sm">Threats Found</p>
+                    <p class="text-3xl font-bold text-red-400" id="threatsFound">-</p>
+                </div>
+                <div class="card-glass rounded-xl p-4">
+                    <p class="text-gray-400 text-sm">Team Members</p>
+                    <p class="text-3xl font-bold text-blue-400" id="memberCount">-</p>
+                </div>
+                <div class="card-glass rounded-xl p-4">
+                    <p class="text-gray-400 text-sm">This Week</p>
+                    <p class="text-3xl font-bold text-green-400" id="weeklyScans">-</p>
+                </div>
+            </div>
+
+            <!-- Quick Scan -->
+            <div class="card-glass rounded-2xl p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-search text-blue-400 mr-2"></i>Quick Link Scan
+                </h2>
+                <div class="flex gap-4">
+                    <input type="url" id="scanUrl" 
+                           class="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                           placeholder="Enter URL to scan...">
+                    <button onclick="scanLink()" 
+                            class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-shield-virus mr-2"></i>Scan
+                    </button>
+                </div>
+                <div id="scanResult" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex space-x-2 mb-6 border-b border-gray-700 pb-4">
+                <button onclick="showTab('members')" class="tab-btn px-4 py-2 rounded-lg bg-blue-500 bg-opacity-20 text-blue-400" data-tab="members">
+                    <i class="fas fa-users mr-2"></i>Members
+                </button>
+                <button onclick="showTab('webhooks')" class="tab-btn px-4 py-2 rounded-lg text-gray-400" data-tab="webhooks">
+                    <i class="fas fa-plug mr-2"></i>Webhooks
+                </button>
+                <button onclick="showTab('api')" class="tab-btn px-4 py-2 rounded-lg text-gray-400" data-tab="api">
+                    <i class="fas fa-key mr-2"></i>API Key
+                </button>
+            </div>
+
+            <!-- Members Tab -->
+            <div id="membersTab" class="tab-content">
+                <div class="card-glass rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold">Team Members</h3>
+                        <button onclick="showInviteModal()" class="px-4 py-2 bg-green-500 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-user-plus mr-2"></i>Invite Member
+                        </button>
+                    </div>
+                    <div id="membersList" class="space-y-3">
+                        <p class="text-gray-400">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Webhooks Tab -->
+            <div id="webhooksTab" class="tab-content hidden">
+                <div class="card-glass rounded-xl p-6">
+                    <h3 class="text-xl font-semibold mb-6">
+                        <i class="fas fa-bell text-yellow-400 mr-2"></i>Webhook Notifications
+                    </h3>
+                    <p class="text-gray-400 mb-6">
+                        Get instant notifications in your team chat when dangerous links are detected.
+                    </p>
+
+                    <form id="webhooksForm" class="space-y-6">
+                        <!-- Slack -->
+                        <div class="p-4 bg-gray-800 rounded-lg">
+                            <div class="flex items-center mb-3">
+                                <i class="fab fa-slack text-2xl text-purple-400 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold">Slack</h4>
+                                    <p class="text-sm text-gray-400">Send alerts to a Slack channel</p>
+                                </div>
+                            </div>
+                            <input type="url" id="slackWebhook" 
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none"
+                                   placeholder="https://hooks.slack.com/services/...">
+                        </div>
+
+                        <!-- Discord -->
+                        <div class="p-4 bg-gray-800 rounded-lg">
+                            <div class="flex items-center mb-3">
+                                <i class="fab fa-discord text-2xl text-indigo-400 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold">Discord</h4>
+                                    <p class="text-sm text-gray-400">Send alerts to a Discord channel</p>
+                                </div>
+                            </div>
+                            <input type="url" id="discordWebhook" 
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-indigo-500 focus:outline-none"
+                                   placeholder="https://discord.com/api/webhooks/...">
+                        </div>
+
+                        <!-- Microsoft Teams -->
+                        <div class="p-4 bg-gray-800 rounded-lg">
+                            <div class="flex items-center mb-3">
+                                <i class="fab fa-microsoft text-2xl text-blue-400 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold">Microsoft Teams</h4>
+                                    <p class="text-sm text-gray-400">Send alerts to a Teams channel</p>
+                                </div>
+                            </div>
+                            <input type="url" id="teamsWebhook" 
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                                   placeholder="https://outlook.office.com/webhook/...">
+                        </div>
+
+                        <button type="submit" 
+                                class="w-full py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-save mr-2"></i>Save Webhook Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- API Tab -->
+            <div id="apiTab" class="tab-content hidden">
+                <div class="card-glass rounded-xl p-6">
+                    <h3 class="text-xl font-semibold mb-6">
+                        <i class="fas fa-code text-green-400 mr-2"></i>API Access
+                    </h3>
+                    <p class="text-gray-400 mb-6">
+                        Use the API key to integrate SecureLink into your applications.
+                    </p>
+
+                    <div class="p-4 bg-gray-800 rounded-lg mb-6">
+                        <label class="block text-sm text-gray-400 mb-2">API Key</label>
+                        <div class="flex items-center gap-2">
+                            <code id="apiKey" class="api-key flex-1 px-4 py-3 rounded-lg overflow-x-auto">
+                                ••••••••••••••••••••••••••••••••
+                            </code>
+                            <button onclick="toggleApiKey()" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                                <i class="fas fa-eye" id="apiKeyIcon"></i>
+                            </button>
+                            <button onclick="copyApiKey()" class="px-4 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg">
+                        <h4 class="font-semibold mb-2">API Usage Example</h4>
+                        <pre class="text-sm text-gray-300 overflow-x-auto"><code>curl -X POST https://securelink.com/api/org/{org_id}/verify \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}'</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create Org Modal -->
+    <div id="createOrgModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-building text-purple-400 mr-2"></i>Create Organization
+            </h2>
+            <form id="createOrgForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Organization Name *</label>
+                    <input type="text" id="newOrgName" required
+                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none"
+                           placeholder="Acme Corp">
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" onclick="hideCreateOrgModal()" 
+                            class="flex-1 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                        Create
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invite Modal -->
+    <div id="inviteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold mb-6">
+                <i class="fas fa-user-plus text-green-400 mr-2"></i>Invite Team Member
+            </h2>
+            <form id="inviteForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Email Address *</label>
+                    <input type="email" id="inviteEmail" required
+                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-green-500 focus:outline-none"
+                           placeholder="colleague@company.com">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Role</label>
+                    <select id="inviteRole" 
+                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-green-500 focus:outline-none">
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" onclick="hideInviteModal()" 
+                            class="flex-1 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                        Send Invite
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+        let currentOrg = null;
+        let apiKeyVisible = false;
+
+        // Check auth and load data
+        async function init() {
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // Try to get user's organization
+            try {
+                const profileRes = await fetch('/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const profile = await profileRes.json();
+
+                if (profile.organization_id) {
+                    await loadOrganization(profile.organization_id);
+                } else {
+                    document.getElementById('noOrgView').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('noOrgView').classList.remove('hidden');
+            }
+        }
+
+        // Load organization data
+        async function loadOrganization(orgId) {
+            try {
+                const response = await fetch(`/api/org/${orgId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentOrg = data.organization;
+                    
+                    document.getElementById('orgName').textContent = currentOrg.name;
+                    document.getElementById('orgView').classList.remove('hidden');
+                    
+                    // Load additional data
+                    loadMembers();
+                    loadStats();
+                    loadWebhooks();
+                } else {
+                    document.getElementById('noOrgView').classList.remove('hidden');
+                }
+            } catch (error) {
+                document.getElementById('noOrgView').classList.remove('hidden');
+            }
+        }
+
+        // Load members
+        async function loadMembers() {
+            if (!currentOrg) return;
+
+            try {
+                const response = await fetch(`/api/org/${currentOrg.id}/members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                const container = document.getElementById('membersList');
+                const members = data.members || [];
+
+                document.getElementById('memberCount').textContent = members.length;
+
+                container.innerHTML = members.map(member => `
+                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3">
+                                ${member.username ? member.username[0].toUpperCase() : '?'}
+                            </div>
+                            <div>
+                                <p class="font-semibold">${member.username || 'Unknown'}</p>
+                                <p class="text-sm text-gray-400">${member.email || ''}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs ${member.role === 'admin' ? 'bg-purple-500 bg-opacity-20 text-purple-400' : 'bg-gray-600 text-gray-300'}">
+                            ${member.role}
+                        </span>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading members:', error);
+            }
+        }
+
+        // Load stats
+        async function loadStats() {
+            if (!currentOrg) return;
+
+            try {
+                const response = await fetch(`/api/org/${currentOrg.id}/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const stats = data.stats || {};
+
+                document.getElementById('totalScans').textContent = stats.total_scans || 0;
+                document.getElementById('threatsFound').textContent = stats.threats_found || 0;
+                document.getElementById('weeklyScans').textContent = stats.weekly_scans || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load webhooks
+        function loadWebhooks() {
+            if (!currentOrg) return;
+
+            document.getElementById('slackWebhook').value = currentOrg.slack_webhook || '';
+            document.getElementById('discordWebhook').value = currentOrg.discord_webhook || '';
+            document.getElementById('teamsWebhook').value = currentOrg.teams_webhook || '';
+            document.getElementById('apiKey').textContent = apiKeyVisible ? currentOrg.api_key : '••••••••••••••••••••••••••••••••';
+        }
+
+        // Scan link
+        async function scanLink() {
+            const url = document.getElementById('scanUrl').value;
+            if (!url || !currentOrg) return;
+
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`/api/org/${currentOrg.id}/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (data.is_safe) {
+                    resultDiv.innerHTML = `
+                        <div class="p-4 bg-green-500 bg-opacity-20 border border-green-500 rounded-lg">
+                            <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                            <strong>Safe</strong> - Risk Score: ${data.risk_score}/100
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
+                            <div class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-red-400 mr-2 mt-1"></i>
+                                <div>
+                                    <strong>Dangerous</strong> - Risk Score: ${data.risk_score}/100
+                                    ${data.threat_types ? `<p class="text-sm mt-1">Threats: ${data.threat_types.join(', ')}</p>` : ''}
+                                    ${data.ai_explanation ? `<p class="text-sm mt-2 text-gray-300">${data.ai_explanation}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="text-red-400">Error scanning link</div>';
+            }
+        }
+
+        // Tab switching
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-blue-500', 'bg-opacity-20', 'text-blue-400');
+                el.classList.add('text-gray-400');
+            });
+
+            document.getElementById(`${tab}Tab`).classList.remove('hidden');
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('bg-blue-500', 'bg-opacity-20', 'text-blue-400');
+            document.querySelector(`[data-tab="${tab}"]`).classList.remove('text-gray-400');
+        }
+
+        // Modals
+        function showCreateOrgModal() {
+            document.getElementById('createOrgModal').classList.remove('hidden');
+            document.getElementById('createOrgModal').classList.add('flex');
+        }
+
+        function hideCreateOrgModal() {
+            document.getElementById('createOrgModal').classList.add('hidden');
+            document.getElementById('createOrgModal').classList.remove('flex');
+        }
+
+        function showInviteModal() {
+            document.getElementById('inviteModal').classList.remove('hidden');
+            document.getElementById('inviteModal').classList.add('flex');
+        }
+
+        function hideInviteModal() {
+            document.getElementById('inviteModal').classList.add('hidden');
+            document.getElementById('inviteModal').classList.remove('flex');
+        }
+
+        // Create organization
+        document.getElementById('createOrgForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newOrgName').value;
+
+            try {
+                const response = await fetch('/api/org/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    hideCreateOrgModal();
+                    loadOrganization(data.organization.id);
+                    document.getElementById('noOrgView').classList.add('hidden');
+                } else {
+                    alert(data.error || 'Failed to create organization');
+                }
+            } catch (error) {
+                alert('Error creating organization');
+            }
+        });
+
+        // Invite member
+        document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentOrg) return;
+
+            const email = document.getElementById('inviteEmail').value;
+            const role = document.getElementById('inviteRole').value;
+
+            try {
+                const response = await fetch(`/api/org/${currentOrg.id}/invite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email, role })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(data.message);
+                    hideInviteModal();
+                    loadMembers();
+                    document.getElementById('inviteForm').reset();
+                } else {
+                    alert(data.error || 'Failed to invite member');
+                }
+            } catch (error) {
+                alert('Error inviting member');
+            }
+        });
+
+        // Save webhooks
+        document.getElementById('webhooksForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentOrg) return;
+
+            const webhooks = {
+                slack_webhook: document.getElementById('slackWebhook').value || null,
+                discord_webhook: document.getElementById('discordWebhook').value || null,
+                teams_webhook: document.getElementById('teamsWebhook').value || null
+            };
+
+            try {
+                const response = await fetch(`/api/org/${currentOrg.id}/webhooks`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(webhooks)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Webhooks saved successfully!');
+                } else {
+                    alert(data.error || 'Failed to save webhooks');
+                }
+            } catch (error) {
+                alert('Error saving webhooks');
+            }
+        });
+
+        // API key functions
+        function toggleApiKey() {
+            apiKeyVisible = !apiKeyVisible;
+            const icon = document.getElementById('apiKeyIcon');
+            const keyEl = document.getElementById('apiKey');
+            
+            if (apiKeyVisible && currentOrg) {
+                keyEl.textContent = currentOrg.api_key;
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                keyEl.textContent = '••••••••••••••••••••••••••••••••';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function copyApiKey() {
+            if (currentOrg && currentOrg.api_key) {
+                navigator.clipboard.writeText(currentOrg.api_key);
+                alert('API key copied to clipboard!');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

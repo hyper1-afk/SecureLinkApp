@@ -1,0 +1,3274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Dark Reader compatibility - site is already dark themed */
+        html[data-darkreader-mode] body,
+        html[data-darkreader-scheme="dark"] body {
+            background: var(--bg-dark) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        html[data-darkreader-mode] .card,
+        html[data-darkreader-scheme="dark"] .card {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Ensure text remains legible with any color inversion */
+        html[data-darkreader-mode] * {
+            --darkreader-text--text-primary: #f1f5f9 !important;
+            --darkreader-bg--bg-dark: #0f172a !important;
+        }
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --primary-light: #38bdf8;
+            --accent-color: #8b5cf6;
+            --accent-light: #a78bfa;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.6;
+            letter-spacing: 0.01em;
+        }
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+        
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: var(--text-primary) !important;
+        }
+        
+        .user-badge {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            border-radius: 50px;
+            padding: 8px 20px 8px 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary) !important;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .user-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .user-badge:hover {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
+            border-color: rgba(14, 165, 233, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2);
+        }
+        
+        .user-badge:hover::before {
+            left: 100%;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.2;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+        
+        .user-role {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        
+        .subscription-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+        
+        .badge-free { background: rgba(148, 163, 184, 0.3); color: var(--text-secondary); }
+        .badge-pro { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3); }
+        .badge-enterprise { background: linear-gradient(135deg, var(--accent-color), #7c3aed); color: #fff; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: rgba(14, 165, 233, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 60px rgba(14, 165, 233, 0.05);
+        }
+        
+        .main-card {
+            background: linear-gradient(180deg, var(--bg-card) 0%, rgba(30, 41, 59, 0.8) 100%);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #ffffff !important;
+        }
+        
+        .url-input {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            color: var(--text-primary);
+            padding: 18px 22px;
+            font-size: 1.05rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .url-input:focus {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15), 0 0 30px rgba(14, 165, 233, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .url-input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        .btn-verify {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 18px 44px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-verify:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(14, 165, 233, 0.4), 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+        
+        .result-card {
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .result-safe {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .result-warning {
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .result-danger {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .risk-badge {
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        
+        .risk-safe { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .risk-low { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .risk-medium { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .risk-high { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .risk-critical { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+        
+        .score-circle {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            position: relative;
+        }
+        
+        .score-safe { background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05)); border: 3px solid #10b981; color: #34d399; }
+        .score-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05)); border: 3px solid #f59e0b; color: #fbbf24; }
+        .score-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)); border: 3px solid #ef4444; color: #f87171; }
+        
+        .threat-item {
+            background: rgba(239, 68, 68, 0.15);
+            border-left: 4px solid #ef4444;
+            padding: 14px 18px;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+        }
+        
+        .warning-item {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 4px solid #f59e0b;
+            padding: 14px 18px;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+        }
+        
+        .history-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            background: rgba(14, 165, 233, 0.05);
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 28px;
+        }
+        
+        .stat-number {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 8px;
+        }
+        
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            padding: 14px 28px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            color: var(--text-primary);
+            border: none;
+            background: rgba(14, 165, 233, 0.1);
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: transparent;
+            color: var(--primary-color);
+            border: none;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .email-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected { background: var(--success-color); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .status-dot.disconnected { background: var(--danger-color); animation: none; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+        
+        .truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .details-accordion .accordion-button {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .details-accordion .accordion-button:not(.collapsed) {
+            background: rgba(14, 165, 233, 0.15);
+            color: var(--text-primary);
+        }
+        
+        .details-accordion .accordion-body {
+            background: rgba(15, 23, 42, 0.5);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        
+        pre {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 18px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .alert {
+            border-radius: 14px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            border: none;
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+        }
+        
+        .alert-info {
+            background: rgba(14, 165, 233, 0.15);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            color: #7dd3fc;
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .badge {
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
+        
+        .btn {
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.35);
+        }
+        
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .text-secondary {
+            color: var(--text-secondary) !important;
+        }
+        
+        .form-control, .form-select {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+            color: var(--text-primary);
+        }
+        
+        .dropdown-menu-dark {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            z-index: 1050;
+        }
+        
+        .navbar .dropdown {
+            position: relative;
+            z-index: 1051;
+        }
+        
+        .dropdown-item {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .dropdown-item:hover {
+            background: rgba(14, 165, 233, 0.1);
+            color: var(--text-primary);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+        
+        /* Support Button Styles */
+        .support-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .support-fab:hover {
+            transform: scale(1.1) translateY(-3px);
+            box-shadow: 0 8px 30px rgba(14, 165, 233, 0.5);
+        }
+        
+        .support-fab:active {
+            transform: scale(0.95);
+        }
+        
+        .support-fab .tooltip-text {
+            position: absolute;
+            right: 70px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+        }
+        
+        .support-fab:hover .tooltip-text {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Support Modal Styles */
+        .support-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .support-modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .support-modal-content {
+            background: var(--bg-card);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .support-modal-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .support-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .support-modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.3s ease;
+        }
+        
+        .support-modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        .support-modal-body {
+            padding: 28px;
+        }
+        
+        .support-form-group {
+            margin-bottom: 20px;
+        }
+        
+        .support-form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        
+        .support-form-group input,
+        .support-form-group select,
+        .support-form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.5);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .support-form-group input:focus,
+        .support-form-group select:focus,
+        .support-form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+        
+        .support-form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .support-form-group select {
+            cursor: pointer;
+        }
+        
+        .support-form-group select option {
+            background: var(--bg-card);
+        }
+        
+        .support-submit-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .support-submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+        
+        .support-submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .support-readonly-field {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.3);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .support-success {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .support-success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        
+        .support-success-icon i {
+            font-size: 2.5rem;
+            color: var(--success-color);
+        }
+        
+        .support-success h4 {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+        
+        .support-success p {
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .support-ticket-number {
+            font-family: monospace;
+            background: rgba(14, 165, 233, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--primary-light);
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 15px;
+        }
+        
+        .support-login-prompt {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .support-login-prompt i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        
+        .support-login-prompt h4 {
+            margin-bottom: 10px;
+        }
+        
+        .support-login-prompt p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+        
+        .support-login-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .support-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+            color: white;
+        }
+        
+        /* File Drop Zone Styles */
+        .verification-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 24px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        
+        .verification-tab {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .verification-tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .verification-tab.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+        }
+        
+        .verification-panel {
+            display: none;
+        }
+        
+        .verification-panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .file-drop-zone {
+            border: 2px dashed rgba(14, 165, 233, 0.5);
+            border-radius: 16px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(14, 165, 233, 0.08);
+        }
+        
+        .file-drop-zone:hover {
+            border-color: var(--primary-color);
+            background: rgba(14, 165, 233, 0.15);
+        }
+        
+        .file-drop-zone.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(14, 165, 233, 0.2);
+            transform: scale(1.01);
+        }
+        
+        .file-drop-zone.has-file {
+            border-color: var(--success-color);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .file-drop-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 1.8rem;
+            color: white;
+        }
+        
+        .file-drop-zone h4 {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #f1f5f9;
+        }
+        
+        .file-drop-zone p {
+            color: #94a3b8;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+        }
+        
+        .file-browse-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(14, 165, 233, 0.2);
+            border: 1px solid var(--primary-color);
+            color: #7dd3fc;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-browse-btn:hover {
+            background: rgba(14, 165, 233, 0.35);
+            color: #bae6fd;
+        }
+        
+        .file-types {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 16px;
+        }
+        
+        .selected-file {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: white;
+        }
+        
+        .file-info {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        
+        .file-size {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .file-remove-btn {
+            background: rgba(239, 68, 68, 0.15);
+            border: none;
+            color: var(--danger-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-remove-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+        
+        .file-result {
+            margin-top: 24px;
+        }
+        
+        .file-result-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .file-result-header h5 {
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+        
+        .file-result-header p {
+            color: #94a3b8;
+        }
+        
+        .file-result-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .file-result-icon.safe {
+            background: rgba(16, 185, 129, 0.25);
+            color: #34d399;
+        }
+        
+        .file-result-icon.warning {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fbbf24;
+        }
+        
+        .file-result-icon.danger {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+        }
+        
+        .file-findings {
+            background: rgba(51, 65, 85, 0.4);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .file-finding {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+            color: #cbd5e1;
+        }
+        
+        .file-finding:last-child {
+            border-bottom: none;
+        }
+        
+        .file-finding i {
+            margin-top: 2px;
+        }
+        
+        .file-finding.threat i {
+            color: #f87171;
+        }
+        
+        .file-finding.warning i {
+            color: #fbbf24;
+        }
+        
+        .file-finding.info i {
+            color: #38bdf8;
+        }
+        
+        /* Help Button Styles */
+        .help-fab {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-fab:hover {
+            background: rgba(14, 165, 233, 0.15);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        /* Onboarding Tutorial Styles */
+        .tutorial-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .tutorial-overlay.active {
+            display: flex;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .tutorial-container {
+            background: var(--bg-card);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+        }
+        
+        .tutorial-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            padding: 40px 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .tutorial-header h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        
+        .tutorial-header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .tutorial-skip {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tutorial-skip:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tutorial-body {
+            padding: 40px;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+        
+        .tutorial-slide {
+            display: none;
+            animation: slideIn 0.4s ease;
+        }
+        
+        .tutorial-slide.active {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .tutorial-slide h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tutorial-slide h3 i {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+        
+        .tutorial-slide p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+        
+        .tutorial-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(14, 165, 233, 0.1);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .tutorial-feature i {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .tutorial-feature h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .tutorial-feature p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .tutorial-footer {
+            padding: 20px 40px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .tutorial-dots {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .tutorial-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tutorial-dot.active {
+            background: var(--primary-color);
+            width: 30px;
+            border-radius: 5px;
+        }
+        
+        .tutorial-nav {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .tutorial-btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tutorial-btn-secondary {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        .tutorial-btn-secondary:hover {
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+        
+        .tutorial-btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            color: white;
+        }
+        
+        .tutorial-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-check me-2"></i>SecureLink
+            </a>
+            <div class="navbar-nav ms-auto align-items-center gap-3">
+                <span class="email-status nav-link" id="emailStatus">
+                    <span class="status-dot disconnected"></span>
+                    <span>Email: Disconnected</span>
+                </span>
+                
+                <!-- Features Button -->
+                <a href="/features" class="btn btn-link text-decoration-none user-badge">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);">
+                        <i class="bi bi-grid-fill"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">Features</span>
+                        <span class="user-role">Explore Tools</span>
+                    </div>
+                </a>
+                
+                <!-- Logged Out Nav -->
+                <div id="loggedOutNav" class="auth-nav">
+                    <a href="/login" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                    </a>
+                </div>
+                
+                <!-- Logged In Nav -->
+                <div id="loggedInNav" class="auth-nav d-none">
+                    <a href="/profile" class="btn btn-link text-decoration-none user-badge">
+                        <div class="user-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="user-info">
+                            <span class="user-name" id="userDisplayName">User</span>
+                            <span class="user-role">View Profile</span>
+                        </div>
+                        <span class="subscription-badge badge-free" id="subBadge">FREE</span>
+                    </a>
+                </div>
+                
+                <!-- Help Button (Far Right) -->
+                <a href="/guide" class="btn btn-outline-secondary btn-sm ms-2" title="User Guide">
+                    <i class="bi bi-question-circle me-1"></i>Help
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <!-- Main Verification Card -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8">
+                <div class="card main-card p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h2 mb-3">
+                            <i class="bi bi-shield-lock-fill text-primary me-2"></i>
+                            Verify
+                        </h1>
+                        <p class="text-secondary">
+                            Verify links or scan files for security threats. Our AI analyzes content for phishing, malware, and other risks.
+                        </p>
+                    </div>
+                    
+                    <!-- Verification Type Tabs -->
+                    <div class="verification-tabs">
+                        <button class="verification-tab active" data-tab="link" onclick="switchVerificationTab('link')">
+                            <i class="bi bi-link-45deg"></i>
+                            Verify Link
+                        </button>
+                        <button class="verification-tab" data-tab="file" onclick="switchVerificationTab('file')">
+                            <i class="bi bi-file-earmark-check"></i>
+                            Scan File
+                        </button>
+                    </div>
+                    
+                    <!-- Link Verification Panel -->
+                    <div class="verification-panel active" id="linkPanel">
+                        <form id="verifyForm">
+                            <div class="mb-4">
+                                <input type="text" 
+                                       class="form-control url-input" 
+                                       id="urlInput" 
+                                       placeholder="https://example.com/suspicious-link"
+                                       autocomplete="off"
+                                       required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-verify" id="verifyBtn">
+                                    <i class="bi bi-search me-2"></i>Verify Link
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- File Scan Panel -->
+                    <div class="verification-panel" id="filePanel">
+                        <div class="file-drop-zone" id="fileDropZone">
+                            <div class="file-drop-icon">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                            </div>
+                            <h4>Drop your file here</h4>
+                            <p>or click to browse files from your computer</p>
+                            <label class="file-browse-btn">
+                                <i class="bi bi-folder2-open"></i>
+                                Browse Files
+                                <input type="file" id="fileInput" hidden accept=".txt,.html,.htm,.js,.css,.json,.xml,.csv,.pdf,.doc,.docx,.xls,.xlsx,.eml,.msg">
+                            </label>
+                            <div class="file-types">
+                                Supported: TXT, HTML, JS, CSS, JSON, XML, CSV, PDF, DOC, DOCX, XLS, XLSX, EML, MSG (Max 200MB)
+                            </div>
+                        </div>
+                        
+                        <!-- Selected File Display -->
+                        <div class="selected-file" id="selectedFile" style="display: none;">
+                            <div class="file-icon">
+                                <i class="bi bi-file-earmark" id="selectedFileIcon"></i>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name" id="selectedFileName">document.pdf</div>
+                                <div class="file-size" id="selectedFileSize">2.4 MB</div>
+                            </div>
+                            <button class="file-remove-btn" onclick="removeSelectedFile()">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="d-grid mt-4">
+                            <button type="button" class="btn btn-primary btn-verify" id="scanFileBtn" onclick="scanFile()" disabled>
+                                <i class="bi bi-shield-check me-2"></i>Scan File
+                            </button>
+                        </div>
+                        
+                        <!-- File Scan Result -->
+                        <div class="file-result" id="fileResult" style="display: none;">
+                            <div class="file-result-header">
+                                <div class="file-result-icon" id="fileResultIcon">
+                                    <i class="bi bi-check-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1" id="fileResultTitle">File is Safe</h5>
+                                    <p class="text-secondary mb-0" id="fileResultSummary">No threats detected</p>
+                                </div>
+                            </div>
+                            <div class="file-findings" id="fileFindings">
+                                <!-- Findings populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Card (hidden initially) -->
+        <div class="row justify-content-center mb-5" id="resultSection" style="display: none;">
+            <div class="col-lg-8">
+                <div class="card result-card p-4" id="resultCard">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-auto">
+                            <div class="score-circle" id="scoreCircle">
+                                <span id="scoreValue">0%</span>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <h4 class="mb-0" id="resultTitle">Checking...</h4>
+                                <span class="risk-badge" id="riskBadge">-</span>
+                            </div>
+                            <p class="text-secondary mb-0 truncate" id="checkedUrl" style="max-width: 400px;"></p>
+                        </div>
+                    </div>
+
+                    <!-- Threats -->
+                    <div id="threatsSection" style="display: none;">
+                        <h5 class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Threats Detected</h5>
+                        <div id="threatsList"></div>
+                    </div>
+
+                    <!-- Warnings -->
+                    <div id="warningsSection" style="display: none;">
+                        <h5 class="mb-3"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Warnings</h5>
+                        <div id="warningsList"></div>
+                    </div>
+
+                    <!-- Details Accordion -->
+                    <div class="accordion details-accordion mt-4" id="detailsAccordion">
+                        <div class="accordion-item bg-transparent border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#detailsCollapse">
+                                    <i class="bi bi-info-circle me-2"></i>Technical Details
+                                </button>
+                            </h2>
+                            <div id="detailsCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+                                <div class="accordion-body">
+                                    <pre id="detailsJson"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs for History and Stats -->
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs mb-4" id="mainTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#recentTab">
+                            <i class="bi bi-lightning me-2"></i>Recent <span id="recentCount" class="badge bg-primary ms-1" style="display: none;">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#historyTab">
+                            <i class="bi bi-clock-history me-2"></i>History
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#statsTab">
+                            <i class="bi bi-graph-up me-2"></i>Statistics
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#emailTab">
+                            <i class="bi bi-envelope me-2"></i>Email Monitor
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Recent Tab (Last 10 Minutes) -->
+                    <div class="tab-pane fade show active" id="recentTab">
+                        <div class="card p-4 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="mb-0"><i class="bi bi-lightning-fill text-warning me-2"></i>Last 10 Minutes</h5>
+                                <small style="color: #94a3b8;">Auto-refreshes every 30 seconds</small>
+                            </div>
+                            <div id="recentList">
+                                <p style="color: #94a3b8;">No recent scans. Check a link to get started!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div class="tab-pane fade" id="historyTab">
+                        <div class="card p-4 mb-4">
+                            <h5 class="mb-4">All Verifications</h5>
+                            <div id="historyList">
+                                <p class="text-secondary">No verifications yet. Check a link to get started!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Tab -->
+                    <div class="tab-pane fade" id="statsTab">
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <div class="card stat-card">
+                                    <div class="stat-number" id="statTotal">0</div>
+                                    <div class="text-secondary">Total Checked</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4">
+                                <div class="card stat-card">
+                                    <div class="stat-number text-success" id="statSafe">0</div>
+                                    <div class="text-secondary">Safe Links</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4">
+                                <div class="card stat-card">
+                                    <div class="stat-number text-danger" id="statUnsafe">0</div>
+                                    <div class="text-secondary">Unsafe Links</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card p-4">
+                            <h5 class="mb-4">Risk Level Breakdown</h5>
+                            <div class="row" id="riskBreakdown">
+                                <!-- Filled by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Tab -->
+                    <div class="tab-pane fade" id="emailTab">
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="mb-0">Email Monitoring</h5>
+                                <button class="btn btn-outline-primary" id="checkEmailsBtn">
+                                    <i class="bi bi-envelope-open me-2"></i>Check Emails Now
+                                </button>
+                            </div>
+                            
+                            <!-- Monitoring Active Info -->
+                            <div id="emailAccountsInfo" class="mb-4" style="display: none;">
+                                <div class="alert alert-success">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-grow spinner-grow-sm text-success me-2" role="status"></div>
+                                        <span><strong>Automatic Monitoring Active</strong></span>
+                                    </div>
+                                    <p class="mb-2 mt-2"><span id="connectedAccountsText">Email accounts connected</span> and being monitored for suspicious links.</p>
+                                    <a href="/profile#email" class="alert-link">Manage accounts in Profile Settings</a>
+                                </div>
+                                <div id="connectedAccountsList" class="d-flex flex-wrap gap-2 mb-3">
+                                    <!-- Filled by JS -->
+                                </div>
+                            </div>
+                            
+                            <!-- No Accounts Warning -->
+                            <div id="noEmailAccountsWarning" class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>No email accounts connected.</strong><br>
+                                <a href="/profile#email" class="alert-link">Go to Profile > Email Settings</a> to add your email accounts.
+                                Once connected, emails will be automatically monitored for suspicious links.
+                            </div>
+                            
+                            <!-- Pro Required Warning -->
+                            <div id="proRequiredWarning" class="alert alert-info" style="display: none;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Email monitoring requires a <strong>Pro</strong> subscription.
+                                <a href="/profile#subscription" class="alert-link">Upgrade now</a> to automatically monitor your emails for threats.
+                            </div>
+                            
+                            <h6 class="mt-4 mb-3">Recent Email Links</h6>
+                            <div id="emailLinksList">
+                                <p class="text-secondary">No email links found yet. Links from monitored emails will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Weekly Security Reports Section -->
+        <div class="row mt-4" id="weeklyReportsSection">
+            <div class="col-12">
+                <div class="card p-4">
+                    <h4 class="mb-4"><i class="bi bi-graph-up me-2 text-primary"></i>Weekly Security Reports</h4>
+                    
+                    <p class="text-secondary mb-4">
+                        Receive a comprehensive weekly email summarizing your security status, threats detected, and risk assessment.
+                    </p>
+                    
+                    <!-- Report Settings -->
+                    <div class="mb-4 p-4" style="background: rgba(14, 165, 233, 0.15); border-radius: 14px; border: 1px solid rgba(14, 165, 233, 0.3);">
+                        <div class="form-check form-switch d-flex align-items-center justify-content-between">
+                            <div>
+                                <label class="form-check-label" for="weeklyReportsEnabled" style="color: #f1f5f9;">
+                                    <strong>Weekly Email Reports</strong>
+                                </label>
+                                <p class="mb-0 mt-1" style="font-size: 0.9rem; color: #94a3b8;">
+                                    Sent every Monday at 9:00 AM to your account email
+                                </p>
+                            </div>
+                            <input class="form-check-input" type="checkbox" id="weeklyReportsEnabled" checked 
+                                   style="width: 50px; height: 26px; cursor: pointer;"
+                                   onchange="updateReportPreferences()">
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Button -->
+                    <div class="mb-4">
+                        <button class="btn btn-outline-primary" onclick="sendTestReport()">
+                            <i class="bi bi-envelope me-2"></i>Send Test Report Now
+                        </button>
+                        <span class="ms-3" style="font-size: 0.9rem; color: #94a3b8;">
+                            Preview what your weekly report will look like
+                        </span>
+                    </div>
+                    
+                    <div id="reportAlert" class="alert d-none"></div>
+                    
+                    <!-- This Week's Statistics -->
+                    <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
+                        <h5 class="mb-4"><i class="bi bi-bar-chart me-2"></i>This Week's Statistics</h5>
+                        
+                        <div id="weeklyStatsLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-secondary mt-2">Loading statistics...</p>
+                        </div>
+                        
+                        <div id="weeklyStatsContent" class="d-none">
+                            <!-- Overall Risk -->
+                            <div class="text-center mb-4 p-4" id="overallRiskCard" style="border-radius: 14px;">
+                                <div class="text-secondary text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">Overall Risk Level</div>
+                                <div id="overallRiskLevel" style="font-size: 2.5rem; font-weight: 800;"></div>
+                                <p id="overallRiskDescription" class="text-secondary mb-0"></p>
+                            </div>
+                            
+                            <!-- Stats Grid -->
+                            <div class="row mb-4">
+                                <div class="col-md-4 mb-3 mb-md-0">
+                                    <div class="text-center p-3" style="background: rgba(15, 23, 42, 0.5); border-radius: 12px;">
+                                        <div id="totalScans" style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">0</div>
+                                        <div class="text-secondary" style="font-size: 0.85rem;">Total Scans</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3 mb-md-0">
+                                    <div class="text-center p-3" style="background: rgba(15, 23, 42, 0.5); border-radius: 12px;">
+                                        <div id="safeCount" style="font-size: 2rem; font-weight: 700; color: #10b981;">0</div>
+                                        <div class="text-secondary" style="font-size: 0.85rem;">Safe Links</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3" style="background: rgba(15, 23, 42, 0.5); border-radius: 12px;">
+                                        <div id="threatCount" style="font-size: 2rem; font-weight: 700; color: #ef4444;">0</div>
+                                        <div class="text-secondary" style="font-size: 0.85rem;">Threats Found</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Risk Breakdown -->
+                            <h6 class="mb-3">Risk Breakdown</h6>
+                            <div id="riskBreakdown">
+                                <!-- Filled by JS -->
+                            </div>
+                            
+                            <!-- Recent Threats -->
+                            <div id="recentThreatsSection" class="mt-4 d-none">
+                                <h6 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Recent Threats</h6>
+                                <div id="recentThreatsList">
+                                    <!-- Filled by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Report IT Issue Button -->
+    <button class="support-fab" id="supportBtn" title="Report IT Issue">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span class="tooltip-text">Report IT Issue</span>
+    </button>
+    
+    <!-- Support Modal -->
+    <div class="support-modal" id="supportModal">
+        <div class="support-modal-content">
+            <div class="support-modal-header">
+                <h3>
+                    <i class="bi bi-exclamation-triangle text-primary"></i>
+                    Report IT Issue
+                </h3>
+                <button class="support-modal-close" id="supportModalClose">&times;</button>
+            </div>
+            <div class="support-modal-body">
+                <!-- Login Required State -->
+                <div id="supportLoginPrompt" class="support-login-prompt" style="display: none;">
+                    <i class="bi bi-person-circle"></i>
+                    <h4>Login Required</h4>
+                    <p>Please log in to report an IT issue. This helps us track your issues and respond faster.</p>
+                    <a href="/login" class="support-login-btn">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        Login to Continue
+                    </a>
+                </div>
+                
+                <!-- IT Issue Form -->
+                <form id="supportForm" style="display: none;">
+                    <div class="support-form-group">
+                        <label for="supportSubject">Issue Summary</label>
+                        <input type="text" id="supportSubject" placeholder="Brief description of the IT issue" required>
+                    </div>
+                    
+                    <div class="support-form-group">
+                        <label>Issue Type</label>
+                        <div class="support-readonly-field">
+                            <i class="bi bi-laptop me-2"></i>Software Issue
+                        </div>
+                        <input type="hidden" id="supportCategory" value="general">
+                    </div>
+                    
+                    <div class="support-form-group">
+                        <label>Priority</label>
+                        <div class="support-readonly-field">
+                            <i class="bi bi-flag me-2"></i>Low
+                            <small class="ms-2 text-secondary">(IT will assess severity)</small>
+                        </div>
+                        <input type="hidden" id="supportPriority" value="low">
+                    </div>
+                    
+                    <div class="support-form-group">
+                        <label for="supportDescription">Issue Details</label>
+                        <textarea id="supportDescription" placeholder="Please describe the IT issue in detail. Include any error messages, when it started, what you were doing, and any troubleshooting steps you've tried..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="support-submit-btn" id="supportSubmitBtn">
+                        <i class="bi bi-send-fill"></i>
+                        Submit IT Ticket
+                    </button>
+                </form>
+                
+                <!-- Success State -->
+                <div id="supportSuccess" class="support-success" style="display: none;">
+                    <div class="support-success-icon">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <h4>IT Ticket Submitted!</h4>
+                    <p>Our IT team will review your issue and respond as soon as possible.</p>
+                    <p class="text-secondary">You'll receive updates at your registered email address.</p>
+                    <div class="support-ticket-number" id="supportTicketNumber">TKT-2026-00000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Tutorial Overlay -->
+    <div class="tutorial-overlay" id="tutorialOverlay">
+        <div class="tutorial-container">
+            <div class="tutorial-header">
+                <button class="tutorial-skip" onclick="closeTutorial()">Skip Tutorial</button>
+                <h2>🎉 Welcome to SecureLink!</h2>
+                <p>Let's get you started with a quick tour</p>
+            </div>
+            
+            <div class="tutorial-body">
+                <!-- Slide 1: Welcome -->
+                <div class="tutorial-slide active" data-slide="1">
+                    <h3><i class="bi bi-shield-check"></i> Stay Safe Online</h3>
+                    <p>SecureLink helps you verify suspicious links before clicking them. Protect yourself from phishing attacks, malware, and online scams.</p>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-search"></i>
+                        <div>
+                            <h4>Instant Link Verification</h4>
+                            <p>Paste any URL and get a detailed security analysis in seconds.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-graph-up"></i>
+                        <div>
+                            <h4>Risk Level Assessment</h4>
+                            <p>Clear risk ratings from Safe to Dangerous help you make informed decisions.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide 2: How to Verify Links -->
+                <div class="tutorial-slide" data-slide="2">
+                    <h3><i class="bi bi-link-45deg"></i> How to Verify Links</h3>
+                    <p>Verifying links is simple and takes just a few seconds:</p>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-1-circle-fill"></i>
+                        <div>
+                            <h4>Step 1: Copy the Link</h4>
+                            <p>Right-click the suspicious link and select "Copy Link Address".</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-2-circle-fill"></i>
+                        <div>
+                            <h4>Step 2: Paste & Analyze</h4>
+                            <p>Paste the URL in the input box and click "Analyze Link".</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-3-circle-fill"></i>
+                        <div>
+                            <h4>Step 3: Review Results</h4>
+                            <p>Check the risk level and detailed analysis before visiting the site.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide 3: Email Monitoring -->
+                <div class="tutorial-slide" data-slide="3">
+                    <h3><i class="bi bi-envelope-check"></i> Email Link Monitoring</h3>
+                    <p>Enable automatic scanning of links in your emails for extra protection:</p>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-envelope-paper"></i>
+                        <div>
+                            <h4>Connect Your Email</h4>
+                            <p>Go to your Profile page and connect your Gmail, Outlook, or Yahoo account using an app password.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-robot"></i>
+                        <div>
+                            <h4>Automatic Scanning</h4>
+                            <p>SecureLink will automatically check links in new emails and alert you to potential threats.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <div>
+                            <h4>Weekly Reports</h4>
+                            <p>Receive weekly summaries of scanned links and security insights.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide 4: Getting Help -->
+                <div class="tutorial-slide" data-slide="4">
+                    <h3><i class="bi bi-life-preserver"></i> Getting Help</h3>
+                    <p>We're here to help you stay secure:</p>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-book"></i>
+                        <div>
+                            <h4>User Guide</h4>
+                            <p>Click the "Help" button in the top navigation bar anytime to access the full user guide.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <div>
+                            <h4>IT Support</h4>
+                            <p>Having technical issues? Click the floating button in the bottom-right corner to report a problem.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-arrow-repeat"></i>
+                        <div>
+                            <h4>Replay Tutorial</h4>
+                            <p>You can view this tutorial again anytime from the User Guide page.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slide 5: Ready to Go -->
+                <div class="tutorial-slide" data-slide="5">
+                    <h3><i class="bi bi-rocket-takeoff"></i> You're All Set!</h3>
+                    <p>You're ready to start protecting yourself from malicious links. Here are some quick tips:</p>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-lightbulb"></i>
+                        <div>
+                            <h4>Trust Your Instincts</h4>
+                            <p>If something seems suspicious, verify it first. It only takes a few seconds!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-check2-all"></i>
+                        <div>
+                            <h4>Check Before You Click</h4>
+                            <p>Even links from friends can be dangerous if their account was compromised.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tutorial-feature">
+                        <i class="bi bi-person-badge"></i>
+                        <div>
+                            <h4>Complete Your Profile</h4>
+                            <p>Visit your profile page to set up email monitoring and customize your settings.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tutorial-footer">
+                <div class="tutorial-dots">
+                    <span class="tutorial-dot active" data-slide="1" onclick="goToSlide(1)"></span>
+                    <span class="tutorial-dot" data-slide="2" onclick="goToSlide(2)"></span>
+                    <span class="tutorial-dot" data-slide="3" onclick="goToSlide(3)"></span>
+                    <span class="tutorial-dot" data-slide="4" onclick="goToSlide(4)"></span>
+                    <span class="tutorial-dot" data-slide="5" onclick="goToSlide(5)"></span>
+                </div>
+                <div class="tutorial-nav">
+                    <button class="tutorial-btn tutorial-btn-secondary" id="tutorialPrev" onclick="prevSlide()" style="display: none;">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </button>
+                    <button class="tutorial-btn tutorial-btn-primary" id="tutorialNext" onclick="nextSlide()">
+                        Next<i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tutorial Functions
+        let currentSlide = 1;
+        const totalSlides = 5;
+        
+        function showTutorial() {
+            document.getElementById('tutorialOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            currentSlide = 1;
+            updateSlideView();
+        }
+        
+        function closeTutorial() {
+            document.getElementById('tutorialOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+            // Mark tutorial as seen on the server
+            const token = getAuthToken();
+            if (token) {
+                fetch('/api/tutorial-seen', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).catch(err => console.error('Error marking tutorial seen:', err));
+            }
+        }
+        
+        function goToSlide(slideNum) {
+            currentSlide = slideNum;
+            updateSlideView();
+        }
+        
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlideView();
+            } else {
+                closeTutorial();
+            }
+        }
+        
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlideView();
+            }
+        }
+        
+        function updateSlideView() {
+            // Update slides
+            document.querySelectorAll('.tutorial-slide').forEach(slide => {
+                slide.classList.remove('active');
+                if (parseInt(slide.dataset.slide) === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            // Update dots
+            document.querySelectorAll('.tutorial-dot').forEach(dot => {
+                dot.classList.remove('active');
+                if (parseInt(dot.dataset.slide) === currentSlide) {
+                    dot.classList.add('active');
+                }
+            });
+            
+            // Update buttons
+            const prevBtn = document.getElementById('tutorialPrev');
+            const nextBtn = document.getElementById('tutorialNext');
+            
+            prevBtn.style.display = currentSlide > 1 ? 'block' : 'none';
+            
+            if (currentSlide === totalSlides) {
+                nextBtn.innerHTML = 'Get Started<i class="bi bi-check-lg ms-2"></i>';
+            } else {
+                nextBtn.innerHTML = 'Next<i class="bi bi-arrow-right ms-2"></i>';
+            }
+        }
+        
+        // Check if tutorial should show on page load
+        async function checkTutorialOnLoad() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const showWelcome = urlParams.get('welcome');
+            const token = getAuthToken();
+            
+            // Show tutorial if welcome param is true (force show)
+            if (showWelcome === 'true') {
+                setTimeout(() => {
+                    showTutorial();
+                }, 500);
+                return;
+            }
+            
+            // Check if user is logged in and hasn't seen tutorial
+            if (token) {
+                try {
+                    const response = await fetch('/api/profile', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Show tutorial only for first-time users who haven't seen it
+                        if (data.user && !data.user.tutorial_seen) {
+                            setTimeout(() => {
+                                showTutorial();
+                            }, 500);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error checking tutorial status:', err);
+                }
+            }
+        }
+    </script>
+
+    <script>
+        // Support Modal Functions
+        const supportBtn = document.getElementById('supportBtn');
+        const supportModal = document.getElementById('supportModal');
+        const supportModalClose = document.getElementById('supportModalClose');
+        const supportForm = document.getElementById('supportForm');
+        const supportLoginPrompt = document.getElementById('supportLoginPrompt');
+        const supportSuccess = document.getElementById('supportSuccess');
+        
+        function openSupportModal() {
+            supportModal.classList.add('active');
+            const token = getAuthToken();
+            
+            // Reset states
+            supportForm.style.display = 'none';
+            supportLoginPrompt.style.display = 'none';
+            supportSuccess.style.display = 'none';
+            
+            if (token) {
+                supportForm.style.display = 'block';
+                supportForm.reset();
+            } else {
+                supportLoginPrompt.style.display = 'block';
+            }
+        }
+        
+        function closeSupportModal() {
+            supportModal.classList.remove('active');
+        }
+        
+        supportBtn.addEventListener('click', openSupportModal);
+        supportModalClose.addEventListener('click', closeSupportModal);
+        
+        // Close modal when clicking outside
+        supportModal.addEventListener('click', (e) => {
+            if (e.target === supportModal) {
+                closeSupportModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && supportModal.classList.contains('active')) {
+                closeSupportModal();
+            }
+        });
+        
+        // Submit support ticket
+        supportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('supportSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+            
+            const ticketData = {
+                subject: document.getElementById('supportSubject').value.trim(),
+                category: document.getElementById('supportCategory').value,
+                priority: document.getElementById('supportPriority').value,
+                description: document.getElementById('supportDescription').value.trim()
+            };
+            
+            try {
+                const response = await fetch('/api/support/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
+                    },
+                    body: JSON.stringify(ticketData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Show success state
+                    supportForm.style.display = 'none';
+                    supportSuccess.style.display = 'block';
+                    document.getElementById('supportTicketNumber').textContent = data.ticket.ticket_number;
+                    
+                    // Auto-close after 5 seconds
+                    setTimeout(() => {
+                        closeSupportModal();
+                    }, 5000);
+                } else {
+                    alert(data.error || 'Failed to submit ticket. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting support ticket:', error);
+                alert('Error submitting ticket. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send-fill"></i> Submit Ticket';
+            }
+        });
+
+        // ============== File Scanning Functions ==============
+        let selectedFileData = null;
+        
+        function switchVerificationTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.verification-tab').forEach(t => {
+                t.classList.remove('active');
+                if (t.dataset.tab === tab) t.classList.add('active');
+            });
+            
+            // Update panels
+            document.querySelectorAll('.verification-panel').forEach(p => {
+                p.classList.remove('active');
+            });
+            document.getElementById(tab + 'Panel').classList.add('active');
+        }
+        
+        // File Drop Zone Event Handlers
+        const fileDropZone = document.getElementById('fileDropZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileDropZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileDropZone.addEventListener(eventName, () => {
+                fileDropZone.classList.add('drag-over');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileDropZone.addEventListener(eventName, () => {
+                fileDropZone.classList.remove('drag-over');
+            });
+        });
+        
+        fileDropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        });
+        
+        fileDropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+        
+        function handleFileSelection(file) {
+            // Check file size (max 200MB)
+            const maxSize = 200 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('File size exceeds 200MB limit. Please select a smaller file.');
+                return;
+            }
+            
+            // Check file type
+            const allowedExtensions = ['.txt', '.html', '.htm', '.js', '.css', '.json', '.xml', '.csv', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.eml', '.msg'];
+            const extension = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(extension)) {
+                alert('File type not supported. Please select a supported file type.');
+                return;
+            }
+            
+            selectedFileData = file;
+            
+            // Update UI
+            fileDropZone.classList.add('has-file');
+            document.getElementById('selectedFile').style.display = 'flex';
+            document.getElementById('selectedFileName').textContent = file.name;
+            document.getElementById('selectedFileSize').textContent = formatFileSize(file.size);
+            document.getElementById('scanFileBtn').disabled = false;
+            document.getElementById('fileResult').style.display = 'none';
+            
+            // Update file icon based on type
+            const iconEl = document.getElementById('selectedFileIcon');
+            iconEl.className = 'bi ' + getFileIcon(extension);
+        }
+        
+        function getFileIcon(extension) {
+            const icons = {
+                '.pdf': 'bi-file-earmark-pdf',
+                '.doc': 'bi-file-earmark-word',
+                '.docx': 'bi-file-earmark-word',
+                '.xls': 'bi-file-earmark-excel',
+                '.xlsx': 'bi-file-earmark-excel',
+                '.html': 'bi-file-earmark-code',
+                '.htm': 'bi-file-earmark-code',
+                '.js': 'bi-file-earmark-code',
+                '.css': 'bi-file-earmark-code',
+                '.json': 'bi-file-earmark-code',
+                '.xml': 'bi-file-earmark-code',
+                '.txt': 'bi-file-earmark-text',
+                '.csv': 'bi-file-earmark-spreadsheet',
+                '.eml': 'bi-envelope',
+                '.msg': 'bi-envelope'
+            };
+            return icons[extension] || 'bi-file-earmark';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function removeSelectedFile() {
+            selectedFileData = null;
+            fileInput.value = '';
+            fileDropZone.classList.remove('has-file');
+            document.getElementById('selectedFile').style.display = 'none';
+            document.getElementById('scanFileBtn').disabled = true;
+            document.getElementById('fileResult').style.display = 'none';
+        }
+        
+        async function scanFile() {
+            if (!selectedFileData) return;
+            
+            const btn = document.getElementById('scanFileBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning...';
+            btn.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFileData);
+            
+            try {
+                const headers = {};
+                const token = getAuthToken();
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch('/api/scan-file', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayFileResult(data);
+                } else {
+                    alert(data.error || 'Error scanning file');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error scanning file. Please try again.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Scan File';
+                btn.disabled = false;
+            }
+        }
+        
+        function displayFileResult(data) {
+            const resultEl = document.getElementById('fileResult');
+            const iconEl = document.getElementById('fileResultIcon');
+            const titleEl = document.getElementById('fileResultTitle');
+            const summaryEl = document.getElementById('fileResultSummary');
+            const findingsEl = document.getElementById('fileFindings');
+            
+            resultEl.style.display = 'block';
+            
+            // Update icon and colors based on risk level
+            iconEl.className = 'file-result-icon';
+            if (data.risk_level === 'safe' || data.risk_level === 'low') {
+                iconEl.classList.add('safe');
+                iconEl.innerHTML = '<i class="bi bi-check-lg"></i>';
+                titleEl.textContent = 'File Appears Safe';
+                summaryEl.textContent = data.threats_count === 0 ? 'No threats detected' : `${data.threats_count} potential issue(s) found`;
+            } else if (data.risk_level === 'medium') {
+                iconEl.classList.add('warning');
+                iconEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
+                titleEl.textContent = 'Potential Risks Found';
+                summaryEl.textContent = `${data.threats_count} potential issue(s) require attention`;
+            } else {
+                iconEl.classList.add('danger');
+                iconEl.innerHTML = '<i class="bi bi-x-lg"></i>';
+                titleEl.textContent = 'Threats Detected';
+                summaryEl.textContent = `${data.threats_count} threat(s) found - Do not open this file`;
+            }
+            
+            // Display findings
+            findingsEl.innerHTML = '';
+            
+            if (data.threats && data.threats.length > 0) {
+                data.threats.forEach(threat => {
+                    findingsEl.innerHTML += `
+                        <div class="file-finding threat">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <div>${escapeHtml(threat)}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.warnings && data.warnings.length > 0) {
+                data.warnings.forEach(warning => {
+                    findingsEl.innerHTML += `
+                        <div class="file-finding warning">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <div>${escapeHtml(warning)}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (data.info && data.info.length > 0) {
+                data.info.forEach(info => {
+                    findingsEl.innerHTML += `
+                        <div class="file-finding info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <div>${escapeHtml(info)}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (findingsEl.innerHTML === '') {
+                findingsEl.innerHTML = `
+                    <div class="file-finding info">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <div>No suspicious content detected in this file.</div>
+                    </div>
+                `;
+            }
+            
+            // Scroll to results
+            resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Verify form submission
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return;
+
+            const btn = document.getElementById('verifyBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await response.json();
+                displayResult(data);
+                loadRecent();
+                loadHistory();
+                loadStats();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error verifying link. Please try again.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-search me-2"></i>Verify Link';
+                btn.disabled = false;
+            }
+        });
+
+        // Display verification result
+        function displayResult(data) {
+            const section = document.getElementById('resultSection');
+            const card = document.getElementById('resultCard');
+            const scoreCircle = document.getElementById('scoreCircle');
+            const scoreValue = document.getElementById('scoreValue');
+            const resultTitle = document.getElementById('resultTitle');
+            const riskBadge = document.getElementById('riskBadge');
+            const checkedUrl = document.getElementById('checkedUrl');
+
+            section.style.display = 'block';
+
+            // Reset classes
+            card.className = 'card result-card p-4';
+            scoreCircle.className = 'score-circle';
+            riskBadge.className = 'risk-badge';
+
+            // Set score
+            const scorePercent = Math.round(data.risk_score * 100);
+            scoreValue.textContent = scorePercent + '%';
+
+            // Set URL
+            checkedUrl.textContent = data.url;
+            checkedUrl.title = data.url;
+
+            // Set based on safety
+            if (data.is_safe) {
+                card.classList.add('result-safe');
+                scoreCircle.classList.add('score-safe');
+                resultTitle.textContent = 'Link Appears Safe';
+                resultTitle.innerHTML = '<i class="bi bi-check-circle-fill text-success me-2"></i>' + resultTitle.textContent;
+            } else if (data.risk_level === 'medium') {
+                card.classList.add('result-warning');
+                scoreCircle.classList.add('score-warning');
+                resultTitle.textContent = 'Proceed with Caution';
+                resultTitle.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>' + resultTitle.textContent;
+            } else {
+                card.classList.add('result-danger');
+                scoreCircle.classList.add('score-danger');
+                resultTitle.textContent = 'Potentially Dangerous';
+                resultTitle.innerHTML = '<i class="bi bi-x-circle-fill text-danger me-2"></i>' + resultTitle.textContent;
+            }
+
+            // Risk badge
+            riskBadge.textContent = data.risk_level;
+            riskBadge.classList.add('risk-' + data.risk_level);
+
+            // Threats
+            const threatsSection = document.getElementById('threatsSection');
+            const threatsList = document.getElementById('threatsList');
+            if (data.threats_detected && data.threats_detected.length > 0) {
+                threatsSection.style.display = 'block';
+                threatsList.innerHTML = data.threats_detected.map(t => 
+                    `<div class="threat-item"><i class="bi bi-exclamation-diamond me-2"></i>${t}</div>`
+                ).join('');
+            } else {
+                threatsSection.style.display = 'none';
+            }
+
+            // Warnings
+            const warningsSection = document.getElementById('warningsSection');
+            const warningsList = document.getElementById('warningsList');
+            if (data.warnings && data.warnings.length > 0) {
+                warningsSection.style.display = 'block';
+                warningsList.innerHTML = data.warnings.map(w => 
+                    `<div class="warning-item"><i class="bi bi-exclamation-circle me-2"></i>${w}</div>`
+                ).join('');
+            } else {
+                warningsSection.style.display = 'none';
+            }
+
+            // Details
+            document.getElementById('detailsJson').textContent = JSON.stringify(data.details, null, 2);
+
+            // Scroll to result
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Tech-focused fallback images (no humans) - expanded collection
+        const techFallbackImages = [
+            'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1510511459019-5dda7724fd87?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1516110833967-0b5716ca1387?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1509395176047-4a66953fd231?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1562813733-b31f71025d54?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1517433456452-f9633a875f6f?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1535191042502-e6a9a3d407e7?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1484807352052-23338990c6c6?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400&h=200&fit=crop'
+        ];
+        
+        // Simple hash function for consistent image selection based on article title
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+        
+        function handleImageError(img, index, title = '') {
+            // Use title hash if available, otherwise fall back to index
+            const hashIndex = title ? hashString(title) : index;
+            const fallback = techFallbackImages[hashIndex % techFallbackImages.length];
+            img.src = fallback;
+            img.onerror = null; // Prevent infinite loop
+        }
+
+        // Cyber News Functions
+        function getSourceBadgeClass(source) {
+            const s = source.toLowerCase();
+            if (s.includes('hacker news')) return 'source-hackernews';
+            if (s.includes('bleeping')) return 'source-bleeping';
+            if (s.includes('krebs')) return 'source-krebs';
+            if (s.includes('dark reading')) return 'source-darkreading';
+            if (s.includes('threatpost')) return 'source-threatpost';
+            return 'source-default';
+        }
+        
+        // Load recent scans (last 10 minutes)
+        async function loadRecent() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                const container = document.getElementById('recentList');
+                const countBadge = document.getElementById('recentCount');
+                const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+                
+                // Filter to only items within last 10 minutes
+                const recentItems = data.filter(item => new Date(item.verified_at) > tenMinutesAgo);
+                
+                // Update count badge
+                if (recentItems.length > 0) {
+                    countBadge.textContent = recentItems.length;
+                    countBadge.style.display = 'inline';
+                } else {
+                    countBadge.style.display = 'none';
+                }
+
+                if (recentItems.length === 0) {
+                    container.innerHTML = '<p style="color: #94a3b8;">No scans in the last 10 minutes. Check a link to get started!</p>';
+                    return;
+                }
+
+                container.innerHTML = recentItems.map(item => {
+                    const riskClass = item.is_safe ? 'success' : (item.risk_level === 'medium' ? 'warning' : 'danger');
+                    const icon = item.is_safe ? 'check-circle' : 'exclamation-triangle';
+                    const timeAgo = getTimeAgo(new Date(item.verified_at));
+                    
+                    // Build source info line
+                    let sourceInfo = '';
+                    if (item.source === 'email') {
+                        const account = item.email_account ? `<span class="badge bg-primary me-2">${item.email_account}</span>` : '';
+                        sourceInfo = `<small style="color: #94a3b8;" class="d-block mt-1">
+                            <i class="bi bi-envelope me-1"></i>${account}
+                            From: ${item.email_from || 'Unknown'} | Subject: ${item.email_subject || 'No subject'}
+                        </small>`;
+                    }
+                    
+                    return `
+                        <div class="history-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="truncate" style="max-width: 60%;">
+                                    <i class="bi bi-${icon}-fill text-${riskClass} me-2"></i>
+                                    <a href="#" onclick="document.getElementById('urlInput').value='${item.url}'; return false;" 
+                                       class="text-light text-decoration-none" title="${item.url}">
+                                        ${item.url.length > 60 ? item.url.substring(0, 60) + '...' : item.url}
+                                    </a>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    ${item.source === 'email' ? '<span class="badge bg-info"><i class="bi bi-envelope-fill me-1"></i>Email</span>' : ''}
+                                    <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
+                                    <small style="color: #0ea5e9; font-weight: 500;">${timeAgo}</small>
+                                </div>
+                            </div>
+                            ${sourceInfo}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading recent:', error);
+            }
+        }
+        
+        // Helper function for time ago
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes === 1) return '1 min ago';
+            return `${minutes} mins ago`;
+        }
+
+        // Load history
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                const container = document.getElementById('historyList');
+
+                if (data.length === 0) {
+                    container.innerHTML = '<p class="text-secondary">No verifications yet. Check a link to get started!</p>';
+                    return;
+                }
+
+                container.innerHTML = data.map(item => {
+                    const riskClass = item.is_safe ? 'success' : (item.risk_level === 'medium' ? 'warning' : 'danger');
+                    const icon = item.is_safe ? 'check-circle' : 'exclamation-triangle';
+                    
+                    // Build source info line
+                    let sourceInfo = '';
+                    if (item.source === 'email') {
+                        const account = item.email_account ? `<span class="badge bg-primary me-2">${item.email_account}</span>` : '';
+                        sourceInfo = `<small class="text-secondary d-block mt-1">
+                            <i class="bi bi-envelope me-1"></i>${account}
+                            From: ${item.email_from || 'Unknown'} | Subject: ${item.email_subject || 'No subject'}
+                        </small>`;
+                    }
+                    
+                    return `
+                        <div class="history-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="truncate" style="max-width: 60%;">
+                                    <i class="bi bi-${icon}-fill text-${riskClass} me-2"></i>
+                                    <a href="#" onclick="document.getElementById('urlInput').value='${item.url}'; return false;" 
+                                       class="text-light text-decoration-none" title="${item.url}">
+                                        ${item.url.length > 60 ? item.url.substring(0, 60) + '...' : item.url}
+                                    </a>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    ${item.source === 'email' ? '<span class="badge bg-info"><i class="bi bi-envelope-fill me-1"></i>Email</span>' : ''}
+                                    <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
+                                    <small class="text-secondary">${new Date(item.verified_at).toLocaleDateString()}</small>
+                                </div>
+                            </div>
+                            ${sourceInfo}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                document.getElementById('statTotal').textContent = data.total;
+                document.getElementById('statSafe').textContent = data.safe;
+                document.getElementById('statUnsafe').textContent = data.unsafe;
+
+                const breakdown = document.getElementById('riskBreakdown');
+                const levels = ['safe', 'low', 'medium', 'high', 'critical'];
+                const colors = {
+                    safe: 'success',
+                    low: 'info',
+                    medium: 'warning',
+                    high: 'danger',
+                    critical: 'danger'
+                };
+
+                breakdown.innerHTML = levels.map(level => `
+                    <div class="col-md-2 col-4 text-center mb-3">
+                        <div class="risk-badge risk-${level} mb-2">${data.risk_levels[level] || 0}</div>
+                        <small class="text-secondary text-capitalize">${level}</small>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Check emails button
+        document.getElementById('checkEmailsBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('checkEmailsBtn');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/check-emails', { 
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    let errorMsg = data.error;
+                    if (errorMsg.includes('AUTHENTICATIONFAILED') || errorMsg.includes('Invalid credentials')) {
+                        errorMsg = 'Email authentication failed. For Gmail, make sure you\'re using an App Password (not your regular password). Go to Profile > Email Settings to update your credentials.';
+                    }
+                    alert('Error: ' + errorMsg);
+                } else {
+                    displayEmailLinks(data.results || []);
+                    loadRecent();
+                    loadHistory();
+                    loadStats();
+                    
+                    // Show summary
+                    if (data.count > 0) {
+                        alert(`Found ${data.count} link(s) in your emails!`);
+                    } else if (data.accounts_checked > 0) {
+                        alert(`Checked ${data.accounts_checked} email account(s). No links found in recent emails.`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error checking emails. Make sure your email credentials are configured correctly.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-envelope-open me-2"></i>Check Emails Now';
+                btn.disabled = false;
+            }
+        });
+
+        // Display email links
+        function displayEmailLinks(results) {
+            const container = document.getElementById('emailLinksList');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-secondary">No links found in recent emails.</p>';
+                return;
+            }
+
+            container.innerHTML = results.map(item => {
+                const riskClass = item.verification.is_safe ? 'success' : 'danger';
+                const accountLabel = item.account_label || item.email_account || 'Unknown';
+                return `
+                    <div class="history-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="truncate" style="max-width: 60%;">
+                                <i class="bi bi-link-45deg me-2"></i>${item.link.url}
+                            </span>
+                            <span class="risk-badge risk-${item.verification.risk_level}">${item.verification.risk_level}</span>
+                        </div>
+                        <small class="text-secondary">
+                            <span class="badge bg-primary me-2">${accountLabel}</span>
+                            From: ${item.link.email_from} | Subject: ${item.link.email_subject}
+                        </small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update email status indicator
+        async function updateEmailStatus() {
+            const status = document.getElementById('emailStatus');
+            const token = getAuthToken();
+            
+            // UI elements for email tab
+            const accountsInfo = document.getElementById('emailAccountsInfo');
+            const noAccountsWarning = document.getElementById('noEmailAccountsWarning');
+            const proRequiredWarning = document.getElementById('proRequiredWarning');
+            const connectedAccountsList = document.getElementById('connectedAccountsList');
+            const connectedAccountsText = document.getElementById('connectedAccountsText');
+            const checkEmailsBtn = document.getElementById('checkEmailsBtn');
+            
+            // If not logged in, show disconnected
+            if (!token) {
+                status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not logged in</span>';
+                if (accountsInfo) accountsInfo.style.display = 'none';
+                if (noAccountsWarning) noAccountsWarning.style.display = 'block';
+                if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                if (checkEmailsBtn) checkEmailsBtn.disabled = true;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/email-accounts/status', {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.connected && data.active_count > 0) {
+                    // User has connected accounts - monitoring is automatic
+                    const accountText = data.active_count === 1 ? '1 account' : `${data.active_count} accounts`;
+                    status.innerHTML = `<span class="status-dot connected"></span><span><i class="bi bi-broadcast me-1"></i>${accountText} monitored</span>`;
+                    
+                    // Update email tab
+                    if (accountsInfo) accountsInfo.style.display = 'block';
+                    if (noAccountsWarning) noAccountsWarning.style.display = 'none';
+                    if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                    if (connectedAccountsText) connectedAccountsText.textContent = `${data.active_count} email account(s)`;
+                    
+                    // Show connected accounts as badges
+                    if (data.accounts && data.accounts.length > 0 && connectedAccountsList) {
+                        connectedAccountsList.innerHTML = data.accounts
+                            .filter(a => a.is_active)
+                            .map(a => `<span class="badge bg-success"><i class="bi bi-broadcast me-1"></i>${a.label || a.email}</span>`)
+                            .join('');
+                    }
+                    
+                    // Enable check button
+                    if (checkEmailsBtn) checkEmailsBtn.disabled = false;
+                    
+                } else if (data.account_count === 0 && data.connected === false) {
+                    // Check if it's a free user (no email monitoring)
+                    const validateResponse = await fetch('/api/auth/validate', {
+                        headers: getAuthHeaders()
+                    });
+                    const validateData = await validateResponse.json();
+                    
+                    if (validateData.valid && validateData.user.subscription_tier === 'free') {
+                        status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Pro required</span>';
+                        if (accountsInfo) accountsInfo.style.display = 'none';
+                        if (noAccountsWarning) noAccountsWarning.style.display = 'none';
+                        if (proRequiredWarning) proRequiredWarning.style.display = 'block';
+                        if (checkEmailsBtn) checkEmailsBtn.disabled = true;
+                    } else {
+                        status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not configured</span>';
+                        if (accountsInfo) accountsInfo.style.display = 'none';
+                        if (noAccountsWarning) noAccountsWarning.style.display = 'block';
+                        if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                        if (checkEmailsBtn) checkEmailsBtn.disabled = true;
+                    }
+                } else {
+                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not configured</span>';
+                    if (accountsInfo) accountsInfo.style.display = 'none';
+                    if (noAccountsWarning) noAccountsWarning.style.display = 'block';
+                    if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking email status:', error);
+                status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Disconnected</span>';
+            }
+        }
+
+        // Auth token management
+        function getAuthToken() {
+            return localStorage.getItem('auth_token');
+        }
+
+        function getAuthHeaders() {
+            const token = getAuthToken();
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        // Check login status and update UI
+        async function checkAuthStatus() {
+            const token = getAuthToken();
+            console.log('Auth check - Token exists:', !!token);
+            
+            if (!token) {
+                updateNavForLoggedOut();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/validate', {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                console.log('Auth validation response:', data);
+
+                if (data.valid && data.user) {
+                    updateNavForLoggedIn(data.user);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                } else {
+                    console.log('Token invalid, clearing');
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    updateNavForLoggedOut();
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                updateNavForLoggedOut();
+            }
+        }
+
+        function updateNavForLoggedIn(user) {
+            console.log('updateNavForLoggedIn called with user:', user);
+            const loggedOutNav = document.getElementById('loggedOutNav');
+            const loggedInNav = document.getElementById('loggedInNav');
+            const userDisplayName = document.getElementById('userDisplayName');
+            const badge = document.getElementById('subBadge');
+            
+            if (!loggedOutNav || !loggedInNav) {
+                console.error('Nav elements not found!');
+                return;
+            }
+            
+            loggedOutNav.classList.add('d-none');
+            loggedInNav.classList.remove('d-none');
+            
+            if (userDisplayName) {
+                userDisplayName.textContent = user.display_name || (user.email ? user.email.split('@')[0] : 'User');
+            }
+            
+            if (badge) {
+                if (user.subscription_tier === 'pro') {
+                    badge.textContent = 'PRO';
+                    badge.className = 'subscription-badge badge-pro';
+                } else if (user.subscription_tier === 'enterprise') {
+                    badge.textContent = 'ENTERPRISE';
+                    badge.className = 'subscription-badge badge-pro';
+                } else {
+                    badge.textContent = 'FREE';
+                    badge.className = 'subscription-badge badge-free';
+                }
+            }
+        }
+
+        function updateNavForLoggedOut() {
+            const loggedOutNav = document.getElementById('loggedOutNav');
+            const loggedInNav = document.getElementById('loggedInNav');
+            if (loggedOutNav) loggedOutNav.classList.remove('d-none');
+            if (loggedInNav) loggedInNav.classList.add('d-none');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login';
+        }
+
+        // Override fetch for API calls to include auth
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            if (url.startsWith('/api/')) {
+                options.headers = {
+                    ...options.headers,
+                    ...getAuthHeaders()
+                };
+            }
+            return originalFetch(url, options);
+        };
+
+        // Initial load
+        // Check for OAuth token in URL
+        (function handleOAuthRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const oauthToken = urlParams.get('oauth_token');
+            const welcome = urlParams.get('welcome');
+            
+            if (oauthToken) {
+                // Store the token and clean URL
+                localStorage.setItem('auth_token', oauthToken);
+                window.history.replaceState({}, document.title, '/');
+                
+                if (welcome === 'true') {
+                    setTimeout(() => {
+                        alert('🎉 Welcome to SecureLink! Your account has been created.');
+                    }, 500);
+                }
+            }
+        })();
+        
+        checkAuthStatus();
+        loadRecent();
+        loadHistory();
+        loadStats();
+        
+        // Auto-refresh recent tab every 30 seconds
+        setInterval(loadRecent, 30000);
+        updateEmailStatus();
+        loadWeeklyStats();
+        
+        // Check if tutorial should be shown (after a brief delay for auth check)
+        setTimeout(checkTutorialOnLoad, 1000);
+        
+        // Periodically check email status (every 30 seconds)
+        setInterval(updateEmailStatus, 30000);
+        
+        // ==================== Weekly Reports Functions ====================
+        
+        async function loadWeeklyStats() {
+            const token = getAuthToken();
+            if (!token) {
+                document.getElementById('weeklyReportsSection').style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reports/weekly-stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await response.json();
+                
+                document.getElementById('weeklyStatsLoading').classList.add('d-none');
+                document.getElementById('weeklyStatsContent').classList.remove('d-none');
+                
+                // Update summary stats
+                document.getElementById('totalScans').textContent = stats.summary.total_scans;
+                document.getElementById('safeCount').textContent = stats.summary.safe_count;
+                document.getElementById('threatCount').textContent = stats.summary.unsafe_count;
+                
+                // Update overall risk
+                const riskColors = {
+                    'critical': '#ef4444',
+                    'high': '#f59e0b',
+                    'medium': '#eab308',
+                    'low': '#22c55e',
+                    'safe': '#10b981',
+                    'unknown': '#64748b'
+                };
+                
+                const riskLevel = stats.overall_risk.level;
+                const riskColor = riskColors[riskLevel] || '#64748b';
+                
+                const riskCard = document.getElementById('overallRiskCard');
+                riskCard.style.background = `${riskColor}22`;
+                riskCard.style.border = `1px solid ${riskColor}44`;
+                
+                document.getElementById('overallRiskLevel').textContent = riskLevel.toUpperCase();
+                document.getElementById('overallRiskLevel').style.color = riskColor;
+                document.getElementById('overallRiskDescription').textContent = stats.overall_risk.description;
+                
+                // Update risk breakdown
+                const breakdownHtml = ['critical', 'high', 'medium', 'low', 'safe'].map(level => {
+                    const count = stats.risk_breakdown[level] || 0;
+                    const total = stats.summary.total_scans || 1;
+                    const pct = (count / total * 100).toFixed(1);
+                    const color = riskColors[level];
+                    
+                    return `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span style="text-transform: capitalize;">${level}</span>
+                                <span class="text-secondary">${count} (${pct}%)</span>
+                            </div>
+                            <div style="background: rgba(148, 163, 184, 0.15); border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div style="background: ${color}; width: ${pct}%; height: 100%; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('riskBreakdown').innerHTML = breakdownHtml;
+                
+                // Update recent threats
+                if (stats.recent_threats && stats.recent_threats.length > 0) {
+                    document.getElementById('recentThreatsSection').classList.remove('d-none');
+                    
+                    const threatsHtml = stats.recent_threats.map(threat => {
+                        const color = riskColors[threat.risk_level] || '#64748b';
+                        return `
+                            <div class="p-3 mb-2" style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid ${color}; border-radius: 0 10px 10px 0;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-break" style="font-size: 0.9rem; color: #f1f5f9;">${threat.url}</span>
+                                    <span style="background: ${color}22; color: ${color}; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-left: 10px; white-space: nowrap;">${threat.risk_level}</span>
+                                </div>
+                                <small style="color: #94a3b8;">Source: ${threat.source}${threat.email_from ? ` | From: ${threat.email_from}` : ''}</small>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('recentThreatsList').innerHTML = threatsHtml;
+                }
+                
+            } catch (error) {
+                console.error('Error loading weekly stats:', error);
+                document.getElementById('weeklyStatsLoading').innerHTML = `
+                    <p class="text-danger"><i class="bi bi-exclamation-circle me-2"></i>Failed to load statistics</p>
+                `;
+            }
+        }
+        
+        async function updateReportPreferences() {
+            const token = getAuthToken();
+            if (!token) return;
+            
+            const enabled = document.getElementById('weeklyReportsEnabled').checked;
+            
+            try {
+                const response = await fetch('/api/reports/preferences', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ weekly_reports_enabled: enabled })
+                });
+                
+                const data = await response.json();
+                
+                const alertEl = document.getElementById('reportAlert');
+                if (data.success) {
+                    alertEl.className = 'alert alert-success';
+                    alertEl.innerHTML = `<i class="bi bi-check-circle me-2"></i>Weekly reports ${enabled ? 'enabled' : 'disabled'}`;
+                } else {
+                    alertEl.className = 'alert alert-danger';
+                    alertEl.innerHTML = `<i class="bi bi-exclamation-circle me-2"></i>${data.error || 'Failed to update preferences'}`;
+                }
+                alertEl.classList.remove('d-none');
+                
+                setTimeout(() => alertEl.classList.add('d-none'), 3000);
+                
+            } catch (error) {
+                console.error('Error updating report preferences:', error);
+            }
+        }
+        
+        async function sendTestReport() {
+            const token = getAuthToken();
+            if (!token) return;
+            
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/reports/send-test', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                const alertEl = document.getElementById('reportAlert');
+                if (data.success) {
+                    alertEl.className = 'alert alert-success';
+                    alertEl.innerHTML = `<i class="bi bi-check-circle me-2"></i>${data.message}`;
+                } else {
+                    alertEl.className = 'alert alert-warning';
+                    alertEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.error || 'Failed to send test report'}`;
+                }
+                alertEl.classList.remove('d-none');
+                
+                setTimeout(() => alertEl.classList.add('d-none'), 5000);
+                
+            } catch (error) {
+                console.error('Error sending test report:', error);
+                const alertEl = document.getElementById('reportAlert');
+                alertEl.className = 'alert alert-danger';
+                alertEl.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>Failed to send test report';
+                alertEl.classList.remove('d-none');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

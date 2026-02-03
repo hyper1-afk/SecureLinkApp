@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warning - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .warning-glow {
+            animation: warning-pulse 2s infinite;
+        }
+        @keyframes warning-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 187, 51, 0.4); }
+            50% { box-shadow: 0 0 30px 10px rgba(255, 187, 51, 0.2); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white flex items-center justify-center">
+    <div class="max-w-lg mx-auto p-6">
+        <div class="text-center">
+            <!-- Warning Icon -->
+            <div class="inline-block p-6 rounded-full bg-yellow-500 bg-opacity-20 mb-6 warning-glow">
+                <i class="fas fa-exclamation-triangle text-6xl text-yellow-400"></i>
+            </div>
+
+            <h1 class="text-3xl font-bold mb-4">Security Warning</h1>
+            
+            <p class="text-gray-300 text-lg mb-6">
+                The link you're about to visit has been flagged as potentially risky.
+            </p>
+
+            <!-- Risk Info -->
+            <div class="bg-gray-800 rounded-xl p-6 mb-6 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400">Risk Score</span>
+                    <span class="text-2xl font-bold text-yellow-400">{{ risk_score }}/100</span>
+                </div>
+                
+                <div class="mb-4">
+                    <span class="text-gray-400 block mb-2">Destination URL</span>
+                    <code class="block p-3 bg-gray-900 rounded-lg text-sm text-red-400 break-all">
+                        {{ short_link.original_url }}
+                    </code>
+                </div>
+
+                <div class="p-4 bg-yellow-500 bg-opacity-10 border border-yellow-500 border-opacity-30 rounded-lg">
+                    <p class="text-sm text-yellow-300">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        This link may contain phishing content, malware, or other security risks. 
+                        Proceed only if you trust the source.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="/home" 
+                   class="flex-1 py-3 px-6 bg-green-500 rounded-lg font-semibold hover:bg-green-600 transition text-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Go Back to Safety
+                </a>
+                <a href="{{ short_link.original_url }}" 
+                   class="flex-1 py-3 px-6 bg-gray-700 border border-red-500 rounded-lg font-semibold hover:bg-gray-600 transition text-center text-red-400">
+                    <i class="fas fa-external-link-alt mr-2"></i>Continue Anyway
+                </a>
+            </div>
+
+            <!-- SecureLink Branding -->
+            <div class="mt-8 text-gray-500 text-sm">
+                <i class="fas fa-shield-alt mr-1"></i>
+                Protected by <a href="/home" class="text-blue-400 hover:underline">SecureLink</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

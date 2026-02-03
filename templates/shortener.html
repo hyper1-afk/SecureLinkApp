@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Link Reducer - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .short-url {
+            font-family: monospace;
+            background: rgba(0, 200, 81, 0.1);
+            border: 1px solid rgba(0, 200, 81, 0.3);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-700">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <a href="/home" class="text-2xl font-bold">
+                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/home" class="hover:text-blue-400 transition">Home</a>
+                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
+                <a href="/community" class="hover:text-blue-400 transition">Community</a>
+                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="inline-block p-4 rounded-full bg-green-500 bg-opacity-20 mb-4">
+                <i class="fas fa-link text-5xl text-green-400"></i>
+            </div>
+            <h1 class="text-4xl font-bold mb-4">Safe Link Reducer</h1>
+            <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                Create reduced, shareable links that are pre-verified for safety. 
+                Recipients can trust links from SecureLink.
+            </p>
+        </div>
+
+        <!-- Shorten Link Card -->
+        <div class="card-glass rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6">
+                <i class="fas fa-magic text-purple-400 mr-2"></i>Reduce & Verify
+            </h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Enter URL to reduce</label>
+                    <input type="url" id="urlInput" 
+                           class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                           placeholder="https://example.com/long-url-here">
+                </div>
+                
+                <button onclick="shortenUrl()" 
+                        class="w-full py-4 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
+                    <i class="fas fa-compress-alt mr-2"></i>Reduce & Verify Link
+                </button>
+            </div>
+
+            <!-- Result Area -->
+            <div id="shortenResult" class="mt-6 hidden">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Benefits -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="card-glass rounded-xl p-6 text-center">
+                <i class="fas fa-shield-alt text-4xl text-green-400 mb-4"></i>
+                <h3 class="text-lg font-semibold mb-2">Pre-Verified</h3>
+                <p class="text-gray-400 text-sm">Every link is scanned before shortening</p>
+            </div>
+            <div class="card-glass rounded-xl p-6 text-center">
+                <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
+                <h3 class="text-lg font-semibold mb-2">Warning Pages</h3>
+                <p class="text-gray-400 text-sm">Risky links show a warning before redirecting</p>
+            </div>
+            <div class="card-glass rounded-xl p-6 text-center">
+                <i class="fas fa-chart-bar text-4xl text-blue-400 mb-4"></i>
+                <h3 class="text-lg font-semibold mb-2">Click Tracking</h3>
+                <p class="text-gray-400 text-sm">See how many times your links are clicked</p>
+            </div>
+        </div>
+
+        <!-- My Links -->
+        <div class="card-glass rounded-2xl p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold">
+                    <i class="fas fa-list text-blue-400 mr-2"></i>My Reduced Links
+                </h2>
+                <div class="text-gray-400">
+                    <span id="totalClicks">0</span> total clicks
+                </div>
+            </div>
+            
+            <div id="linksList" class="space-y-4">
+                <p class="text-gray-400 text-center py-8">Loading your links...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('auth_token');
+
+        async function shortenUrl() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            if (!token) {
+                alert('Please log in to shorten links');
+                window.location.href = '/login';
+                return;
+            }
+
+            const resultDiv = document.getElementById('shortenResult');
+            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-purple-400"></i><p class="mt-2">Verifying and shortening...</p></div>';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const safetyClass = data.is_safe ? 'bg-green-500' : 'bg-yellow-500';
+                    const safetyText = data.is_safe ? 'Safe' : 'Warning';
+                    const safetyIcon = data.is_safe ? 'fa-check-circle' : 'fa-exclamation-triangle';
+
+                    resultDiv.innerHTML = `
+                        <div class="p-6 bg-gray-800 rounded-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold">Your Reduced Link</h3>
+                                <span class="px-3 py-1 rounded-full text-sm ${safetyClass} bg-opacity-20 border border-current">
+                                    <i class="fas ${safetyIcon} mr-1"></i>${safetyText}
+                                </span>
+                            </div>
+                            
+                            <div class="short-url p-4 rounded-lg mb-4 flex items-center justify-between">
+                                <span class="text-green-400 text-lg break-all">${data.short_url}</span>
+                                <button onclick="copyToClipboard('${data.short_url}')" 
+                                        class="ml-4 px-4 py-2 bg-green-500 rounded-lg hover:bg-green-600 transition flex-shrink-0">
+                                    <i class="fas fa-copy mr-2"></i>Copy
+                                </button>
+                            </div>
+                            
+                            <div class="text-sm text-gray-400">
+                                <p><strong>Original:</strong> <span class="break-all">${data.original_url}</span></p>
+                                <p class="mt-1"><strong>Risk Score:</strong> ${data.risk_score}/100</p>
+                            </div>
+                            
+                            ${!data.is_safe ? `
+                                <div class="mt-4 p-3 bg-yellow-500 bg-opacity-10 border border-yellow-500 rounded-lg text-sm">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    This link has some risk indicators. Recipients will see a warning page before being redirected.
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    // Refresh links list
+                    loadMyLinks();
+                    document.getElementById('urlInput').value = '';
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            ${data.error || 'Failed to shorten link'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        Error shortening link. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        async function loadMyLinks() {
+            if (!token) {
+                document.getElementById('linksList').innerHTML = '<p class="text-gray-400 text-center py-8">Log in to see your links</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/shorten/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                document.getElementById('totalClicks').textContent = data.total_clicks || 0;
+
+                const container = document.getElementById('linksList');
+                const links = data.links || [];
+
+                if (links.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 text-center py-8">No reduced links yet. Create your first one above!</p>';
+                    return;
+                }
+
+                container.innerHTML = links.map(link => {
+                    const safetyClass = link.is_safe ? 'text-green-400' : 'text-yellow-400';
+                    const safetyIcon = link.is_safe ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                    const shortUrl = `${window.location.origin}/s/${link.short_code}`;
+
+                    return `
+                        <div class="p-4 bg-gray-800 rounded-lg">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fas ${safetyIcon} ${safetyClass}"></i>
+                                        <a href="${shortUrl}" target="_blank" class="text-blue-400 hover:underline font-mono">
+                                            ${shortUrl}
+                                        </a>
+                                    </div>
+                                    <p class="text-sm text-gray-400 truncate">${link.original_url}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold">${link.click_count || 0}</p>
+                                        <p class="text-xs text-gray-400">clicks</p>
+                                    </div>
+                                    <button onclick="copyToClipboard('${shortUrl}')" 
+                                            class="px-3 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading links:', error);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief toast
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 px-4 py-2 bg-green-500 rounded-lg text-white';
+                toast.textContent = 'Copied to clipboard!';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadMyLinks);
+    </script>
+</body>
+</html>
