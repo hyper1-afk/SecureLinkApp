@@ -1135,14 +1135,44 @@ def scan_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
-    # Check file size (max 200MB)
+    # Check auth and determine file size limit based on subscription tier
+    token = get_token_from_request()
+    user_id = None
+    subscription_tier = 'free'
+    
+    if token:
+        user_data = auth_manager.validate_token(token)
+        if user_data:
+            user_id = user_data['user']['id']
+            subscription_tier = user_data['user'].get('subscription_tier', 'free')
+    
+    # Set file size limit based on tier
+    tier_limits = {
+        'free': 0,          # No file scanning for free users
+        'pro': 50,          # 50MB for Pro
+        'enterprise': 200   # 200MB for Enterprise
+    }
+    max_size_mb = tier_limits.get(subscription_tier, 0)
+    
+    # Free users cannot scan files
+    if max_size_mb == 0:
+        return jsonify({
+            'error': 'File scanning requires a Pro or Enterprise subscription',
+            'upgrade_required': True
+        }), 403
+    
+    # Check file size
     file.seek(0, 2)  # Seek to end
     file_size = file.tell()
     file.seek(0)  # Seek back to start
     
-    max_size = 200 * 1024 * 1024  # 200MB
+    max_size = max_size_mb * 1024 * 1024
     if file_size > max_size:
-        return jsonify({'error': 'File size exceeds 200MB limit'}), 400
+        return jsonify({
+            'error': f'File size exceeds {max_size_mb}MB limit for your plan',
+            'current_limit_mb': max_size_mb,
+            'upgrade_hint': 'Upgrade to Enterprise for 200MB file scanning' if subscription_tier == 'pro' else None
+        }), 400
     
     # Get file extension
     filename = file.filename.lower()
@@ -1152,21 +1182,15 @@ def scan_file():
     if extension not in allowed_extensions:
         return jsonify({'error': 'File type not supported'}), 400
     
-    # Check auth for scan limits (optional)
-    token = get_token_from_request()
-    user_id = None
-    
-    if token:
-        user_data = auth_manager.validate_token(token)
-        if user_data:
-            user_id = user_data['user']['id']
-            limit_check = auth_manager.check_scan_limit(user_id)
-            if not limit_check.get('allowed'):
-                return jsonify({
-                    'error': 'Daily scan limit reached',
-                    'limit': limit_check.get('limit'),
-                    'used': limit_check.get('used')
-                }), 429
+    # Check scan limits
+    if user_id:
+        limit_check = auth_manager.check_scan_limit(user_id)
+        if not limit_check.get('allowed'):
+            return jsonify({
+                'error': 'Daily scan limit reached',
+                'limit': limit_check.get('limit'),
+                'used': limit_check.get('used')
+            }), 429
     
     try:
         # Read file content

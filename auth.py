@@ -1079,50 +1079,78 @@ SUBSCRIPTION_PLANS = {
         'name': 'Free',
         'price': 0,
         'period': None,
+        'max_scans_per_day': 10,
+        'max_email_accounts': 0,
+        'max_file_size_mb': 0,
+        'hourly_alerts': False,
+        'weekly_reports': False,
+        'api_access': False,
         'features': [
             '10 link scans per day',
             'Basic threat detection',
             'Scan history (7 days)',
-            'Desktop notifications'
+            'Password breach checker',
+            'Security news feed',
+            'Browser extension',
+            'Community threat reports'
         ],
         'limitations': [
+            'No file scanning',
             'No email monitoring',
-            'No API access',
-            'No advanced analysis'
+            'No email alerts or reports',
+            'No API access'
         ]
     },
     'pro': {
         'name': 'Pro',
         'price': 9.99,
         'period': 'month',
+        'max_scans_per_day': 500,
         'max_email_accounts': 5,
+        'max_file_size_mb': 50,
+        'hourly_alerts': False,
+        'weekly_reports': True,
+        'api_access': True,
         'features': [
             '500 link scans per day',
-            'Advanced threat detection',
+            'Advanced AI threat detection',
+            'File scanning up to 50MB',
             'Monitor up to 5 email accounts',
+            'Weekly security email reports',
             'Full scan history',
             'API access',
             'Whitelist/Blacklist management',
             'Export reports',
             'Priority email support'
         ],
-        'limitations': []
+        'limitations': [
+            'No hourly threat alerts (Enterprise only)'
+        ]
     },
     'enterprise': {
         'name': 'Enterprise',
         'price': 49.99,
         'period': 'month',
+        'max_scans_per_day': -1,  # Unlimited
         'max_email_accounts': 25,
+        'max_file_size_mb': 200,
+        'hourly_alerts': True,
+        'weekly_reports': True,
+        'api_access': True,
         'features': [
             'Unlimited link scans',
-            'Advanced threat detection',
+            'Advanced AI threat detection',
+            'File scanning up to 200MB',
             'Monitor up to 25 email accounts',
+            'Hourly threat alerts',
+            'Weekly security email reports',
             'Full scan history',
             'Full API access',
             'Custom integrations',
             'Priority phone support',
             'Team management',
-            'SSO integration'
+            'SSO integration',
+            'Dedicated account manager'
         ],
         'limitations': []
     }

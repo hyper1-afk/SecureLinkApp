@@ -1449,8 +1449,9 @@
                                 Browse Files
                                 <input type="file" id="fileInput" hidden accept=".txt,.html,.htm,.js,.css,.json,.xml,.csv,.pdf,.doc,.docx,.xls,.xlsx,.eml,.msg">
                             </label>
-                            <div class="file-types">
-                                Supported: TXT, HTML, JS, CSS, JSON, XML, CSV, PDF, DOC, DOCX, XLS, XLSX, EML, MSG (Max 200MB)
+                            <div class="file-types" id="fileLimitText">
+                                Supported: TXT, HTML, JS, CSS, JSON, XML, CSV, PDF, DOC, DOCX, XLS, XLSX, EML, MSG
+                                <span id="fileSizeLimit">(Pro: 50MB | Enterprise: 200MB)</span>
                             </div>
                         </div>
                         
@@ -2296,10 +2297,26 @@
         });
         
         function handleFileSelection(file) {
-            // Check file size (max 200MB)
-            const maxSize = 200 * 1024 * 1024;
+            // Get user's subscription tier to determine file size limit
+            const userTier = window.currentUserTier || 'free';
+            const tierLimits = {
+                'free': 0,
+                'pro': 50 * 1024 * 1024,     // 50MB
+                'enterprise': 200 * 1024 * 1024  // 200MB
+            };
+            const maxSize = tierLimits[userTier] || 0;
+            
+            // Free users can't scan files
+            if (maxSize === 0) {
+                alert('File scanning requires a Pro or Enterprise subscription. Upgrade to unlock this feature!');
+                return;
+            }
+            
+            // Check file size based on tier
             if (file.size > maxSize) {
-                alert('File size exceeds 200MB limit. Please select a smaller file.');
+                const limitMB = maxSize / (1024 * 1024);
+                const upgradeMsg = userTier === 'pro' ? ' Upgrade to Enterprise for 200MB file scanning.' : '';
+                alert(`File size exceeds ${limitMB}MB limit for your plan.${upgradeMsg}`);
                 return;
             }
             
@@ -3006,6 +3023,9 @@
             const userDisplayName = document.getElementById('userDisplayName');
             const badge = document.getElementById('subBadge');
             
+            // Store user tier globally for feature gating
+            window.currentUserTier = user.subscription_tier || 'free';
+            
             if (!loggedOutNav || !loggedInNav) {
                 console.error('Nav elements not found!');
                 return;
@@ -3037,6 +3057,9 @@
             const loggedInNav = document.getElementById('loggedInNav');
             if (loggedOutNav) loggedOutNav.classList.remove('d-none');
             if (loggedInNav) loggedInNav.classList.add('d-none');
+            
+            // Reset user tier to free when logged out
+            window.currentUserTier = 'free';
         }
 
         async function logout() {

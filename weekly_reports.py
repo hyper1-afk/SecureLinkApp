@@ -436,7 +436,8 @@ class WeeklyReportGenerator:
     
     def send_all_reports(self, auth_manager) -> Dict:
         """
-        Send weekly reports to all users who have opted in.
+        Send weekly reports to Pro and Enterprise users who have opted in.
+        Weekly reports are a paid feature (Pro and Enterprise only).
         
         Args:
             auth_manager: AuthManager instance to get users
@@ -444,7 +445,7 @@ class WeeklyReportGenerator:
         Returns:
             Dict with sent, failed, skipped counts
         """
-        results = {'sent': 0, 'failed': 0, 'skipped': 0}
+        results = {'sent': 0, 'failed': 0, 'skipped': 0, 'free_tier': 0}
         
         try:
             session = auth_manager.Session()
@@ -457,6 +458,11 @@ class WeeklyReportGenerator:
             ).all()
             
             for user in users:
+                # Only Pro and Enterprise users get weekly reports
+                if user.subscription_tier not in ['pro', 'enterprise']:
+                    results['free_tier'] += 1
+                    continue
+                
                 user_dict = {
                     'id': user.id,
                     'email': user.email,
@@ -775,7 +781,8 @@ class WeeklyReportGenerator:
     
     def send_all_hourly_reports(self, auth_manager) -> Dict:
         """
-        Send hourly threat reports to all users with active email monitoring.
+        Send hourly threat reports to ENTERPRISE users with active email monitoring.
+        Hourly alerts are an Enterprise-only feature.
         
         Args:
             auth_manager: AuthManager instance to get users
@@ -783,7 +790,7 @@ class WeeklyReportGenerator:
         Returns:
             Dict with sent, skipped counts
         """
-        results = {'sent': 0, 'skipped': 0, 'failed': 0}
+        results = {'sent': 0, 'skipped': 0, 'failed': 0, 'not_enterprise': 0}
         
         try:
             session = auth_manager.Session()
@@ -799,6 +806,11 @@ class WeeklyReportGenerator:
             ).distinct().all()
             
             for user in users_with_monitoring:
+                # Only Enterprise users get hourly alerts
+                if user.subscription_tier != 'enterprise':
+                    results['not_enterprise'] += 1
+                    continue
+                
                 user_dict = {
                     'id': user.id,
                     'email': user.email,
