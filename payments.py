@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 # Stripe Price IDs - Replace with your actual Stripe Price IDs
 STRIPE_PRICES = {
-    'pro_monthly': 'price_1Sw63DAq4LTyI7HZMSAeZcRS',  # $9.99/month
-    'pro_yearly': 'price_1Sw63DAq4LTyI7HZ6OTxcggc',    # $99.99/year (save ~17%)
-    'enterprise_monthly': 'price_1Sw63DAq4LTyI7HZGEux6f2S',  # $49.99/month
-    'enterprise_yearly': 'price_1Sw63EAq4LTyI7HZOCvhwUDd',    # $499.99/year (save ~17%)
+    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $9.99/month
+    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $99.99/year (save ~17%)
+    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $49.99/month
+    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',    # $499.99/year (save ~17%)
 }
 
 PLAN_PRICES = {
