@@ -242,8 +242,19 @@ class Database:
     
     def __init__(self, config: Config = None):
         self.config = config or Config()
-        self.engine = create_engine(f'sqlite:///{self.config.DATABASE_PATH}')
-        Base.metadata.create_all(self.engine)
+        
+        # Use PostgreSQL if DATABASE_URL is set, otherwise fall back to SQLite
+        if self.config.DATABASE_URL:
+            # Handle DigitalOcean's postgres:// vs postgresql:// URL format
+            db_url = self.config.DATABASE_URL
+            if db_url.startswith('postgres://'):
+                db_url = db_url.replace('postgres://', 'postgresql://', 1)
+            self.engine = create_engine(db_url)
+        else:
+            self.engine = create_engine(f'sqlite:///{self.config.DATABASE_PATH}')
+        
+        # Create tables only if they don't exist
+        Base.metadata.create_all(self.engine, checkfirst=True)
         self._migrate_database()
         self.Session = sessionmaker(bind=self.engine)
     
