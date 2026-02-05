@@ -384,6 +384,68 @@ def validate_token():
     return jsonify({'valid': False})
 
 
+@app.route('/api/admin/emergency-reset', methods=['POST'])
+def emergency_password_reset():
+    """Emergency password reset endpoint - requires secret key"""
+    data = request.get_json()
+    
+    # Require a secret key for security
+    secret_key = data.get('secret_key', '')
+    if secret_key != 'SecureLink2026EmergencyReset!':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    email = data.get('email', '').strip()
+    new_password = data.get('new_password', '')
+    
+    if not email or not new_password:
+        return jsonify({'success': False, 'error': 'Email and new_password required'}), 400
+    
+    result = auth_manager.reset_password_by_email(email, new_password)
+    return jsonify(result)
+
+
+@app.route('/api/admin/check-user', methods=['POST'])
+def check_user_exists():
+    """Check if user exists in database - requires secret key"""
+    data = request.get_json()
+    
+    secret_key = data.get('secret_key', '')
+    if secret_key != 'SecureLink2026EmergencyReset!':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    email = data.get('email', '').strip()
+    
+    session = auth_manager.get_session()
+    try:
+        from auth import User
+        user = session.query(User).filter(User.email == email).first()
+        if user:
+            return jsonify({
+                'success': True,
+                'found': True,
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'username': user.username,
+                    'has_password': bool(user.password_hash),
+                    'has_salt': bool(user.salt),
+                    'is_active': user.is_active,
+                    'created_at': str(user.created_at) if user.created_at else None
+                }
+            })
+        else:
+            # List all users for debugging
+            all_users = session.query(User).limit(10).all()
+            return jsonify({
+                'success': True,
+                'found': False,
+                'total_users': len(all_users),
+                'sample_emails': [u.email for u in all_users]
+            })
+    finally:
+        session.close()
+
+
 @app.route('/api/auth/change-password', methods=['POST'])
 @require_auth
 def change_password():
