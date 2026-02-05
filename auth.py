@@ -335,15 +335,18 @@ class AuthManager:
         """Authenticate user and create session"""
         session = self.get_session()
         try:
-            # Find user
+            # Find user (case-insensitive for email/username)
+            from sqlalchemy import func
+            email_or_username_lower = email_or_username.lower()
             user = session.query(User).filter(
-                (User.email == email_or_username) | (User.username == email_or_username)
+                (func.lower(User.email) == email_or_username_lower) | 
+                (func.lower(User.username) == email_or_username_lower)
             ).first()
             
             if not user:
                 return {'success': False, 'error': 'Invalid credentials'}
             
-            # Verify password
+            # Verify password (case-sensitive)
             password_hash = self._hash_password(password, user.salt)
             if password_hash != user.password_hash:
                 return {'success': False, 'error': 'Invalid credentials'}
