@@ -446,6 +446,47 @@ def check_user_exists():
         session.close()
 
 
+@app.route('/api/admin/reset-admin-password', methods=['POST'])
+def reset_admin_password():
+    """Reset admin/employee password - requires secret key"""
+    data = request.get_json()
+    
+    secret_key = data.get('secret_key', '')
+    if secret_key != 'SecureLink2026EmergencyReset!':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    username = data.get('username', '').strip()
+    new_password = data.get('new_password', '')
+    
+    if not username or not new_password:
+        return jsonify({'success': False, 'error': 'Username and new_password required'}), 400
+    
+    # Reset admin/employee password
+    import hashlib
+    import secrets as sec
+    from admin import Employee
+    
+    admin_session = admin_manager.get_session()
+    try:
+        employee = admin_session.query(Employee).filter(Employee.username == username).first()
+        if not employee:
+            return jsonify({'success': False, 'error': f'Employee {username} not found'})
+        
+        salt = sec.token_hex(32)
+        password_hash = hashlib.sha256((new_password + salt).encode()).hexdigest()
+        
+        employee.salt = salt
+        employee.password_hash = password_hash
+        admin_session.commit()
+        
+        return jsonify({'success': True, 'message': f'Password reset for admin user: {username}'})
+    except Exception as e:
+        admin_session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        admin_session.close()
+
+
 @app.route('/api/auth/change-password', methods=['POST'])
 @require_auth
 def change_password():
