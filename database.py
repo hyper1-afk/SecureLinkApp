@@ -254,7 +254,12 @@ class Database:
             self.engine = create_engine(f'sqlite:///{self.config.DATABASE_PATH}')
         
         # Create tables only if they don't exist
-        Base.metadata.create_all(self.engine, checkfirst=True)
+        try:
+            Base.metadata.create_all(self.engine, checkfirst=True)
+        except Exception as e:
+            # Tables may already exist, log and continue
+            import logging
+            logging.getLogger(__name__).warning(f"Table creation warning (may be safe to ignore): {e}")
         self._migrate_database()
         self.Session = sessionmaker(bind=self.engine)
     
