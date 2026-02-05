@@ -432,6 +432,52 @@ class AuthManager:
         finally:
             session.close()
     
+    def reset_password_by_email(self, email: str, new_password: str) -> Dict:
+        """Reset password for a user by email (admin function)"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.email == email).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Generate new salt and hash
+            salt = secrets.token_hex(32)
+            password_hash = self._hash_password(new_password, salt)
+            
+            user.salt = salt
+            user.password_hash = password_hash
+            session.commit()
+            
+            return {'success': True, 'message': f'Password reset for {email}'}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def reset_password_by_username(self, username: str, new_password: str) -> Dict:
+        """Reset password for a user by username (admin function)"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.username == username).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Generate new salt and hash
+            salt = secrets.token_hex(32)
+            password_hash = self._hash_password(new_password, salt)
+            
+            user.salt = salt
+            user.password_hash = password_hash
+            session.commit()
+            
+            return {'success': True, 'message': f'Password reset for {username}'}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+
     def logout_all_devices(self, user_id: int) -> bool:
         """Logout from all devices"""
         session = self.get_session()
