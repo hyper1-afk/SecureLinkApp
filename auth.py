@@ -225,19 +225,12 @@ class AuthManager:
     def __init__(self, config: Config = None):
         self.config = config or Config()
         
-        # Use PostgreSQL if DATABASE_URL is set, otherwise fall back to SQLite
-        if self.config.DATABASE_URL:
-            db_url = self.config.DATABASE_URL
-            if db_url.startswith('postgres://'):
-                db_url = db_url.replace('postgres://', 'postgresql://', 1)
-            self.engine = create_engine(db_url)
-        else:
-            self.engine = create_engine(f'sqlite:///{self.config.DATABASE_PATH}')
+        # Use shared database engine
+        from db_engine import get_database_engine, safe_create_tables
+        self.engine = get_database_engine(self.config)
         
-        try:
-            Base.metadata.create_all(self.engine, checkfirst=True)
-        except Exception as e:
-            pass  # Tables already exist
+        # Only create tables if they don't exist (safe for production)
+        safe_create_tables(Base.metadata, self.engine)
         self._migrate_database()
         self.Session = sessionmaker(bind=self.engine)
     
