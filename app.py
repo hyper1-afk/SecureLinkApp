@@ -272,6 +272,12 @@ def features_page():
     return render_template('features.html')
 
 
+@app.route('/extension')
+def extension_page():
+    """Render the browser extension page"""
+    return render_template('extension.html')
+
+
 @app.route('/breach-checker')
 def breach_checker_page():
     """Render the breach checker page"""
@@ -1783,6 +1789,12 @@ def admin_onboarding_requests_page():
     return render_template('admin/onboarding_requests.html')
 
 
+@app.route('/admin/database')
+def admin_database_page():
+    """Admin database monitoring page"""
+    return render_template('admin/database.html')
+
+
 # ==================== Admin API Routes ====================
 
 @app.route('/admin/api/login', methods=['POST'])
@@ -2061,6 +2073,78 @@ def admin_api_onboarding_reject(request_id):
     if result['success']:
         return jsonify(result)
     return jsonify(result), 400
+
+
+# ==================== Database Monitoring API ====================
+
+@app.route('/admin/api/database/stats', methods=['GET'])
+@require_admin
+def admin_api_database_stats():
+    """Get comprehensive database statistics for monitoring"""
+    from sqlalchemy import inspect, text
+    from database import (
+        VerificationRecord, WhitelistedDomain, BlacklistedDomain, 
+        ShortLink, CommunityReport, Organization, ThreatEvent
+    )
+    from auth import User
+    from admin import Employee, SupportTicket
+    
+    try:
+        session = db.get_session()
+        
+        # Determine database type
+        db_url = config.DATABASE_URL if config.DATABASE_URL else f'sqlite:///{config.DATABASE_PATH}'
+        db_type = 'PostgreSQL' if 'postgresql' in db_url or 'postgres' in db_url else 'SQLite'
+        
+        # Get table counts
+        tables = {}
+        tables['verification_records'] = session.query(VerificationRecord).count()
+        tables['users'] = session.query(User).count()
+        tables['short_links'] = session.query(ShortLink).count()
+        tables['whitelisted_domains'] = session.query(WhitelistedDomain).count()
+        tables['blacklisted_domains'] = session.query(BlacklistedDomain).count()
+        tables['community_reports'] = session.query(CommunityReport).count()
+        tables['organizations'] = session.query(Organization).count()
+        tables['threat_events'] = session.query(ThreatEvent).count()
+        tables['support_tickets'] = session.query(SupportTicket).count()
+        tables['employees'] = session.query(Employee).count()
+        
+        # Total records
+        total_records = sum(tables.values())
+        
+        # Risk level distribution
+        risk_levels = {}
+        for level in ['safe', 'low', 'medium', 'high', 'critical']:
+            risk_levels[level] = session.query(VerificationRecord).filter(
+                VerificationRecord.risk_level == level
+            ).count()
+        
+        # Threats blocked (unsafe verifications)
+        threats_blocked = session.query(VerificationRecord).filter(
+            VerificationRecord.is_safe == False
+        ).count()
+        
+        # Recent verifications
+        recent = session.query(VerificationRecord).order_by(
+            VerificationRecord.created_at.desc()
+        ).limit(10).all()
+        recent_verifications = [v.to_dict() for v in recent]
+        
+        session.close()
+        
+        return jsonify({
+            'database_type': db_type,
+            'total_tables': len(tables),
+            'total_records': total_records,
+            'tables': tables,
+            'risk_levels': risk_levels,
+            'threats_blocked': threats_blocked,
+            'recent_verifications': recent_verifications
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching database stats: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ==================== Customer Support Ticket Submission ====================
