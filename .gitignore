@@ -70,3 +70,4 @@ node_modules/
 # Deployment artifacts
 .vercel/
 .netlify/
+.vercel

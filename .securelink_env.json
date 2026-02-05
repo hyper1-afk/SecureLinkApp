@@ -1,0 +1,19 @@
+{
+  "current_environment": "local",
+  "environments": {
+    "local": {
+      "name": "Local Development",
+      "database_type": "sqlite",
+      "database_path": "link_verifier.db",
+      "database_url": null,
+      "app_url": "http://localhost:5000"
+    },
+    "production": {
+      "name": "Production",
+      "database_type": "postgresql",
+      "database_path": null,
+      "database_url": "",
+      "app_url": ""
+    }
+  }
+}

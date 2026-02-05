@@ -313,12 +313,12 @@ class AdminManager:
     def __init__(self, config: Config = None):
         self.config = config or Config()
         
-        # Use shared database engine
-        from db_engine import get_database_engine, safe_create_tables
-        self.engine = get_database_engine(self.config)
+        # Use SEPARATE admin database engine (isolated from user data)
+        from admin_db_engine import get_admin_database_engine, safe_create_admin_tables
+        self.engine = get_admin_database_engine(self.config)
         
         # Only create tables if they don't exist (safe for production)
-        safe_create_tables(Base.metadata, self.engine)
+        safe_create_admin_tables(Base.metadata, self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self._ensure_default_admin()
     
