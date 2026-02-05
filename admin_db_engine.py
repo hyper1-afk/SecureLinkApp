@@ -18,14 +18,20 @@ def get_admin_database_engine(config: Config = None):
     if config is None:
         config = Config()
     
-    # Use separate ADMIN_DATABASE_URL if set, otherwise use a separate SQLite file
+    # Priority: ADMIN_DATABASE_URL > DATABASE_URL > SQLite fallback
     admin_db_url = os.getenv('ADMIN_DATABASE_URL')
     
     if admin_db_url:
-        # Handle postgres:// vs postgresql:// URL format
+        # Use dedicated admin database if configured
         if admin_db_url.startswith('postgres://'):
             admin_db_url = admin_db_url.replace('postgres://', 'postgresql://', 1)
         _admin_engine = create_engine(admin_db_url, pool_pre_ping=True)
+    elif config.DATABASE_URL:
+        # Fall back to main database (admin tables have different names)
+        db_url = config.DATABASE_URL
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        _admin_engine = create_engine(db_url, pool_pre_ping=True)
     else:
         # Use separate SQLite file for admin data locally
         admin_db_path = os.getenv('ADMIN_DATABASE_PATH', 'admin_database.db')
