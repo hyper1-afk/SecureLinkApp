@@ -273,6 +273,18 @@ def guide_page():
     return render_template('guide.html')
 
 
+@app.route('/privacy')
+def privacy_page():
+    """Render the privacy policy page"""
+    return render_template('privacy.html')
+
+
+@app.route('/terms')
+def terms_page():
+    """Render the terms of service page"""
+    return render_template('terms.html')
+
+
 @app.route('/features')
 def features_page():
     """Render the features overview page"""

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --accent-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--text-primary) !important;
+        }
+        
+        .navbar-brand i {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .content-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px 100px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .last-updated {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 0.9rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-top: 40px;
+            margin-bottom: 16px;
+        }
+        
+        h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+        
+        p, li {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        ul {
+            padding-left: 24px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .highlight-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+        
+        .highlight-box.important {
+            border-color: var(--primary-color);
+            background: rgba(14, 165, 233, 0.1);
+        }
+        
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-shield-lock-fill me-2"></i>SecureLink
+            </a>
+            <a href="/" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-2"></i>Back to Home
+            </a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="content-container">
+        <h1>Privacy Policy</h1>
+        <p class="last-updated">Last Updated: February 5, 2026</p>
+        
+        <div class="highlight-box important">
+            <strong><i class="bi bi-shield-check me-2"></i>Our Commitment:</strong> SecureLink is designed to protect your privacy and security. We collect only the minimum data necessary to provide our URL scanning service and never sell your personal information.
+        </div>
+
+        <h2>1. Introduction</h2>
+        <p>This Privacy Policy explains how SecureLink ("we," "our," or "us") collects, uses, and protects your information when you use our browser extension and web service. By using SecureLink, you agree to the collection and use of information as described in this policy.</p>
+
+        <h2>2. Information We Collect</h2>
+        
+        <h3>2.1 URLs You Visit</h3>
+        <p>When the SecureLink browser extension is active, it sends the URLs you visit to our servers for security analysis. This is the core functionality that allows us to warn you about malicious websites.</p>
+        <ul>
+            <li><strong>What we analyze:</strong> The URL/domain of websites you navigate to</li>
+            <li><strong>What we DON'T collect:</strong> Page content, form data, passwords, personal files, or browsing history</li>
+            <li><strong>Exceptions:</strong> We skip internal browser pages, localhost, and known-safe domains (Google, Amazon, etc.)</li>
+        </ul>
+
+        <h3>2.2 Account Information</h3>
+        <p>If you create a SecureLink account, we collect:</p>
+        <ul>
+            <li>Email address (for account verification and communication)</li>
+            <li>Username (for identification)</li>
+            <li>Password (stored securely using industry-standard hashing)</li>
+            <li>Optional: Full name</li>
+        </ul>
+
+        <h3>2.3 Usage Data</h3>
+        <p>We collect anonymized usage statistics to improve our service:</p>
+        <ul>
+            <li>Number of URLs scanned</li>
+            <li>Types of threats detected (not the specific URLs)</li>
+            <li>Extension version and browser type</li>
+        </ul>
+
+        <h3>2.4 Payment Information</h3>
+        <p>For paid subscriptions, payment is processed by Stripe. We do not store your credit card numbers. Stripe's privacy policy applies to payment processing.</p>
+
+        <h2>3. How We Use Your Information</h2>
+        <ul>
+            <li><strong>Security Analysis:</strong> URLs are analyzed against threat databases to identify phishing, malware, and suspicious sites</li>
+            <li><strong>Service Improvement:</strong> Aggregated, anonymized data helps us improve detection accuracy</li>
+            <li><strong>Account Management:</strong> Email is used for verification, password resets, and service notifications</li>
+            <li><strong>Customer Support:</strong> To respond to your inquiries and provide assistance</li>
+        </ul>
+
+        <h2>4. Data Retention</h2>
+        <ul>
+            <li><strong>URL Scan Data:</strong> Temporarily cached for performance (typically 5 minutes), then discarded</li>
+            <li><strong>Account Data:</strong> Retained while your account is active; deleted upon account deletion request</li>
+            <li><strong>Anonymized Statistics:</strong> May be retained indefinitely for service improvement</li>
+        </ul>
+
+        <h2>5. Data Sharing</h2>
+        <p>We do NOT sell, trade, or rent your personal information. We may share data only in these limited circumstances:</p>
+        <ul>
+            <li><strong>Service Providers:</strong> Trusted third parties that help operate our service (hosting, payment processing)</li>
+            <li><strong>Legal Requirements:</strong> When required by law or to protect our rights</li>
+            <li><strong>Security Research:</strong> Anonymized threat data may be shared with security researchers to improve internet safety</li>
+        </ul>
+
+        <h2>6. Data Security</h2>
+        <p>We implement industry-standard security measures:</p>
+        <ul>
+            <li>HTTPS encryption for all data transmission</li>
+            <li>Secure password hashing (SHA-256 with unique salts)</li>
+            <li>Regular security audits and updates</li>
+            <li>Limited employee access to user data</li>
+        </ul>
+
+        <h2>7. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li><strong>Access:</strong> Request a copy of your personal data</li>
+            <li><strong>Correction:</strong> Update or correct your account information</li>
+            <li><strong>Deletion:</strong> Delete your account and associated data</li>
+            <li><strong>Opt-out:</strong> Disable the extension at any time to stop URL scanning</li>
+            <li><strong>Data Portability:</strong> Request your data in a machine-readable format</li>
+        </ul>
+
+        <h2>8. Browser Extension Permissions</h2>
+        <p>The SecureLink extension requests the following permissions:</p>
+        <ul>
+            <li><strong>tabs:</strong> To detect which website you're visiting</li>
+            <li><strong>webNavigation:</strong> To intercept navigation before potentially dangerous pages load</li>
+            <li><strong>storage:</strong> To save your login session and preferences locally</li>
+            <li><strong>host_permissions (all URLs):</strong> To scan any website you visit for threats</li>
+        </ul>
+        <p>These permissions are used solely for security scanning. We do not read page content, inject ads, or modify websites.</p>
+
+        <h2>9. Children's Privacy</h2>
+        <p>SecureLink is not intended for children under 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us.</p>
+
+        <h2>10. International Users</h2>
+        <p>SecureLink is operated from the United States. If you're accessing our service from the EU, UK, or other regions with data protection laws, please note that your data may be transferred to and processed in the United States.</p>
+
+        <h2>11. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by:</p>
+        <ul>
+            <li>Posting the new policy on this page</li>
+            <li>Updating the "Last Updated" date</li>
+            <li>Sending email notification for material changes (if you have an account)</li>
+        </ul>
+
+        <h2>12. Contact Us</h2>
+        <p>If you have questions about this Privacy Policy or your data, please contact us:</p>
+        <div class="highlight-box">
+            <p><strong>Email:</strong> <a href="mailto:admin@securelinkapp.com">admin@securelinkapp.com</a></p>
+            <p><strong>Website:</strong> <a href="https://securelinkapp.com">https://securelinkapp.com</a></p>
+            <p style="margin-bottom: 0;"><strong>Address:</strong> SecureLink, United States</p>
+        </div>
+
+        <h2>13. California Privacy Rights (CCPA)</h2>
+        <p>California residents have additional rights under the CCPA, including the right to know what personal information is collected and the right to request deletion. To exercise these rights, contact us at admin@securelinkapp.com.</p>
+
+        <h2>14. GDPR Compliance (EU Users)</h2>
+        <p>For EU residents, we process data under the following legal bases:</p>
+        <ul>
+            <li><strong>Contract:</strong> Processing necessary to provide the service you requested</li>
+            <li><strong>Legitimate Interest:</strong> Improving our service and security</li>
+            <li><strong>Consent:</strong> For optional features like marketing emails</li>
+        </ul>
+        <p>You may contact us to exercise your GDPR rights, including access, rectification, erasure, and data portability.</p>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <p>
+                <a href="/">Home</a> &middot;
+                <a href="/terms">Terms of Service</a> &middot;
+                <a href="/privacy">Privacy Policy</a> &middot;
+                <a href="mailto:admin@securelinkapp.com">Contact</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
