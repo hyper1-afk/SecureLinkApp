@@ -272,6 +272,12 @@ def features_page():
     return render_template('features.html')
 
 
+@app.route('/pricing')
+def pricing_page():
+    """Render the pricing page"""
+    return render_template('pricing.html')
+
+
 @app.route('/extension')
 def extension_page():
     """Render the browser extension page"""

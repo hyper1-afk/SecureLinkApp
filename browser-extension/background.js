@@ -6,6 +6,7 @@ const API_BASE = 'https://securelinkapp.com'; // Production API
 // Track checked URLs to avoid re-checking
 const checkedUrls = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const pendingChecks = new Set(); // URLs currently being checked
 
 // User session
 let userSession = null;
@@ -50,15 +51,24 @@ const SAFE_DOMAINS = [
     'securelinkapp.com', 'www.securelinkapp.com'
 ];
 
+// Test domains - always show warning (for testing)
+const TEST_DOMAINS = [
+    'securelink-test-malware.com',
+    'test-phishing-example.net',
+    'fake-dangerous-site.xyz'
+];
+
 console.log('SecureLink: Extension loaded and ready');
 
-// Listen for tab URL changes - this catches address bar navigation
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    // Only check when URL changes and we have a URL
-    if (!changeInfo.url) return;
+// Use webNavigation.onBeforeNavigate to intercept BEFORE page loads
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+    // Only check main frame navigation
+    if (details.frameId !== 0) return;
     
-    const url = changeInfo.url;
-    console.log('SecureLink: Detected navigation to:', url);
+    const url = details.url;
+    const tabId = details.tabId;
+    
+    console.log('SecureLink: Intercepting navigation to:', url);
     
     // Skip internal/local URLs
     for (const pattern of SKIP_PATTERNS) {
@@ -68,16 +78,22 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         }
     }
     
-    // Skip extension warning page
-    if (url.includes('warning.html')) return;
+    // Skip extension pages
+    if (url.includes('warning.html') || url.includes('upgrade.html')) return;
     
     try {
         const urlObj = new URL(url);
+        const hostname = urlObj.hostname.replace(/^www\./, '');
         
         // Skip known safe domains
-        const hostname = urlObj.hostname.replace(/^www\./, '');
         if (SAFE_DOMAINS.some(d => d === urlObj.hostname || d === hostname)) {
             console.log('SecureLink: Known safe domain, skipping');
+            return;
+        }
+        
+        // Check if already pending
+        if (pendingChecks.has(url)) {
+            console.log('SecureLink: Check already in progress');
             return;
         }
         
@@ -91,9 +107,27 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             return;
         }
         
+        // Quick check for test domains (no API needed)
+        if (TEST_DOMAINS.some(d => hostname === d || hostname === 'www.' + d)) {
+            console.log('SecureLink: TEST DOMAIN DETECTED - showing warning');
+            const testResult = {
+                riskScore: 95,
+                threats: ['Test Malware Site'],
+                warnings: ['This is a test URL for extension testing']
+            };
+            checkedUrls.set(url, { timestamp: Date.now(), dangerous: true, data: testResult });
+            showWarning(tabId, url, testResult);
+            return;
+        }
+        
+        // Mark as pending
+        pendingChecks.add(url);
+        
         // Check the URL with our API
         console.log('SecureLink: Checking URL with API...');
         const result = await checkUrl(url);
+        
+        pendingChecks.delete(url);
         console.log('SecureLink: API result - Risk Score:', result.riskScore);
         
         // Handle rate limit

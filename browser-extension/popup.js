@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tierBadge.className = 'tier-badge';
         
         statusText.textContent = 'Limited Protection';
-        statusSub.textContent = '10 free scans/day - Sign in for more';
+        statusSub.textContent = '5 free scans/day - Sign in for 10+';
         statusSub.className = 'status-sub warning';
     }
 

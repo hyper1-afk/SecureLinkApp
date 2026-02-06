@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Pricing - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --accent-color: #8b5cf6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+        }
+        
+        .page-header {
+            text-align: center;
+            padding: 4rem 0 3rem;
+        }
+        
+        .page-header h1 {
+            font-weight: 800;
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+        
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1rem 4rem;
+        }
+        
+        .pricing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+        }
+        
+        .pricing-card.popular {
+            border: 2px solid var(--warning-color);
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.1) 100%);
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            color: white;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-description {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .plan-price {
+            margin-bottom: 1.5rem;
+        }
+        
+        .price-amount {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        
+        .price-amount.free {
+            background: linear-gradient(135deg, var(--success-color), #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .price-amount.pro {
+            background: linear-gradient(135deg, var(--warning-color), #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .price-amount.enterprise {
+            background: linear-gradient(135deg, var(--accent-color), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .price-period {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 2rem 0;
+        }
+        
+        .features-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .features-list i {
+            color: var(--success-color);
+            font-size: 1.1rem;
+            margin-top: 2px;
+        }
+        
+        .features-list .highlight {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .plan-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+        
+        .plan-btn.free {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .plan-btn.free:hover {
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+        
+        .plan-btn.pro {
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            border: none;
+            color: white;
+        }
+        
+        .plan-btn.pro:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
+        }
+        
+        .plan-btn.enterprise {
+            background: linear-gradient(135deg, var(--accent-color), #a78bfa);
+            border: none;
+            color: white;
+        }
+        
+        .plan-btn.enterprise:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+        }
+        
+        .comparison-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+        
+        .comparison-section h2 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .comparison-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .comparison-table td:first-child {
+            text-align: left;
+            color: var(--text-secondary);
+        }
+        
+        .comparison-table .check {
+            color: var(--success-color);
+            font-size: 1.25rem;
+        }
+        
+        .comparison-table .dash {
+            color: var(--text-muted);
+        }
+        
+        .faq-section {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 3rem 1rem 5rem;
+        }
+        
+        .faq-section h2 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+        
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .faq-question:hover {
+            background: var(--bg-card-hover);
+        }
+        
+        .faq-answer {
+            padding: 0 1.25rem 1.25rem;
+            color: var(--text-secondary);
+            display: none;
+        }
+        
+        .faq-item.open .faq-answer {
+            display: block;
+        }
+        
+        .faq-item.open .faq-question i {
+            transform: rotate(180deg);
+        }
+        
+        .footer {
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2rem;
+            }
+            
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-table {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-shield-check me-2"></i>SecureLink
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/pricing">Pricing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <h1>Simple, Transparent Pricing</h1>
+            <p>Choose the plan that's right for you. Start free, upgrade anytime.</p>
+        </div>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="container">
+        <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-description">Perfect for personal use</div>
+                <div class="plan-price">
+                    <span class="price-amount free">$0</span>
+                    <span class="price-period">/ forever</span>
+                </div>
+                <ul class="features-list">
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span><span class="highlight">10 URL scans</span> per day</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Real-time threat detection</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Browser extension</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Basic threat reports</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Email support</span>
+                    </li>
+                </ul>
+                <a href="/login" class="plan-btn free">Get Started Free</a>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card popular">
+                <span class="popular-badge">Most Popular</span>
+                <div class="plan-name">Pro</div>
+                <div class="plan-description">For power users & professionals</div>
+                <div class="plan-price">
+                    <span class="price-amount pro">$9.99</span>
+                    <span class="price-period">/ month</span>
+                </div>
+                <ul class="features-list">
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span><span class="highlight">500 URL scans</span> per day</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Everything in Free</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Detailed threat analysis</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>URL shortener access</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Priority support</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Weekly security reports</span>
+                    </li>
+                </ul>
+                <a href="/login" class="plan-btn pro">Upgrade to Pro</a>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Enterprise</div>
+                <div class="plan-description">For teams & organizations</div>
+                <div class="plan-price">
+                    <span class="price-amount enterprise">$49.99</span>
+                    <span class="price-period">/ month</span>
+                </div>
+                <ul class="features-list">
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span><span class="highlight">Unlimited</span> URL scans</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Everything in Pro</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>API access</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Team management</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Custom integrations</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Dedicated account manager</span>
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>24/7 phone support</span>
+                    </li>
+                </ul>
+                <a href="/login" class="plan-btn enterprise">Go Enterprise</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="comparison-section">
+        <h2>Compare Plans</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Free</th>
+                    <th>Pro</th>
+                    <th>Enterprise</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Daily URL Scans</td>
+                    <td>10</td>
+                    <td>500</td>
+                    <td>Unlimited</td>
+                </tr>
+                <tr>
+                    <td>Browser Extension</td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>URL Shortener</td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Detailed Reports</td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>API Access</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Team Management</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Support</td>
+                    <td>Email</td>
+                    <td>Priority</td>
+                    <td>24/7 Phone</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>Can I cancel anytime?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Yes! There are no long-term contracts. You can cancel your subscription at any time and continue using the service until the end of your billing period.
+            </div>
+        </div>
+        
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>What payment methods do you accept?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.
+            </div>
+        </div>
+        
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>What happens if I exceed my daily scan limit?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                You'll receive a notification that you've reached your limit. You can either wait until the next day when your scans reset, or upgrade to a higher plan for more scans.
+            </div>
+        </div>
+        
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>Do unused scans roll over?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                No, scan limits reset daily at midnight UTC. Unused scans do not carry over to the next day.
+            </div>
+        </div>
+        
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>Is there a free trial for Pro or Enterprise?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Our Free plan lets you try the core features. When you're ready to upgrade, you'll be billed immediately but can cancel within 7 days for a full refund if you're not satisfied.
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 SecureLink. All rights reserved. | <a href="/features">Features</a> | <a href="/login">Login</a></p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
