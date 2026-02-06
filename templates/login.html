@@ -61,13 +61,8 @@
         
         .auth-container {
             width: 100%;
-            max-width: 460px;
-            padding: 24px;
-            transition: max-width 0.3s ease;
-        }
-        
-        .auth-container.expanded {
             max-width: 800px;
+            padding: 24px;
         }
         
         .auth-card {
@@ -389,7 +384,7 @@
             .plan-selection {
                 grid-template-columns: 1fr;
             }
-            .auth-container.expanded {
+            .auth-container {
                 max-width: 460px;
             }
         }
@@ -769,7 +764,6 @@
         });
         
         function switchTab(tab) {
-            const container = document.querySelector('.auth-container');
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
             
@@ -782,11 +776,9 @@
             if (tab === 'login') {
                 document.querySelector('.tab-btn:first-child').classList.add('active');
                 document.getElementById('loginForm').classList.add('active');
-                container.classList.remove('expanded');
             } else {
                 document.querySelector('.tab-btn:last-child').classList.add('active');
                 document.getElementById('registerForm').classList.add('active');
-                container.classList.add('expanded');
             }
             
             // Update OAuth button text
