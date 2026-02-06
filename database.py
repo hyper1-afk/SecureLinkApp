@@ -309,10 +309,31 @@ class Database:
             session.close()
     
     def get_recent_verifications(self, limit: int = 50) -> List[Dict]:
-        """Get recent verification records"""
+        """Get recent verification records (all users - for admin)"""
         session = self.get_session()
         try:
             records = session.query(VerificationRecord)\
+                .order_by(VerificationRecord.created_at.desc())\
+                .limit(limit)\
+                .all()
+            return [r.to_dict() for r in records]
+        finally:
+            session.close()
+    
+    def get_user_verifications(self, user_id: int, email_accounts: List[str] = None, limit: int = 50) -> List[Dict]:
+        """Get verification records for a specific user"""
+        from sqlalchemy import or_
+        session = self.get_session()
+        try:
+            # Build filter conditions
+            conditions = [VerificationRecord.user_id == user_id]
+            
+            # Also include verifications from user's email accounts
+            if email_accounts:
+                conditions.append(VerificationRecord.email_account.in_(email_accounts))
+            
+            records = session.query(VerificationRecord)\
+                .filter(or_(*conditions))\
                 .order_by(VerificationRecord.created_at.desc())\
                 .limit(limit)\
                 .all()

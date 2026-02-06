@@ -1780,11 +1780,36 @@ def scan_file():
 
 @app.route('/api/history', methods=['GET'])
 def get_history():
-    """Get verification history"""
+    """Get verification history for the current user"""
     limit = request.args.get('limit', 50, type=int)
     try:
-        history = db.get_recent_verifications(limit)
-        return jsonify(history)
+        # Check if user is authenticated
+        token = get_token_from_request()
+        if token:
+            user_data = auth_manager.validate_token(token)
+            if user_data:
+                user = user_data['user']
+                user_id = user['id']
+                
+                # Get user's email accounts
+                email_accounts = []
+                try:
+                    from auth import EmailAccount
+                    session = auth_manager.get_session()
+                    accounts = session.query(EmailAccount).filter(
+                        EmailAccount.user_id == user_id
+                    ).all()
+                    email_accounts = [acc.email for acc in accounts]
+                    session.close()
+                except Exception as e:
+                    logger.warning(f"Could not get email accounts: {e}")
+                
+                # Get only this user's verifications
+                history = db.get_user_verifications(user_id, email_accounts, limit)
+                return jsonify(history)
+        
+        # If not authenticated, return empty list (no anonymous history)
+        return jsonify([])
     except Exception as e:
         logger.error(f"Error getting history: {e}")
         return jsonify({'error': str(e)}), 500
