@@ -1974,10 +1974,34 @@
         
         function confirmDeleteAccount() {
             if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                if (confirm('This will permanently delete all your data. Type DELETE to confirm.')) {
-                    // In production, implement actual deletion
-                    alert('Account deletion would be processed here.');
+                const confirmation = prompt('This will permanently delete all your data. Type DELETE to confirm:');
+                if (confirmation === 'DELETE') {
+                    deleteAccount();
+                } else if (confirmation !== null) {
+                    alert('Deletion cancelled. You must type DELETE to confirm.');
                 }
+            }
+        }
+        
+        async function deleteAccount() {
+            try {
+                const response = await fetch('/api/auth/delete-account', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Your account has been deleted. You will be redirected to the home page.');
+                    localStorage.clear();
+                    window.location.href = '/';
+                } else {
+                    alert('Error deleting account: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting account. Please try again or contact support.');
             }
         }
         

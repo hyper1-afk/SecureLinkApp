@@ -500,6 +500,50 @@ class AuthManager:
         finally:
             session.close()
     
+    def delete_user(self, user_id: int) -> Dict:
+        """Permanently delete a user and all their data"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            username = user.username
+            email = user.email
+            
+            # Delete all user sessions first
+            session.query(UserSession).filter(UserSession.user_id == user_id).delete()
+            
+            # Delete all email accounts
+            session.query(EmailAccount).filter(EmailAccount.user_id == user_id).delete()
+            
+            # Delete the user
+            session.delete(user)
+            session.commit()
+            
+            return {
+                'success': True, 
+                'message': f'User {username} ({email}) has been permanently deleted'
+            }
+            
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def delete_user_by_email(self, email: str) -> Dict:
+        """Delete a user by email address (admin function)"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.email == email).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            return self.delete_user(user.id)
+        finally:
+            session.close()
+    
     def update_profile(self, user_id: int, updates: Dict) -> Dict:
         """Update user profile"""
         session = self.get_session()

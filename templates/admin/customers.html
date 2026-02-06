@@ -232,9 +232,14 @@
                     <td>${c.email_accounts_count || 0}</td>
                     <td class="text-secondary">${formatDate(c.created_at)}</td>
                     <td>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="viewCustomerTickets('${c.email}')">
-                            <i class="bi bi-ticket-detailed"></i>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="viewCustomerTickets('${c.email}')" title="View Tickets">
+                                <i class="bi bi-ticket-detailed"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteCustomer(${c.id}, '${escapeHtml(c.email)}')" title="Delete Customer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -264,6 +269,38 @@
         
         function viewCustomerTickets(email) {
             window.location.href = `/admin/tickets?search=${encodeURIComponent(email)}`;
+        }
+        
+        function confirmDeleteCustomer(userId, email) {
+            if (confirm(`Are you sure you want to delete the customer account: ${email}?\n\nThis action cannot be undone.`)) {
+                const confirmation = prompt('Type DELETE to confirm:');
+                if (confirmation === 'DELETE') {
+                    deleteCustomer(userId, email);
+                } else if (confirmation !== null) {
+                    alert('Deletion cancelled. You must type DELETE to confirm.');
+                }
+            }
+        }
+        
+        async function deleteCustomer(userId, email) {
+            try {
+                const response = await fetch(`/admin/api/customers/${userId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Customer ${email} has been deleted.`);
+                    loadCustomers(currentPage);
+                } else {
+                    alert('Error deleting customer: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting customer. Please try again.');
+            }
         }
         
         function formatDate(dateStr) {

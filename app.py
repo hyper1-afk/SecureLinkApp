@@ -427,6 +427,15 @@ def logout_all():
     return jsonify({'success': True})
 
 
+@app.route('/api/auth/delete-account', methods=['DELETE'])
+@require_auth
+def delete_own_account():
+    """Delete the current user's account permanently"""
+    user_id = request.current_user['id']
+    result = auth_manager.delete_user(user_id)
+    return jsonify(result)
+
+
 @app.route('/api/auth/validate', methods=['GET'])
 def validate_token():
     """Validate a session token"""
@@ -2363,6 +2372,26 @@ def admin_api_customers():
         per_page=request.args.get('per_page', 20, type=int)
     )
     return jsonify(result)
+
+
+@app.route('/admin/api/customers/<int:user_id>', methods=['DELETE'])
+@require_admin_role('manager')
+def admin_api_delete_customer(user_id):
+    """Delete a customer account (manager only)"""
+    result = auth_manager.delete_user(user_id)
+    return jsonify(result) if result['success'] else (jsonify(result), 400)
+
+
+@app.route('/admin/api/customers/by-email', methods=['DELETE'])
+@require_admin_role('manager')
+def admin_api_delete_customer_by_email():
+    """Delete a customer account by email (manager only)"""
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    result = auth_manager.delete_user_by_email(email)
+    return jsonify(result) if result['success'] else (jsonify(result), 400)
 
 
 # ==================== Employee Onboarding API ====================
