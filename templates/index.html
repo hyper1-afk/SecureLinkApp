@@ -1433,6 +1433,12 @@
                                     <i class="bi bi-search me-2"></i>Verify Link
                                 </button>
                             </div>
+                            <div class="text-center mt-3" id="scanLimitInfo">
+                                <small class="text-muted">
+                                    <span id="scansRemaining">5</span> free scans remaining today • 
+                                    <a href="/login" class="text-info">Sign up for more</a>
+                                </small>
+                            </div>
                         </form>
                     </div>
                     
@@ -2520,6 +2526,24 @@
                     body: JSON.stringify({ url })
                 });
                 const data = await response.json();
+                
+                // Handle rate limit error
+                if (response.status === 429) {
+                    const scansInfo = document.getElementById('scanLimitInfo');
+                    scansInfo.innerHTML = `
+                        <div class="alert alert-warning py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            ${data.message || 'Daily scan limit reached'}
+                            <a href="/login" class="alert-link ms-2">Sign up for more →</a>
+                        </div>
+                    `;
+                    document.getElementById('scansRemaining').textContent = '0';
+                    return;
+                }
+                
+                // Update scans remaining counter for anonymous users
+                updateScansRemaining();
+                
                 displayResult(data);
                 loadRecent();
                 loadHistory();
@@ -2532,6 +2556,21 @@
                 btn.disabled = false;
             }
         });
+        
+        // Track and update scans remaining for anonymous users
+        function updateScansRemaining() {
+            const scansEl = document.getElementById('scansRemaining');
+            if (scansEl) {
+                let remaining = parseInt(scansEl.textContent) || 5;
+                remaining = Math.max(0, remaining - 1);
+                scansEl.textContent = remaining;
+                
+                if (remaining <= 2) {
+                    scansEl.parentElement.classList.add('text-warning');
+                    scansEl.parentElement.classList.remove('text-muted');
+                }
+            }
+        }
 
         // Display verification result
         function displayResult(data) {

@@ -1394,6 +1394,9 @@ def stripe_webhook():
 
 # ============== Link Verification Routes ==============
 
+# Track anonymous website scan counts (in production, use Redis)
+website_anonymous_scans = {}
+
 @app.route('/api/verify', methods=['POST'])
 def verify_link():
     """API endpoint to verify a single link"""
@@ -1403,23 +1406,45 @@ def verify_link():
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     
-    # Check auth for scan limits (optional - allow unauthenticated scans)
+    # Check auth for scan limits
     token = get_token_from_request()
     user_id = None
+    is_anonymous = True
     
     if token:
         user_data = auth_manager.validate_token(token)
         if user_data:
             user_id = user_data['user']['id']
+            is_anonymous = False
             
-            # Check scan limit
+            # Check scan limit for authenticated users
             limit_check = auth_manager.check_scan_limit(user_id)
             if not limit_check.get('allowed'):
                 return jsonify({
                     'error': 'Daily scan limit reached',
                     'limit': limit_check.get('limit'),
-                    'used': limit_check.get('used')
+                    'used': limit_check.get('used'),
+                    'upgrade_url': '/pricing'
                 }), 429
+    
+    # Rate limit for anonymous users (5 scans/day per IP)
+    if is_anonymous:
+        from datetime import date
+        today = date.today().isoformat()
+        ip_key = f"{request.remote_addr}:{today}"
+        scans_today = website_anonymous_scans.get(ip_key, 0)
+        
+        if scans_today >= 5:
+            return jsonify({
+                'error': 'Daily scan limit reached',
+                'message': 'Sign up for free to get 10 scans per day!',
+                'limit': 5,
+                'used': scans_today,
+                'signup_url': '/login'
+            }), 429
+        
+        # Increment anonymous scan count
+        website_anonymous_scans[ip_key] = scans_today + 1
     
     try:
         # Verify the link
