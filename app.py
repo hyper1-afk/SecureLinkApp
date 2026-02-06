@@ -1555,8 +1555,8 @@ def verify_link():
         # Verify the link
         result = verifier.verify_link(url)
         
-        # Save to database
-        db.save_verification(result, source='manual')
+        # Save to database with user_id if authenticated
+        db.save_verification(result, source='manual', user_id=user_id)
         
         # Increment scan count if authenticated
         if user_id:
