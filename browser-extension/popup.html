@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=400, initial-scale=1.0">
+    <meta name="viewport" content="width=360, initial-scale=1.0">
     <title>SecureLink</title>
     <style>
         * {
@@ -12,74 +12,300 @@
         }
 
         body {
-            width: 400px;
-            min-height: 300px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            width: 360px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
         }
 
         .header {
-            padding: 16px;
+            padding: 20px;
+            text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            gap: 10px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 18px;
+            gap: 10px;
+            font-size: 20px;
             font-weight: bold;
         }
 
-        .logo-icon {
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 6px;
+        .logo img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .tier-badge {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .tier-badge.pro {
+            background: linear-gradient(135deg, #f5af19, #f12711);
+        }
+
+        .tier-badge.enterprise {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+
+        /* User Info Section */
+        .user-section {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 18px;
         }
 
-        .settings-btn {
+        .user-details {
+            flex: 1;
+        }
+
+        .user-email {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .scans-remaining {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .logout-btn {
             background: rgba(255, 255, 255, 0.1);
             border: none;
-            border-radius: 6px;
-            padding: 8px;
-            cursor: pointer;
             color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        .settings-btn:hover {
+        .logout-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
-        .main {
-            padding: 16px;
+        /* Login Section */
+        .login-section {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-section h3 {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .login-section input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .login-section input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .login-section input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .login-help {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .login-help a {
+            color: #0ea5e9;
+            text-decoration: none;
+        }
+
+        .login-help a:hover {
+            text-decoration: underline;
+        }
+
+        /* Status */
+        .status {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .status-text {
+            font-size: 16px;
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .status-sub {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .status-sub.warning {
+            color: #f59e0b;
+        }
+
+        /* Upgrade CTA */
+        .upgrade-cta {
+            margin: 0 20px 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(245, 175, 25, 0.2), rgba(241, 39, 17, 0.2));
+            border: 1px solid rgba(245, 175, 25, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .upgrade-cta p {
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-cta a {
+            display: inline-block;
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .upgrade-cta a:hover {
+            opacity: 0.9;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0ea5e9;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 20px;
+        }
+
+        /* Manual Check */
+        .check-section {
+            padding: 20px;
+        }
+
+        .check-section h3 {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 12px;
         }
 
         .input-group {
-            position: relative;
-            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
         }
 
         .input-group input {
-            width: 100%;
-            padding: 14px 16px;
-            padding-right: 100px;
+            flex: 1;
+            padding: 12px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.05);
             color: white;
             font-size: 14px;
         }
 
         .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.4);
         }
 
         .input-group input:focus {
@@ -87,322 +313,166 @@
             border-color: #3b82f6;
         }
 
-        .verify-btn {
-            position: absolute;
-            right: 6px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        .check-btn {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
             border: none;
             border-radius: 8px;
-            padding: 10px 16px;
             color: white;
             font-weight: 600;
             cursor: pointer;
             transition: opacity 0.2s;
         }
 
-        .verify-btn:hover {
+        .check-btn:hover {
             opacity: 0.9;
         }
 
-        .verify-btn:disabled {
+        .check-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
         .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
             display: none;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
         }
 
         .result.safe {
-            background: rgba(34, 197, 94, 0.15);
-            border: 1px solid rgba(34, 197, 94, 0.3);
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: block;
+        }
+
+        .result.warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            display: block;
         }
 
         .result.danger {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.3);
+            display: block;
         }
 
-        .result.warning {
-            background: rgba(234, 179, 8, 0.15);
-            border: 1px solid rgba(234, 179, 8, 0.3);
+        .result.limit {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            display: block;
         }
 
         .result-header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .result-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .result.safe .result-icon {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-        }
-
-        .result.danger .result-icon {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
-        .result.warning .result-icon {
-            background: rgba(234, 179, 8, 0.2);
-            color: #eab308;
-        }
-
-        .result-title {
-            font-size: 18px;
+            gap: 10px;
             font-weight: 600;
         }
 
-        .result-subtitle {
+        .result-score {
             font-size: 13px;
-            opacity: 0.7;
+            color: #94a3b8;
+            margin-top: 8px;
         }
 
-        .risk-meter {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }
-
-        .risk-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        .result.safe .risk-fill {
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-        }
-
-        .result.warning .risk-fill {
-            background: linear-gradient(90deg, #eab308, #ca8a04);
-        }
-
-        .result.danger .risk-fill {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-        }
-
-        .threat-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 12px;
-        }
-
-        .threat-tag {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-        }
-
-        .ai-explanation {
-            margin-top: 12px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .quick-action {
-            padding: 12px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .quick-action:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .quick-action-icon {
-            font-size: 24px;
-            margin-bottom: 6px;
-        }
-
-        .quick-action-label {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
+        /* Footer */
         .footer {
-            padding: 12px 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
             text-align: center;
-            font-size: 12px;
-            opacity: 0.6;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .footer a {
-            color: #60a5fa;
+            color: #3b82f6;
             text-decoration: none;
+            font-size: 13px;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
+        .footer a:hover {
+            text-decoration: underline;
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 12px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .recent-checks {
-            margin-top: 16px;
-        }
-
-        .recent-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            opacity: 0.8;
-        }
-
-        .recent-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            margin-bottom: 6px;
-            cursor: pointer;
-        }
-
-        .recent-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .recent-status {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .recent-status.safe { background: #22c55e; }
-        .recent-status.danger { background: #ef4444; }
-        .recent-status.warning { background: #eab308; }
-
-        .recent-url {
-            flex: 1;
-            font-size: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .recent-score {
-            font-size: 11px;
-            opacity: 0.6;
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo">
-            <div class="logo-icon">🛡️</div>
-            SecureLink
+            <img src="icons/icon32.png" alt="SecureLink">
+            <span>SecureLink</span>
         </div>
-        <button class="settings-btn" id="settingsBtn">⚙️</button>
+        <span class="tier-badge" id="tier-badge">Free</span>
     </div>
 
-    <div class="main">
+    <!-- Login Section (shown when logged out) -->
+    <div class="login-section" id="login-section">
+        <h3>🔐 Sign in for more scans</h3>
+        <input type="email" id="login-email" placeholder="Email address">
+        <input type="password" id="login-password" placeholder="Password">
+        <button class="login-btn" id="login-btn">Sign In</button>
+        <div class="login-error" id="login-error"></div>
+        <div class="login-help">
+            Free: 10 scans/day • <a href="https://securelinkapp.com/features" target="_blank">View Plans</a>
+        </div>
+    </div>
+
+    <!-- User Section (shown when logged in) -->
+    <div class="user-section hidden" id="user-section">
+        <div class="user-avatar">👤</div>
+        <div class="user-details">
+            <div class="user-email" id="user-email">user@example.com</div>
+            <div class="scans-remaining" id="scans-remaining">500 scans remaining today</div>
+        </div>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="status">
+        <div class="status-icon">🛡️</div>
+        <div class="status-text" id="status-text">Protection Active</div>
+        <div class="status-sub" id="status-sub">Scanning URLs automatically</div>
+    </div>
+
+    <!-- Upgrade CTA (shown for free users) -->
+    <div class="upgrade-cta hidden" id="upgrade-cta">
+        <p>⚡ Running low on scans? Upgrade for more!</p>
+        <a href="https://securelinkapp.com/features" target="_blank">Upgrade Now</a>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value" id="checked-count">0</div>
+            <div class="stat-label">URLs Checked</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="blocked-count">0</div>
+            <div class="stat-label">Threats Blocked</div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="check-section">
+        <h3>Manual URL Check</h3>
         <div class="input-group">
-            <input type="url" id="urlInput" placeholder="Paste a URL to check...">
-            <button class="verify-btn" id="verifyBtn">Verify</button>
+            <input type="text" id="url-input" placeholder="Paste a URL to check...">
+            <button class="check-btn" id="check-btn">Check</button>
         </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analyzing link safety...</p>
-        </div>
-
         <div class="result" id="result">
             <div class="result-header">
-                <div class="result-icon" id="resultIcon">✓</div>
-                <div>
-                    <div class="result-title" id="resultTitle">Safe</div>
-                    <div class="result-subtitle" id="resultSubtitle">This link appears to be safe</div>
-                </div>
+                <span id="result-icon"></span>
+                <span id="result-text"></span>
             </div>
-            <div class="risk-meter">
-                <div class="risk-fill" id="riskFill" style="width: 0%"></div>
-            </div>
-            <div id="riskScore" style="font-size: 12px; opacity: 0.7;">Risk Score: 0/100</div>
-            <div class="threat-tags" id="threatTags"></div>
-            <div class="ai-explanation" id="aiExplanation" style="display: none;"></div>
-        </div>
-
-        <div class="quick-actions">
-            <div class="quick-action" id="checkCurrentPage">
-                <div class="quick-action-icon">🔍</div>
-                <div class="quick-action-label">Check This Page</div>
-            </div>
-            <div class="quick-action" id="scanPageLinks">
-                <div class="quick-action-icon">📋</div>
-                <div class="quick-action-label">Scan Page Links</div>
-            </div>
-            <div class="quick-action" id="reportLink">
-                <div class="quick-action-icon">🚩</div>
-                <div class="quick-action-label">Report Link</div>
-            </div>
-            <div class="quick-action" id="breachChecker">
-                <div class="quick-action-icon">🔐</div>
-                <div class="quick-action-label">Breach Check</div>
-            </div>
-        </div>
-
-        <div class="recent-checks" id="recentChecks">
-            <div class="recent-title">Recent Checks</div>
-            <div id="recentList"></div>
+            <div class="result-score" id="result-score"></div>
         </div>
     </div>
 
     <div class="footer">
-        Powered by <a href="https://securelink.com" target="_blank">SecureLink</a>
+        <a href="https://securelinkapp.com" target="_blank">Visit SecureLink →</a>
     </div>
 
     <script src="popup.js"></script>

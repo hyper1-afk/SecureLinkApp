@@ -487,6 +487,212 @@ def reset_admin_password():
         admin_session.close()
 
 
+# ============== Browser Extension API ==============
+
+# Track daily scans per user (in-memory, resets on server restart)
+# In production, use Redis or database
+extension_scan_counts = {}
+
+def get_scan_limit(subscription_tier):
+    """Get daily scan limit based on subscription tier"""
+    limits = {
+        'free': 10,
+        'pro': 500,
+        'enterprise': float('inf')  # Unlimited
+    }
+    return limits.get(subscription_tier, 10)
+
+@app.route('/api/extension/auth', methods=['POST'])
+def extension_auth():
+    """Authenticate user from browser extension"""
+    data = request.get_json()
+    
+    email_or_username = data.get('email_or_username', '').strip()
+    password = data.get('password', '')
+    
+    if not email_or_username or not password:
+        return jsonify({'success': False, 'error': 'Credentials required'}), 400
+    
+    result = auth_manager.login(
+        email_or_username,
+        password,
+        remember_me=True,
+        device_info='SecureLink Browser Extension',
+        ip_address=request.remote_addr
+    )
+    
+    if result.get('success'):
+        # Return subscription info for extension
+        user = result.get('user', {})
+        return jsonify({
+            'success': True,
+            'token': result.get('token'),
+            'user': {
+                'id': user.get('id'),
+                'email': user.get('email'),
+                'username': user.get('username'),
+                'subscription_tier': user.get('subscription_tier', 'free')
+            },
+            'scan_limit': get_scan_limit(user.get('subscription_tier', 'free'))
+        })
+    
+    return jsonify(result)
+
+
+@app.route('/api/extension/status', methods=['GET'])
+def extension_status():
+    """Get extension status and remaining scans for authenticated user"""
+    token = get_token_from_request()
+    
+    if not token:
+        # Anonymous user - very limited access
+        return jsonify({
+            'authenticated': False,
+            'subscription_tier': 'anonymous',
+            'scan_limit': 5,
+            'scans_remaining': 5,
+            'message': 'Sign in for more scans'
+        })
+    
+    user_data = auth_manager.validate_token(token)
+    if not user_data:
+        return jsonify({
+            'authenticated': False,
+            'subscription_tier': 'anonymous',
+            'scan_limit': 5,
+            'scans_remaining': 5,
+            'message': 'Session expired. Please sign in again.'
+        })
+    
+    user = user_data.get('user', {})
+    user_id = user.get('id')
+    tier = user.get('subscription_tier', 'free')
+    limit = get_scan_limit(tier)
+    
+    # Get today's scan count
+    from datetime import date
+    today = date.today().isoformat()
+    key = f"{user_id}:{today}"
+    scans_today = extension_scan_counts.get(key, 0)
+    
+    remaining = max(0, limit - scans_today) if limit != float('inf') else 'unlimited'
+    
+    return jsonify({
+        'authenticated': True,
+        'user': {
+            'email': user.get('email'),
+            'username': user.get('username')
+        },
+        'subscription_tier': tier,
+        'scan_limit': limit if limit != float('inf') else 'unlimited',
+        'scans_today': scans_today,
+        'scans_remaining': remaining
+    })
+
+
+@app.route('/api/extension/verify', methods=['POST'])
+def extension_verify():
+    """Verify URL from extension with rate limiting based on subscription"""
+    data = request.get_json()
+    url = data.get('url', '')
+    
+    if not url:
+        return jsonify({'error': 'URL required'}), 400
+    
+    # TEST MODE: Special test URLs for extension testing
+    # These return fake high-risk scores without being blocked by Chrome
+    test_urls = {
+        'securelink-test-malware.com': {
+            'risk_score': 0.95,
+            'threats': ['Test Malware Site', 'Suspicious Domain Pattern'],
+            'warnings': ['This is a test URL for extension development']
+        },
+        'test-phishing-example.net': {
+            'risk_score': 0.85,
+            'threats': ['Test Phishing Attempt'],
+            'warnings': ['Fake login page detected (TEST)']
+        },
+        'fake-dangerous-site.xyz': {
+            'risk_score': 0.75,
+            'threats': ['Suspicious TLD', 'New Domain'],
+            'warnings': ['Test warning message']
+        }
+    }
+    
+    # Check if this is a test URL
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ''
+        hostname_clean = hostname.replace('www.', '')
+        
+        if hostname_clean in test_urls:
+            test_data = test_urls[hostname_clean]
+            return jsonify({
+                'url': url,
+                'risk_score': test_data['risk_score'],
+                'is_safe': False,
+                'risk_level': 'high',
+                'threats_detected': test_data['threats'],
+                'warnings': test_data['warnings'],
+                'subscription_tier': 'test',
+                'scans_remaining': 999,
+                'test_mode': True
+            })
+    except:
+        pass
+    
+    # Check authentication
+    token = get_token_from_request()
+    user_id = None
+    tier = 'anonymous'
+    limit = 5
+    
+    if token:
+        user_data = auth_manager.validate_token(token)
+        if user_data:
+            user = user_data.get('user', {})
+            user_id = user.get('id')
+            tier = user.get('subscription_tier', 'free')
+            limit = get_scan_limit(tier)
+    
+    # Check rate limit
+    from datetime import date
+    today = date.today().isoformat()
+    key = f"{user_id or request.remote_addr}:{today}"
+    scans_today = extension_scan_counts.get(key, 0)
+    
+    if limit != float('inf') and scans_today >= limit:
+        upgrade_msg = "Upgrade to Pro for 500 scans/day" if tier == 'free' else "Sign in for more scans"
+        return jsonify({
+            'error': 'Daily scan limit reached',
+            'limit_reached': True,
+            'subscription_tier': tier,
+            'message': upgrade_msg,
+            'upgrade_url': 'https://securelinkapp.com/login'
+        }), 429
+    
+    # Increment scan count
+    extension_scan_counts[key] = scans_today + 1
+    
+    # Perform the actual verification
+    result = verifier.verify_link(url)
+    
+    # Return result with subscription info
+    response = {
+        'url': url,
+        'risk_score': result.risk_score,
+        'is_safe': result.is_safe,
+        'risk_level': result.risk_level,
+        'threats_detected': result.threats_detected,
+        'warnings': result.warnings,
+        'subscription_tier': tier,
+        'scans_remaining': max(0, limit - scans_today - 1) if limit != float('inf') else 'unlimited'
+    }
+    
+    return jsonify(response)
+
+
 @app.route('/api/auth/change-password', methods=['POST'])
 @require_auth
 def change_password():

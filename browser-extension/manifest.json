@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "SecureLink - Link Safety Checker",
-  "version": "1.0.0",
-  "description": "Instantly verify if links are safe before you click. Protect yourself from phishing, malware, and scams.",
+  "name": "SecureLink",
+  "version": "1.1.0",
+  "description": "Automatically scans URLs you visit and warns you about potentially malicious sites. Sign in for more scans!",
   "permissions": [
-    "activeTab",
-    "contextMenus",
-    "storage",
-    "notifications"
+    "tabs",
+    "webNavigation",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -30,11 +29,10 @@
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
+  "web_accessible_resources": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
+      "resources": ["warning.html", "upgrade.html"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

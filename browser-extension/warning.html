@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚠️ Security Warning - SecureLink</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .warning-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .warning-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #ef4444;
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+
+        .subtitle {
+            color: #fca5a5;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .url-display {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            word-break: break-all;
+            color: #94a3b8;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .risk-score {
+            display: inline-block;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .threats {
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .threats h3 {
+            color: #fca5a5;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .threat-item {
+            color: #f87171;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .threat-item:last-child {
+            border-bottom: none;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-safe {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+        }
+
+        .btn-safe:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #f87171;
+            border: 1px solid #f87171;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .powered-by {
+            margin-top: 30px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .powered-by a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="warning-container">
+        <div class="warning-icon">🛡️</div>
+        <h1>Potentially Dangerous Site Detected</h1>
+        <p class="subtitle">SecureLink has blocked this page for your safety</p>
+        
+        <div class="url-display" id="blocked-url"></div>
+        
+        <div class="risk-score" id="risk-score">Risk Score: --/100</div>
+        
+        <div class="threats" id="threats-container">
+            <h3>⚠️ Detected Threats:</h3>
+            <div id="threats-list"></div>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn btn-safe" onclick="goBack()">← Go Back to Safety</button>
+            <button class="btn btn-danger" onclick="proceedAnyway()">Proceed Anyway (Not Recommended)</button>
+        </div>
+        
+        <p class="powered-by">Protected by <a href="https://securelinkapp.com" target="_blank">SecureLink</a></p>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const blockedUrl = params.get('url') || 'Unknown URL';
+        const riskScore = params.get('score') || '?';
+        let threats = [];
+        
+        try {
+            threats = JSON.parse(params.get('threats') || '[]');
+        } catch (e) {
+            threats = ['Suspicious activity detected'];
+        }
+
+        // Display blocked URL
+        document.getElementById('blocked-url').textContent = blockedUrl;
+        
+        // Display risk score
+        document.getElementById('risk-score').textContent = `Risk Score: ${riskScore}/100`;
+        
+        // Display threats
+        const threatsList = document.getElementById('threats-list');
+        if (threats.length === 0) {
+            threats = ['This site has been flagged as potentially dangerous'];
+        }
+        threats.forEach(threat => {
+            const item = document.createElement('div');
+            item.className = 'threat-item';
+            item.innerHTML = `<span>⚠️</span> ${threat}`;
+            threatsList.appendChild(item);
+        });
+
+        // Go back to safety
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'https://google.com';
+            }
+        }
+
+        // Proceed anyway (at user's risk)
+        function proceedAnyway() {
+            if (confirm('Are you sure you want to proceed? This site may be dangerous and could harm your computer or steal your information.')) {
+                // Store bypass for this URL temporarily
+                chrome.storage.local.set({ 
+                    [`bypass_${blockedUrl}`]: Date.now() 
+                }, () => {
+                    window.location.href = blockedUrl;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
