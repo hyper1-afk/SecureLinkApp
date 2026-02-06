@@ -1435,8 +1435,8 @@
                             </div>
                             <div class="text-center mt-3" id="scanLimitInfo">
                                 <small class="text-muted">
-                                    <span id="scansRemaining">5</span> free scans remaining today • 
-                                    <a href="/login" class="text-info">Sign up for more</a>
+                                    <span id="scansRemaining">--</span> scans remaining today • 
+                                    <a href="/login" class="text-info" id="upgradeLink">Sign up for more</a>
                                 </small>
                             </div>
                         </form>
@@ -2530,11 +2530,14 @@
                 // Handle rate limit error
                 if (response.status === 429) {
                     const scansInfo = document.getElementById('scanLimitInfo');
+                    const isLoggedIn = !!getAuthToken();
+                    const upgradeUrl = isLoggedIn ? '/profile#subscription-tab' : '/login';
+                    const upgradeText = isLoggedIn ? 'Upgrade for more →' : 'Sign up for more →';
                     scansInfo.innerHTML = `
                         <div class="alert alert-warning py-2 mb-0">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             ${data.message || 'Daily scan limit reached'}
-                            <a href="/login" class="alert-link ms-2">Sign up for more →</a>
+                            <a href="${upgradeUrl}" class="alert-link ms-2">${upgradeText}</a>
                         </div>
                     `;
                     document.getElementById('scansRemaining').textContent = '0';
@@ -3087,6 +3090,37 @@
                 } else {
                     badge.textContent = 'FREE';
                     badge.className = 'subscription-badge badge-free';
+                }
+            }
+            
+            // Update scan limit info for logged-in users
+            updateScanLimitDisplay(user);
+        }
+        
+        async function updateScanLimitDisplay(user) {
+            const upgradeLink = document.getElementById('upgradeLink');
+            const scansRemainingEl = document.getElementById('scansRemaining');
+            
+            if (upgradeLink) {
+                if (user.subscription_tier === 'enterprise') {
+                    // Enterprise has unlimited scans
+                    if (scansRemainingEl) scansRemainingEl.textContent = '∞';
+                    upgradeLink.style.display = 'none';
+                } else {
+                    upgradeLink.href = '/profile#subscription-tab';
+                    upgradeLink.textContent = 'Upgrade for more';
+                    
+                    // Fetch actual scan usage
+                    try {
+                        const response = await fetch('/api/usage', { headers: getAuthHeaders() });
+                        if (response.ok) {
+                            const data = await response.json();
+                            const remaining = Math.max(0, (data.limit || 10) - (data.used || 0));
+                            if (scansRemainingEl) scansRemainingEl.textContent = remaining;
+                        }
+                    } catch (e) {
+                        console.error('Could not fetch scan usage:', e);
+                    }
                 }
             }
         }
