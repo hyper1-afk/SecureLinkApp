@@ -737,6 +737,28 @@ class AuthManager:
         finally:
             session.close()
     
+    def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Get user by their ID"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                return user.to_dict()
+            return None
+        finally:
+            session.close()
+    
+    def get_user_by_email(self, email: str) -> Optional[Dict]:
+        """Get user by email address"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.email == email).first()
+            if user:
+                return user.to_dict()
+            return None
+        finally:
+            session.close()
+    
     def get_user_by_oauth(self, provider: str, provider_id: str) -> Optional[Dict]:
         """Get user by OAuth provider and provider ID"""
         session = self.get_session()

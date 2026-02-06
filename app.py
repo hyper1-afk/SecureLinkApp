@@ -431,7 +431,18 @@ def logout_all():
 @require_auth
 def delete_own_account():
     """Delete the current user's account permanently"""
-    user_id = request.current_user['id']
+    user = request.current_user
+    user_id = user['id']
+    
+    # Cancel any active Stripe subscription first
+    subscription_id = user.get('stripe_subscription_id')
+    if subscription_id and not subscription_id.startswith('demo_'):
+        try:
+            payment_manager.cancel_subscription(subscription_id, at_period_end=False)
+        except Exception as e:
+            # Log but don't block deletion if subscription cancel fails
+            print(f"Warning: Failed to cancel subscription {subscription_id}: {e}")
+    
     result = auth_manager.delete_user(user_id)
     return jsonify(result)
 
@@ -2378,6 +2389,16 @@ def admin_api_customers():
 @require_admin_role('manager')
 def admin_api_delete_customer(user_id):
     """Delete a customer account (manager only)"""
+    # First get the user to check for subscription
+    user_data = auth_manager.get_user_by_id(user_id)
+    if user_data:
+        subscription_id = user_data.get('stripe_subscription_id')
+        if subscription_id and not subscription_id.startswith('demo_'):
+            try:
+                payment_manager.cancel_subscription(subscription_id, at_period_end=False)
+            except Exception as e:
+                print(f"Warning: Failed to cancel subscription {subscription_id}: {e}")
+    
     result = auth_manager.delete_user(user_id)
     return jsonify(result) if result['success'] else (jsonify(result), 400)
 
@@ -2390,6 +2411,17 @@ def admin_api_delete_customer_by_email():
     email = data.get('email', '').strip()
     if not email:
         return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    # First get the user to check for subscription
+    user_data = auth_manager.get_user_by_email(email)
+    if user_data:
+        subscription_id = user_data.get('stripe_subscription_id')
+        if subscription_id and not subscription_id.startswith('demo_'):
+            try:
+                payment_manager.cancel_subscription(subscription_id, at_period_end=False)
+            except Exception as e:
+                print(f"Warning: Failed to cancel subscription {subscription_id}: {e}")
+    
     result = auth_manager.delete_user_by_email(email)
     return jsonify(result) if result['success'] else (jsonify(result), 400)
 
