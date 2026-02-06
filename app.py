@@ -254,6 +254,13 @@ def login_page():
     return render_template('login.html')
 
 
+@app.route('/verify-email')
+def verify_email_page():
+    """Render the email verification page"""
+    token = request.args.get('token', '')
+    return render_template('verify_email.html', token=token)
+
+
 @app.route('/profile')
 def profile_page():
     """Render the profile page"""
@@ -318,7 +325,7 @@ def shortener_page():
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    """Register a new user and auto-login"""
+    """Register a new user - requires email verification"""
     data = request.get_json()
     
     email = data.get('email', '').strip()
@@ -335,54 +342,50 @@ def register():
     
     result = auth_manager.register(email, username, password, full_name)
     
-    # If registration successful, auto-login the user
+    # If registration successful, send verification email
     if result.get('success'):
-        login_result = auth_manager.login(
-            email,
-            password,
-            remember_me=True,
-            device_info=request.headers.get('User-Agent'),
-            ip_address=request.remote_addr
-        )
+        base_url = request.host_url.rstrip('/')
+        verification_token = result.get('verification_token')
         
-        if login_result.get('success'):
-            # Merge login data into result
-            result['token'] = login_result['token']
-            result['plan_limits'] = login_result['plan_limits']
-            result['auto_logged_in'] = True
-            
-            # If paid plan selected, create checkout session
-            if subscription_tier in ['pro', 'enterprise']:
-                user = login_result['user']
-                customer_id = payment_manager.create_customer(
-                    email=user['email'],
-                    name=user.get('full_name') or user['username'],
-                    metadata={'user_id': user['id']}
-                )
-                
-                if customer_id and not customer_id.startswith('demo_'):
-                    auth_manager.update_stripe_customer_id(user['id'], customer_id)
-                
-                base_url = request.host_url.rstrip('/')
-                checkout_session = payment_manager.create_checkout_session(
-                    customer_id=customer_id,
-                    plan=subscription_tier,
-                    billing_period='monthly',
-                    success_url=f"{base_url}/home?payment=success&plan={subscription_tier}&welcome=true",
-                    cancel_url=f"{base_url}/profile?payment=cancelled",
-                    user_id=user['id']
-                )
-                
-                if checkout_session:
-                    if checkout_session.get('demo_mode'):
-                        # Demo mode - instantly upgrade
-                        expires_at = datetime.utcnow() + timedelta(days=30)
-                        auth_manager.update_subscription(user['id'], subscription_tier, expires_at)
-                        result['demo_upgrade'] = True
-                    else:
-                        result['checkout_url'] = checkout_session['url']
-                        result['checkout_session_id'] = checkout_session['session_id']
+        # Send verification email
+        email_sent = auth_manager._send_verification_email(email, username, verification_token, base_url)
+        
+        # Store the selected plan in the result so frontend can remind user after verification
+        result['selected_plan'] = subscription_tier
+        result['email_sent'] = email_sent
+        result['requires_verification'] = True
+        
+        # Don't expose the verification token to the frontend
+        if 'verification_token' in result:
+            del result['verification_token']
     
+    return jsonify(result)
+
+
+@app.route('/api/auth/verify-email', methods=['POST'])
+def verify_email():
+    """Verify email address using token"""
+    data = request.get_json()
+    token = data.get('token', '').strip()
+    
+    if not token:
+        return jsonify({'success': False, 'error': 'Verification token is required'}), 400
+    
+    result = auth_manager.verify_email(token)
+    return jsonify(result)
+
+
+@app.route('/api/auth/resend-verification', methods=['POST'])
+def resend_verification():
+    """Resend verification email"""
+    data = request.get_json()
+    email = data.get('email', '').strip()
+    
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    base_url = request.host_url.rstrip('/')
+    result = auth_manager.resend_verification(email, base_url)
     return jsonify(result)
 
 

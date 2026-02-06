@@ -837,6 +837,9 @@
                             window.location.href = '/home';
                         }, 1000);
                     }
+                } else if (data.email_not_verified) {
+                    // Show verification needed message with resend option
+                    showVerificationNeeded(data.email);
                 } else {
                     showAlert(data.error || 'Login failed');
                 }
@@ -845,6 +848,41 @@
             } finally {
                 btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Sign In';
                 btn.disabled = false;
+            }
+        }
+        
+        function showVerificationNeeded(email) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = 'alert alert-warning';
+            alertBox.innerHTML = `
+                <i class="bi bi-envelope-exclamation me-2"></i>
+                <strong>Email verification required.</strong><br>
+                Please check your inbox for the verification link.
+                <br><br>
+                <button class="btn btn-sm btn-outline-warning" onclick="resendVerification('${email}')">
+                    <i class="bi bi-arrow-repeat me-1"></i>Resend verification email
+                </button>
+            `;
+            alertBox.style.display = 'block';
+        }
+        
+        async function resendVerification(email) {
+            try {
+                const response = await fetch('/api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Verification email sent! Please check your inbox.', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to send verification email');
+                }
+            } catch (error) {
+                showAlert('Connection error. Please try again.');
             }
         }
         
@@ -882,33 +920,21 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Store auth token (user is auto-logged in)
-                    if (data.token) {
-                        localStorage.setItem('auth_token', data.token);
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        if (data.plan_limits) {
-                            localStorage.setItem('plan_limits', JSON.stringify(data.plan_limits));
+                    // Registration successful - show verification message
+                    if (data.requires_verification) {
+                        // Store selected plan for after verification
+                        if (data.selected_plan && data.selected_plan !== 'free') {
+                            sessionStorage.setItem('pending_upgrade', data.selected_plan);
                         }
-                    }
-                    
-                    // If checkout URL provided, redirect to Stripe
-                    if (data.checkout_url) {
-                        showAlert('Account created! Redirecting to checkout...', 'success');
-                        setTimeout(() => {
-                            window.location.href = data.checkout_url;
-                        }, 1000);
-                    } else if (data.demo_upgrade) {
-                        // Demo mode - instant upgrade
-                        showAlert('Account created with ' + selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' plan! Redirecting...', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/home?welcome=true';
-                        }, 1000);
+                        
+                        showRegistrationSuccess(data.user.email);
                     } else {
-                        // Free plan - go to home
-                        showAlert('Account created! Redirecting...', 'success');
+                        // Fallback for if verification is disabled
+                        showAlert('Account created! Please sign in.', 'success');
                         setTimeout(() => {
-                            window.location.href = '/home?welcome=true';
-                        }, 1000);
+                            switchTab('login');
+                            document.getElementById('loginEmail').value = document.getElementById('registerEmail').value;
+                        }, 1500);
                     }
                 } else {
                     showAlert(data.error || 'Registration failed');
@@ -918,6 +944,34 @@
             } finally {
                 btn.innerHTML = '<i class="bi bi-person-plus me-2"></i>Create Account';
                 btn.disabled = false;
+            }
+        }
+        
+        function showRegistrationSuccess(email) {
+            const registerForm = document.getElementById('registerForm');
+            registerForm.innerHTML = `
+                <div class="text-center py-4">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: #10b981;">
+                        <i class="bi bi-envelope-check"></i>
+                    </div>
+                    <h3 style="color: #f8fafc; margin-bottom: 12px;">Check Your Email</h3>
+                    <p style="color: #94a3b8; margin-bottom: 24px;">
+                        We've sent a verification link to:<br>
+                        <strong style="color: #0ea5e9;">${email}</strong>
+                    </p>
+                    <p style="color: #94a3b8; font-size: 0.9rem;">
+                        Click the link in the email to verify your account and start using SecureLink.
+                    </p>
+                    <hr style="border-color: rgba(148, 163, 184, 0.2); margin: 24px 0;">
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 16px;">
+                        Didn't receive the email? Check your spam folder or
+                    </p>
+                    <button class="btn btn-outline-primary btn-sm" onclick="resendVerification('${email}')">
+                        <i class="bi bi-arrow-repeat me-1"></i>Resend verification email
+                    </button>
+                </div>
+            `;
+        }
             }
         }
         

@@ -7,6 +7,9 @@ Copyright (c) 2026 Ryan Haley. All Rights Reserved.
 import os
 import hashlib
 import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from dataclasses import dataclass
@@ -288,6 +291,100 @@ class AuthManager:
         """Hash a session token"""
         return hashlib.sha256(token.encode()).hexdigest()
     
+    def _send_verification_email(self, email: str, username: str, token: str, base_url: str = None) -> bool:
+        """Send email verification link to user"""
+        try:
+            if not base_url:
+                base_url = 'https://securelinkapp.com'
+            
+            verification_url = f"{base_url}/verify-email?token={token}"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 40px; }}
+                    .logo {{ text-align: center; margin-bottom: 30px; }}
+                    .logo h1 {{ color: #0ea5e9; margin: 0; font-size: 28px; }}
+                    h2 {{ color: #f8fafc; margin-top: 0; }}
+                    p {{ color: #cbd5e1; line-height: 1.6; }}
+                    .btn {{ display: inline-block; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; }}
+                    .btn:hover {{ background: linear-gradient(135deg, #0284c7, #0369a1); }}
+                    .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; text-align: center; }}
+                    .link {{ color: #0ea5e9; word-break: break-all; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">
+                        <h1>🔒 SecureLink</h1>
+                    </div>
+                    <h2>Verify Your Email Address</h2>
+                    <p>Hi {username},</p>
+                    <p>Thanks for signing up for SecureLink! Please verify your email address by clicking the button below:</p>
+                    <p style="text-align: center;">
+                        <a href="{verification_url}" class="btn">Verify Email Address</a>
+                    </p>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p class="link">{verification_url}</p>
+                    <p>This link will expire in 24 hours.</p>
+                    <p>If you didn't create a SecureLink account, you can safely ignore this email.</p>
+                    <div class="footer">
+                        <p>© 2026 SecureLink. All rights reserved.</p>
+                        <p>Protecting you from malicious links, one click at a time.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+            Verify Your Email Address
+            
+            Hi {username},
+            
+            Thanks for signing up for SecureLink! Please verify your email address by clicking the link below:
+            
+            {verification_url}
+            
+            This link will expire in 24 hours.
+            
+            If you didn't create a SecureLink account, you can safely ignore this email.
+            
+            © 2026 SecureLink
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'Verify your SecureLink email address'
+            msg['From'] = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            msg['To'] = email
+            
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            smtp_host = self.config.SMTP_HOST or 'smtp.gmail.com'
+            smtp_port = self.config.SMTP_PORT or 587
+            smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
+            
+            if not smtp_user or not smtp_pass:
+                print("Warning: SMTP not configured - verification email not sent")
+                return False
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Failed to send verification email: {e}")
+            return False
+    
     def register(self, email: str, username: str, password: str, full_name: str = None) -> Dict:
         """Register a new user"""
         session = self.get_session()
@@ -321,8 +418,65 @@ class AuthManager:
             return {
                 'success': True,
                 'user': user.to_dict(),
-                'message': 'Account created successfully'
+                'verification_token': user.verification_token,
+                'message': 'Account created successfully. Please verify your email.'
             }
+            
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def verify_email(self, token: str) -> Dict:
+        """Verify a user's email address using the verification token"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.verification_token == token).first()
+            
+            if not user:
+                return {'success': False, 'error': 'Invalid or expired verification link'}
+            
+            if user.is_verified:
+                return {'success': True, 'message': 'Email already verified', 'already_verified': True}
+            
+            user.is_verified = True
+            user.verification_token = None  # Clear the token after use
+            session.commit()
+            
+            return {
+                'success': True,
+                'message': 'Email verified successfully! You can now log in.',
+                'user': user.to_dict()
+            }
+            
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def resend_verification(self, email: str, base_url: str = None) -> Dict:
+        """Resend verification email"""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.email == email).first()
+            
+            if not user:
+                # Don't reveal if email exists or not for security
+                return {'success': True, 'message': 'If this email is registered, a verification link has been sent.'}
+            
+            if user.is_verified:
+                return {'success': False, 'error': 'This email is already verified. Please log in.'}
+            
+            # Generate new verification token
+            user.verification_token = secrets.token_urlsafe(32)
+            session.commit()
+            
+            # Send the email
+            self._send_verification_email(user.email, user.username, user.verification_token, base_url)
+            
+            return {'success': True, 'message': 'Verification email sent! Please check your inbox.'}
             
         except Exception as e:
             session.rollback()
@@ -353,6 +507,15 @@ class AuthManager:
             
             if not user.is_active:
                 return {'success': False, 'error': 'Account is deactivated'}
+            
+            # Check if email is verified
+            if not user.is_verified:
+                return {
+                    'success': False, 
+                    'error': 'Please verify your email before logging in. Check your inbox for the verification link.',
+                    'email_not_verified': True,
+                    'email': user.email
+                }
             
             # Update last login
             user.last_login = datetime.utcnow()
