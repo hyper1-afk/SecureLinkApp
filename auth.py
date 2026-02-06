@@ -509,13 +509,21 @@ class AuthManager:
                 return {'success': False, 'error': 'Account is deactivated'}
             
             # Check if email is verified
-            if not user.is_verified:
-                return {
-                    'success': False, 
-                    'error': 'Please verify your email before logging in. Check your inbox for the verification link.',
-                    'email_not_verified': True,
-                    'email': user.email
-                }
+            # Skip verification for OAuth users and users created before verification was added
+            # (users without a verification_token were created before this feature)
+            if not user.is_verified and user.oauth_provider is None:
+                # Auto-verify users who registered before email verification was implemented
+                # These users have null verification_token or were created before Feb 5, 2026
+                if user.verification_token is None or (user.created_at and user.created_at < datetime(2026, 2, 5)):
+                    user.is_verified = True
+                    session.commit()
+                else:
+                    return {
+                        'success': False, 
+                        'error': 'Please verify your email before logging in. Check your inbox for the verification link.',
+                        'email_not_verified': True,
+                        'email': user.email
+                    }
             
             # Update last login
             user.last_login = datetime.utcnow()
