@@ -318,13 +318,14 @@ def shortener_page():
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    """Register a new user"""
+    """Register a new user and auto-login"""
     data = request.get_json()
     
     email = data.get('email', '').strip()
     username = data.get('username', '').strip()
     password = data.get('password', '')
     full_name = data.get('full_name', '').strip()
+    subscription_tier = data.get('subscription_tier', 'free')
     
     if not email or not username or not password:
         return jsonify({'success': False, 'error': 'Email, username, and password are required'}), 400
@@ -333,6 +334,55 @@ def register():
         return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
     
     result = auth_manager.register(email, username, password, full_name)
+    
+    # If registration successful, auto-login the user
+    if result.get('success'):
+        login_result = auth_manager.login(
+            email,
+            password,
+            remember_me=True,
+            device_info=request.headers.get('User-Agent'),
+            ip_address=request.remote_addr
+        )
+        
+        if login_result.get('success'):
+            # Merge login data into result
+            result['token'] = login_result['token']
+            result['plan_limits'] = login_result['plan_limits']
+            result['auto_logged_in'] = True
+            
+            # If paid plan selected, create checkout session
+            if subscription_tier in ['pro', 'enterprise']:
+                user = login_result['user']
+                customer_id = payment_manager.create_customer(
+                    email=user['email'],
+                    name=user.get('full_name') or user['username'],
+                    metadata={'user_id': user['id']}
+                )
+                
+                if customer_id and not customer_id.startswith('demo_'):
+                    auth_manager.update_stripe_customer_id(user['id'], customer_id)
+                
+                base_url = request.host_url.rstrip('/')
+                checkout_session = payment_manager.create_checkout_session(
+                    customer_id=customer_id,
+                    plan=subscription_tier,
+                    billing_period='monthly',
+                    success_url=f"{base_url}/home?payment=success&plan={subscription_tier}&welcome=true",
+                    cancel_url=f"{base_url}/profile?payment=cancelled",
+                    user_id=user['id']
+                )
+                
+                if checkout_session:
+                    if checkout_session.get('demo_mode'):
+                        # Demo mode - instantly upgrade
+                        expires_at = datetime.utcnow() + timedelta(days=30)
+                        auth_manager.update_subscription(user['id'], subscription_tier, expires_at)
+                        result['demo_upgrade'] = True
+                    else:
+                        result['checkout_url'] = checkout_session['url']
+                        result['checkout_session_id'] = checkout_session['session_id']
+    
     return jsonify(result)
 
 

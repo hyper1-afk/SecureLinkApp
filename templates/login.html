@@ -882,18 +882,34 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // If Pro or Enterprise was selected, redirect to payment after login
-                    if (selectedPlan !== 'free') {
-                        showAlert('Account created! Please sign in to complete your ' + selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' subscription.', 'success');
-                        // Store the selected plan for after login
-                        sessionStorage.setItem('pending_upgrade', selectedPlan);
-                    } else {
-                        showAlert('Account created! Please sign in.', 'success');
+                    // Store auth token (user is auto-logged in)
+                    if (data.token) {
+                        localStorage.setItem('auth_token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        if (data.plan_limits) {
+                            localStorage.setItem('plan_limits', JSON.stringify(data.plan_limits));
+                        }
                     }
-                    setTimeout(() => {
-                        switchTab('login');
-                        document.getElementById('loginEmail').value = document.getElementById('registerEmail').value;
-                    }, 1500);
+                    
+                    // If checkout URL provided, redirect to Stripe
+                    if (data.checkout_url) {
+                        showAlert('Account created! Redirecting to checkout...', 'success');
+                        setTimeout(() => {
+                            window.location.href = data.checkout_url;
+                        }, 1000);
+                    } else if (data.demo_upgrade) {
+                        // Demo mode - instant upgrade
+                        showAlert('Account created with ' + selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1) + ' plan! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/home?welcome=true';
+                        }, 1000);
+                    } else {
+                        // Free plan - go to home
+                        showAlert('Account created! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/home?welcome=true';
+                        }, 1000);
+                    }
                 } else {
                     showAlert(data.error || 'Registration failed');
                 }
