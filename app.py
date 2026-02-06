@@ -578,6 +578,26 @@ def reset_admin_password():
         admin_session.close()
 
 
+@app.route('/api/admin/verify-all-users', methods=['POST'])
+def verify_all_users():
+    """Mark all existing users as verified - requires secret key"""
+    data = request.get_json()
+    
+    secret_key = data.get('secret_key', '')
+    if secret_key != 'SecureLink2026EmergencyReset!':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        from auth import User
+        db_session = auth_manager.get_session()
+        count = db_session.query(User).filter(User.is_verified == False).update({'is_verified': True})
+        db_session.commit()
+        db_session.close()
+        return jsonify({'success': True, 'message': f'Verified {count} users'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
 # ============== Browser Extension API ==============
 
 # Track daily scans per user (in-memory, resets on server restart)
