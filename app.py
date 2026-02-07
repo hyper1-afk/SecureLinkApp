@@ -2703,6 +2703,42 @@ def create_support_ticket():
     return jsonify(result), 400
 
 
+@app.route('/api/support/tickets/guest', methods=['POST'])
+def create_guest_support_ticket():
+    """Allow guests (non-logged-in users) to submit support tickets"""
+    data = request.get_json()
+    
+    customer_email = data.get('customer_email', '').strip()
+    customer_name = data.get('customer_name', '').strip()
+    subject = data.get('subject', '').strip()
+    description = data.get('description', '').strip()
+    category = data.get('category', 'general')
+    priority = data.get('priority', 'medium')
+    
+    if not customer_email or not subject or not description:
+        return jsonify({'error': 'Email, subject, and description are required'}), 400
+    
+    # Basic email validation
+    import re
+    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', customer_email):
+        return jsonify({'error': 'Invalid email address'}), 400
+    
+    result = admin_manager.create_ticket(
+        customer_email=customer_email,
+        customer_name=customer_name or 'Guest',
+        subject=subject,
+        description=description,
+        category=category,
+        priority=priority,
+        user_id=None,
+        source='web'
+    )
+    
+    if result['success']:
+        return jsonify(result)
+    return jsonify(result), 400
+
+
 @app.route('/api/support/tickets', methods=['GET'])
 @require_auth
 def get_my_support_tickets():
