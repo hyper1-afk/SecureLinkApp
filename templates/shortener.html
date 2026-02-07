@@ -116,6 +116,26 @@
     <script>
         const token = localStorage.getItem('auth_token');
 
+        // Check subscription - Pro or Enterprise required
+        (async function checkSubscription() {
+            if (!token) {
+                window.location.href = '/pricing?upgrade=pro&feature=shortener';
+                return;
+            }
+            try {
+                const res = await fetch('/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const profile = await res.json();
+                const tier = profile.subscription_tier || 'free';
+                if (tier === 'free') {
+                    window.location.href = '/pricing?upgrade=pro&feature=shortener';
+                }
+            } catch (e) {
+                window.location.href = '/pricing?upgrade=pro&feature=shortener';
+            }
+        })();
+
         async function shortenUrl() {
             const url = document.getElementById('urlInput').value;
             if (!url) {

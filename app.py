@@ -100,6 +100,17 @@ def require_pro(f):
     return decorated
 
 
+def require_enterprise(f):
+    """Decorator to require Enterprise subscription"""
+    @wraps(f)
+    @require_auth
+    def decorated(*args, **kwargs):
+        if request.current_user.get('subscription_tier') != SubscriptionTier.ENTERPRISE.value:
+            return jsonify({'error': 'This feature requires an Enterprise subscription'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
 def require_admin(f):
     """Decorator to require admin employee authentication"""
     @wraps(f)
@@ -2733,8 +2744,9 @@ def customer_ticket_respond(ticket_id):
 # ============================================================================
 
 @app.route('/api/breach/password', methods=['POST'])
+@require_pro
 def check_password_breach_route():
-    """Check if a password has been exposed in data breaches"""
+    """Check if a password has been exposed in data breaches (requires Pro)"""
     data = request.get_json()
     password = data.get('password', '')
     
@@ -2770,9 +2782,9 @@ def check_email_breach_route():
 # ============================================================================
 
 @app.route('/api/shorten', methods=['POST'])
-@require_auth
+@require_pro
 def create_short_link():
-    """Create a shortened, pre-verified link"""
+    """Create a shortened, pre-verified link (requires Pro)"""
     import traceback
     user = request.current_user
     data = request.get_json()
@@ -2831,9 +2843,9 @@ def redirect_short_link(short_code):
 
 
 @app.route('/api/shorten/stats', methods=['GET'])
-@require_auth
+@require_pro
 def get_short_link_stats():
-    """Get user's short link statistics"""
+    """Get user's short link statistics (requires Pro)"""
     user = request.current_user
     links = db.get_user_short_links(user.get('id'))
     
@@ -3010,9 +3022,9 @@ def check_ip_abuse(ip):
 # ============================================================================
 
 @app.route('/api/org/create', methods=['POST'])
-@require_auth
+@require_enterprise
 def create_organization():
-    """Create a new organization"""
+    """Create a new organization (requires Enterprise)"""
     user = request.current_user
     data = request.get_json()
     
@@ -3038,9 +3050,9 @@ def create_organization():
 
 
 @app.route('/api/org/<int:org_id>', methods=['GET'])
-@require_auth
+@require_enterprise
 def get_organization(org_id):
-    """Get organization details"""
+    """Get organization details (requires Enterprise)"""
     user = request.current_user
     org = db.get_organization(org_id)
     
@@ -3055,9 +3067,9 @@ def get_organization(org_id):
 
 
 @app.route('/api/org/<int:org_id>/members', methods=['GET'])
-@require_auth
+@require_enterprise
 def get_organization_members(org_id):
-    """Get organization members"""
+    """Get organization members (requires Enterprise)"""
     user = request.current_user
     
     if not db.is_organization_member(org_id, user.get('id')):
@@ -3068,9 +3080,9 @@ def get_organization_members(org_id):
 
 
 @app.route('/api/org/<int:org_id>/invite', methods=['POST'])
-@require_auth
+@require_enterprise
 def invite_organization_member(org_id):
-    """Invite a user to the organization"""
+    """Invite a user to the organization (requires Enterprise)"""
     user = request.current_user
     data = request.get_json()
     
@@ -3102,9 +3114,9 @@ def invite_organization_member(org_id):
 
 
 @app.route('/api/org/<int:org_id>/webhooks', methods=['PUT'])
-@require_auth
+@require_enterprise
 def update_organization_webhooks(org_id):
-    """Update organization webhook settings"""
+    """Update organization webhook settings (requires Enterprise)"""
     user = request.current_user
     data = request.get_json()
     
@@ -3126,9 +3138,9 @@ def update_organization_webhooks(org_id):
 
 
 @app.route('/api/org/<int:org_id>/verify', methods=['POST'])
-@require_auth
+@require_enterprise
 def organization_verify_link(org_id):
-    """Verify a link for an organization (with webhook notifications)"""
+    """Verify a link for an organization with webhook notifications (requires Enterprise)"""
     user = request.current_user
     data = request.get_json()
     
@@ -3195,9 +3207,9 @@ def organization_verify_link(org_id):
 
 
 @app.route('/api/org/<int:org_id>/stats', methods=['GET'])
-@require_auth
+@require_enterprise
 def get_organization_stats(org_id):
-    """Get organization verification statistics"""
+    """Get organization verification statistics (requires Enterprise)"""
     user = request.current_user
     
     if not db.is_organization_member(org_id, user.get('id')):

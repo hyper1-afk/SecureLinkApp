@@ -300,6 +300,26 @@
         let currentOrg = null;
         let apiKeyVisible = false;
 
+        // Check subscription - Enterprise required
+        (async function checkSubscription() {
+            if (!token) {
+                window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+                return;
+            }
+            try {
+                const res = await fetch('/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const profile = await res.json();
+                const tier = profile.subscription_tier || 'free';
+                if (tier !== 'enterprise') {
+                    window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+                }
+            } catch (e) {
+                window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+            }
+        })();
+
         // Check auth and load data
         async function init() {
             if (!token) {
