@@ -917,11 +917,17 @@ class AdminManager:
             
             # Send closure notification to customer if ticket was just closed or resolved
             if 'status' in data and data['status'] in [TicketStatus.RESOLVED.value, TicketStatus.CLOSED.value]:
+                print(f"[TICKET CLOSURE] Status changed to: {data['status']}, old_status: {old_status}")
                 if old_status not in [TicketStatus.RESOLVED.value, TicketStatus.CLOSED.value]:
+                    print(f"[TICKET CLOSURE] Sending notification to: {ticket_dict.get('customer_email')}")
                     try:
-                        send_ticket_closure_notification(ticket_dict, self.config)
+                        result = send_ticket_closure_notification(ticket_dict, self.config)
+                        print(f"[TICKET CLOSURE] Notification result: {result}")
                     except Exception as notify_error:
+                        print(f"[TICKET CLOSURE] Notification FAILED: {notify_error}")
                         logging.getLogger(__name__).warning(f"Failed to send closure notification: {notify_error}")
+                else:
+                    print(f"[TICKET CLOSURE] Skipping - ticket was already {old_status}")
             
             return {'success': True, 'ticket': ticket_dict}
             

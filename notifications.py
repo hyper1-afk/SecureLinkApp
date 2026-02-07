@@ -384,14 +384,20 @@ def send_ticket_closure_notification(ticket_data: dict, config: Config = None):
     """
     config = config or Config()
     
+    print(f"[CLOSURE EMAIL] Starting notification for ticket {ticket_data.get('ticket_number')}")
+    
     customer_email = ticket_data.get('customer_email')
     if not customer_email:
+        print("[CLOSURE EMAIL] FAILED: No customer email")
         logger.warning("No customer email - ticket closure notification not sent")
         return False
     
     if not config.SMTP_USERNAME or not config.SMTP_PASSWORD:
+        print(f"[CLOSURE EMAIL] FAILED: SMTP not configured (user: {config.SMTP_USERNAME})")
         logger.warning("SMTP credentials not configured - ticket closure notification not sent")
         return False
+    
+    print(f"[CLOSURE EMAIL] Sending to: {customer_email} via {config.SMTP_HOST}:{config.SMTP_PORT}")
     
     try:
         ticket_number = ticket_data.get('ticket_number', 'N/A')
@@ -490,10 +496,12 @@ def send_ticket_closure_notification(ticket_data: dict, config: Config = None):
                 server.send_message(msg)
         
         logger.info(f"Ticket closure notification sent to {customer_email}")
+        print(f"[CLOSURE EMAIL] SUCCESS: Email sent to {customer_email}")
         return True
         
     except Exception as e:
         logger.error(f"Failed to send ticket closure notification: {e}")
+        print(f"[CLOSURE EMAIL] ERROR: {e}")
         return False
 
 
