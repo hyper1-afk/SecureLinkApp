@@ -1195,64 +1195,77 @@
             document.getElementById('supportModal').classList.remove('active');
         }
 
-        document.getElementById('supportModalClose').addEventListener('click', closeSupportModal);
-
-        document.getElementById('supportModal').addEventListener('click', (e) => {
-            if (e.target.id === 'supportModal') {
-                closeSupportModal();
+        // Wait for DOM to load before attaching event listeners to modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const supportModalClose = document.getElementById('supportModalClose');
+            const supportModal = document.getElementById('supportModal');
+            const supportForm = document.getElementById('supportForm');
+            
+            if (supportModalClose) {
+                supportModalClose.addEventListener('click', closeSupportModal);
             }
-        });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.getElementById('supportModal').classList.contains('active')) {
-                closeSupportModal();
-            }
-        });
-
-        document.getElementById('supportForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('supportSubmitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
-            
-            const ticketData = {
-                subject: document.getElementById('supportSubject').value.trim(),
-                category: 'general',
-                priority: 'medium',
-                description: document.getElementById('supportDescription').value.trim(),
-                customer_email: document.getElementById('supportEmail').value.trim(),
-                customer_name: document.getElementById('supportName').value.trim()
-            };
-            
-            try {
-                const response = await fetch('/api/support/tickets/guest', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(ticketData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    document.getElementById('supportForm').style.display = 'none';
-                    document.getElementById('supportSuccess').style.display = 'block';
-                    document.getElementById('supportTicketNumber').textContent = data.ticket.ticket_number;
-                    
-                    setTimeout(() => {
+            if (supportModal) {
+                supportModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'supportModal') {
                         closeSupportModal();
-                    }, 5000);
-                } else {
-                    alert(data.error || 'Failed to submit ticket. Please try again.');
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && supportModal && supportModal.classList.contains('active')) {
+                    closeSupportModal();
                 }
-            } catch (error) {
-                console.error('Error submitting support ticket:', error);
-                alert('Error submitting ticket. Please try again.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-send-fill"></i> Submit Ticket';
+            });
+
+            if (supportForm) {
+                supportForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const submitBtn = document.getElementById('supportSubmitBtn');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+                    
+                    const ticketData = {
+                        subject: document.getElementById('supportSubject').value.trim(),
+                        category: 'general',
+                        priority: 'medium',
+                        description: document.getElementById('supportDescription').value.trim(),
+                        customer_email: document.getElementById('supportEmail').value.trim(),
+                        customer_name: document.getElementById('supportName').value.trim()
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/support/tickets/guest', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(ticketData)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            document.getElementById('supportForm').style.display = 'none';
+                            document.getElementById('supportSuccess').style.display = 'block';
+                            document.getElementById('supportTicketNumber').textContent = data.ticket.ticket_number;
+                            
+                            setTimeout(() => {
+                                closeSupportModal();
+                            }, 5000);
+                        } else {
+                            alert(data.error || 'Failed to submit ticket. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Error submitting support ticket:', error);
+                        alert('Error submitting ticket. Please try again.');
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-send-fill"></i> Submit Ticket';
+                    }
+                });
             }
         });
     </script>
