@@ -190,6 +190,61 @@
             text-decoration: underline;
         }
 
+        /* Scan Tracker */
+        .scan-tracker {
+            margin: 0 20px 15px;
+            padding: 15px;
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 10px;
+        }
+
+        .scan-tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .scan-count {
+            font-weight: 600;
+            color: #0ea5e9;
+        }
+
+        .scan-progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .scan-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #0ea5e9);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .scan-progress.warning {
+            background: linear-gradient(90deg, #f59e0b, #f97316);
+        }
+
+        .scan-progress.danger {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .scan-reset-time {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #64748b;
+            text-align: right;
+        }
+
+        .scan-tracker.unlimited .scan-progress-bar {
+            display: none;
+        }
+
         /* Status */
         .status {
             padding: 20px;
@@ -420,7 +475,7 @@
             Don't have an account? <a href="https://securelinkapp.com/login" target="_blank">Create one free →</a>
         </div>
         <div class="login-help" style="margin-top: 5px;">
-            Sign in: 10 scans/day • <a href="https://securelinkapp.com/pricing" target="_blank">View Plans</a>
+            Sign in: 50 scans/day • <a href="https://securelinkapp.com/pricing" target="_blank">View Plans</a>
         </div>
     </div>
 
@@ -429,9 +484,21 @@
         <div class="user-avatar">👤</div>
         <div class="user-details">
             <div class="user-email" id="user-email">user@example.com</div>
-            <div class="scans-remaining" id="scans-remaining">500 scans remaining today</div>
+            <div class="scans-remaining" id="scans-remaining">50 scans remaining today</div>
         </div>
         <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+
+    <!-- Scan Tracker -->
+    <div class="scan-tracker" id="scan-tracker">
+        <div class="scan-tracker-header">
+            <span>Today's Scans</span>
+            <span class="scan-count" id="scan-count">0 / 50</span>
+        </div>
+        <div class="scan-progress-bar">
+            <div class="scan-progress" id="scan-progress" style="width: 0%"></div>
+        </div>
+        <div class="scan-reset-time" id="scan-reset-time">Resets at midnight</div>
     </div>
 
     <div class="status">

@@ -90,8 +90,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update scans display
         if (session.scanLimit === 'unlimited' || tier === 'enterprise') {
             scansRemaining.textContent = 'Unlimited scans';
+            updateScanTracker(0, 'unlimited');
         } else {
-            scansRemaining.textContent = `${session.scanLimit || 10} scans/day`;
+            const limit = session.scanLimit || 50;
+            const used = session.scansToday || 0;
+            scansRemaining.textContent = `${limit - used} scans remaining`;
+            updateScanTracker(used, limit);
         }
         
         statusText.textContent = 'Full Protection Active';
@@ -108,8 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
         tierBadge.className = 'tier-badge';
         
         statusText.textContent = 'Limited Protection';
-        statusSub.textContent = '5 free scans/day - Sign in for 10+';
+        statusSub.textContent = '15 free scans - Sign in for 50/day';
         statusSub.className = 'status-sub warning';
+        
+        // Hide scan tracker when logged out
+        const scanTracker = document.getElementById('scan-tracker');
+        if (scanTracker) scanTracker.style.display = 'none';
     }
 
     function updateStatusDisplay(status) {
@@ -121,21 +129,64 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tier === 'pro') tierBadge.classList.add('pro');
         if (tier === 'enterprise') tierBadge.classList.add('enterprise');
         
-        // Update scans remaining
+        // Update scans remaining and tracker
         if (status.scan_limit === 'unlimited') {
             scansRemaining.textContent = 'Unlimited scans';
             upgradeCta.classList.add('hidden');
+            updateScanTracker(0, 'unlimited');
         } else {
             const remaining = status.scans_remaining || 0;
-            const limit = status.scan_limit || 10;
-            scansRemaining.textContent = `${remaining} of ${limit} scans remaining today`;
+            const limit = status.scan_limit || 50;
+            const used = status.scans_today || (limit - remaining);
+            scansRemaining.textContent = `${remaining} scans remaining`;
+            updateScanTracker(used, limit);
             
             // Show upgrade CTA if running low
-            if (remaining <= 3 && tier === 'free') {
+            if (remaining <= 5 && tier === 'free') {
                 upgradeCta.classList.remove('hidden');
             } else {
                 upgradeCta.classList.add('hidden');
             }
+        }
+    }
+
+    function updateScanTracker(used, limit) {
+        const scanTracker = document.getElementById('scan-tracker');
+        const scanCount = document.getElementById('scan-count');
+        const scanProgress = document.getElementById('scan-progress');
+        const scanResetTime = document.getElementById('scan-reset-time');
+        
+        if (!scanTracker) return;
+        
+        // Show tracker for logged-in users
+        scanTracker.style.display = 'block';
+        
+        if (limit === 'unlimited') {
+            scanTracker.classList.add('unlimited');
+            scanCount.textContent = `${used} scans today`;
+            scanProgress.style.width = '0%';
+            scanResetTime.textContent = 'Unlimited plan';
+        } else {
+            scanTracker.classList.remove('unlimited');
+            scanCount.textContent = `${used} / ${limit}`;
+            
+            const percentage = Math.min((used / limit) * 100, 100);
+            scanProgress.style.width = `${percentage}%`;
+            
+            // Color code based on usage
+            scanProgress.classList.remove('warning', 'danger');
+            if (percentage >= 90) {
+                scanProgress.classList.add('danger');
+            } else if (percentage >= 70) {
+                scanProgress.classList.add('warning');
+            }
+            
+            // Calculate time until midnight reset
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0);
+            const hoursUntilReset = Math.ceil((midnight - now) / (1000 * 60 * 60));
+            scanResetTime.textContent = `Resets in ${hoursUntilReset} hour${hoursUntilReset !== 1 ? 's' : ''}`;
         }
     }
 
