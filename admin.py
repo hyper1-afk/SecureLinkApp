@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 from config import Config
-from notifications import send_ticket_notification
+from notifications import send_ticket_notification, send_ticket_closure_notification
 
 Base = declarative_base()
 
@@ -895,6 +895,7 @@ class AdminManager:
             if not ticket:
                 return {'success': False, 'error': 'Ticket not found'}
             
+            old_status = ticket.status
             if 'status' in data:
                 ticket.status = data['status']
                 if data['status'] == TicketStatus.RESOLVED.value:
@@ -911,7 +912,18 @@ class AdminManager:
                 ticket.tags = ','.join(data['tags']) if isinstance(data['tags'], list) else data['tags']
             
             session.commit()
-            return {'success': True, 'ticket': ticket.to_dict()}
+            
+            ticket_dict = ticket.to_dict()
+            
+            # Send closure notification to customer if ticket was just closed or resolved
+            if 'status' in data and data['status'] in [TicketStatus.RESOLVED.value, TicketStatus.CLOSED.value]:
+                if old_status not in [TicketStatus.RESOLVED.value, TicketStatus.CLOSED.value]:
+                    try:
+                        send_ticket_closure_notification(ticket_dict, self.config)
+                    except Exception as notify_error:
+                        logging.getLogger(__name__).warning(f"Failed to send closure notification: {notify_error}")
+            
+            return {'success': True, 'ticket': ticket_dict}
             
         except Exception as e:
             session.rollback()

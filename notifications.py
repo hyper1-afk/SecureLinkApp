@@ -374,6 +374,129 @@ def send_ticket_notification(ticket_data: dict, config: Config = None):
         return False
 
 
+def send_ticket_closure_notification(ticket_data: dict, config: Config = None):
+    """
+    Send email notification to customer when their ticket is closed/resolved.
+    
+    Args:
+        ticket_data: Dictionary containing ticket information
+        config: Optional Config object
+    """
+    config = config or Config()
+    
+    customer_email = ticket_data.get('customer_email')
+    if not customer_email:
+        logger.warning("No customer email - ticket closure notification not sent")
+        return False
+    
+    if not config.SMTP_USERNAME or not config.SMTP_PASSWORD:
+        logger.warning("SMTP credentials not configured - ticket closure notification not sent")
+        return False
+    
+    try:
+        ticket_number = ticket_data.get('ticket_number', 'N/A')
+        subject_text = ticket_data.get('subject', 'Your Support Request')
+        status = ticket_data.get('status', 'resolved').replace('_', ' ').title()
+        resolution_notes = ticket_data.get('resolution_notes', '')
+        
+        email_subject = f"✅ Your Support Ticket {ticket_number} Has Been {status}"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 25px; }}
+                .ticket-info {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+                .ticket-number {{ font-family: monospace; font-size: 1.1rem; color: #10b981; }}
+                .resolution {{ background: #ecfdf5; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 15px; }}
+                .footer {{ background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #888; }}
+                .btn {{ display: inline-block; background: #10b981; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px; margin-top: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2 style="margin: 0;">✅ Ticket {status}</h2>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9;">Your support request has been addressed</p>
+                </div>
+                <div class="content">
+                    <p>Hello {ticket_data.get('customer_name', 'Valued Customer')},</p>
+                    
+                    <p>We wanted to let you know that your support ticket has been {status.lower()}.</p>
+                    
+                    <div class="ticket-info">
+                        <strong>Ticket Number:</strong> <span class="ticket-number">{ticket_number}</span><br>
+                        <strong>Subject:</strong> {subject_text}<br>
+                        <strong>Status:</strong> {status}
+                    </div>
+                    
+                    {"<div class='resolution'><strong>Resolution Notes:</strong><br>" + resolution_notes + "</div>" if resolution_notes else ""}
+                    
+                    <p>If you have any further questions or if the issue persists, please don't hesitate to open a new ticket or reply to this email.</p>
+                    
+                    <p>Thank you for using SecureLink!</p>
+                    
+                    <a href="{config.APP_URL}" class="btn">Visit SecureLink</a>
+                </div>
+                <div class="footer">
+                    SecureLink Support Team | This is an automated message
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        plain_text = f"""
+        Ticket {status}
+        
+        Hello {ticket_data.get('customer_name', 'Valued Customer')},
+        
+        Your support ticket has been {status.lower()}.
+        
+        Ticket Number: {ticket_number}
+        Subject: {subject_text}
+        Status: {status}
+        
+        {"Resolution Notes: " + resolution_notes if resolution_notes else ""}
+        
+        If you have any further questions, please open a new ticket.
+        
+        Thank you for using SecureLink!
+        
+        Visit: {config.APP_URL}
+        """
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = email_subject
+        msg['From'] = config.SMTP_USERNAME
+        msg['To'] = customer_email
+        
+        msg.attach(MIMEText(plain_text, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        if config.SMTP_USE_SSL or config.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT) as server:
+                server.login(config.SMTP_USERNAME, config.SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT) as server:
+                if config.SMTP_USE_TLS:
+                    server.starttls()
+                server.login(config.SMTP_USERNAME, config.SMTP_PASSWORD)
+                server.send_message(msg)
+        
+        logger.info(f"Ticket closure notification sent to {customer_email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send ticket closure notification: {e}")
+        return False
+
+
 if __name__ == "__main__":
     # Test notification
     from link_verifier import verify_link
