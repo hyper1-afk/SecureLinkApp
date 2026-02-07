@@ -110,7 +110,7 @@ class User(Base):
         """Get feature limits based on subscription tier"""
         limits = {
             SubscriptionTier.FREE.value: {
-                'daily_scans': 10,
+                'daily_scans': 50,  # Increased from 10
                 'email_monitoring': False,
                 'max_email_accounts': 0,
                 'api_access': False,

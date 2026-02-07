@@ -240,6 +240,140 @@ def send_notification(result: VerificationResult, email_context: str = None):
     service.notify(result, email_context)
 
 
+def send_ticket_notification(ticket_data: dict, config: Config = None):
+    """
+    Send email notification when a new support ticket is created.
+    
+    Args:
+        ticket_data: Dictionary containing ticket information
+        config: Optional Config object
+    """
+    config = config or Config()
+    
+    if not config.SUPPORT_EMAIL:
+        logger.warning("SUPPORT_EMAIL not configured - ticket notification not sent")
+        return False
+    
+    if not config.SMTP_USERNAME or not config.SMTP_PASSWORD:
+        logger.warning("SMTP credentials not configured - ticket notification not sent")
+        return False
+    
+    try:
+        subject = f"🎫 New Support Ticket: {ticket_data.get('ticket_number', 'N/A')} - {ticket_data.get('subject', 'No Subject')}"
+        
+        priority = ticket_data.get('priority', 'medium').upper()
+        priority_colors = {
+            'LOW': '#28a745',
+            'MEDIUM': '#ffc107', 
+            'HIGH': '#fd7e14',
+            'URGENT': '#dc3545'
+        }
+        priority_color = priority_colors.get(priority, '#6c757d')
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; }}
+                .content {{ padding: 25px; }}
+                .field {{ margin-bottom: 15px; }}
+                .label {{ font-weight: bold; color: #555; font-size: 12px; text-transform: uppercase; }}
+                .value {{ margin-top: 5px; color: #333; }}
+                .priority {{ display: inline-block; padding: 5px 12px; border-radius: 20px; color: white; font-weight: bold; font-size: 12px; }}
+                .description {{ background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; }}
+                .footer {{ background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #888; }}
+                .btn {{ display: inline-block; background: #667eea; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px; margin-top: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2 style="margin: 0;">🎫 New Support Ticket</h2>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9;">Ticket #{ticket_data.get('ticket_number', 'N/A')}</p>
+                </div>
+                <div class="content">
+                    <div class="field">
+                        <div class="label">Priority</div>
+                        <div class="value">
+                            <span class="priority" style="background-color: {priority_color};">{priority}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Category</div>
+                        <div class="value">{ticket_data.get('category', 'General')}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">From</div>
+                        <div class="value">{ticket_data.get('customer_name', 'Unknown')} ({ticket_data.get('customer_email', 'No email')})</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Subject</div>
+                        <div class="value" style="font-size: 18px; font-weight: bold;">{ticket_data.get('subject', 'No Subject')}</div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="label">Description</div>
+                        <div class="description">{ticket_data.get('description', 'No description provided.')}</div>
+                    </div>
+                    
+                    <a href="{config.APP_URL}/admin/tickets" class="btn">View in Admin Panel</a>
+                </div>
+                <div class="footer">
+                    SecureLink Support System | {ticket_data.get('created_at', 'Just now')}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        plain_text = f"""
+        New Support Ticket #{ticket_data.get('ticket_number', 'N/A')}
+        
+        Priority: {priority}
+        Category: {ticket_data.get('category', 'General')}
+        From: {ticket_data.get('customer_name', 'Unknown')} ({ticket_data.get('customer_email', 'No email')})
+        Subject: {ticket_data.get('subject', 'No Subject')}
+        
+        Description:
+        {ticket_data.get('description', 'No description provided.')}
+        
+        View ticket: {config.APP_URL}/admin/tickets
+        """
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = config.SMTP_USERNAME
+        msg['To'] = config.SUPPORT_EMAIL
+        
+        msg.attach(MIMEText(plain_text, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Use SSL for port 465 (GoDaddy, etc.) or TLS for port 587 (Gmail, etc.)
+        if config.SMTP_USE_SSL or config.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT) as server:
+                server.login(config.SMTP_USERNAME, config.SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT) as server:
+                if config.SMTP_USE_TLS:
+                    server.starttls()
+                server.login(config.SMTP_USERNAME, config.SMTP_PASSWORD)
+                server.send_message(msg)
+        
+        logger.info(f"Ticket notification sent to {config.SUPPORT_EMAIL}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send ticket notification: {e}")
+        return False
+
+
 if __name__ == "__main__":
     # Test notification
     from link_verifier import verify_link

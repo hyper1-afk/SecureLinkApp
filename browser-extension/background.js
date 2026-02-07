@@ -5,7 +5,7 @@ const API_BASE = 'https://securelinkapp.com'; // Production API
 
 // Track checked URLs to avoid re-checking
 const checkedUrls = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours - saves scans on revisited sites
 const pendingChecks = new Set(); // URLs currently being checked
 
 // User session
@@ -33,21 +33,97 @@ const SKIP_PATTERNS = [
     /^10\./,
 ];
 
-// Known safe domains that don't need checking
+// Known safe domains that don't need checking (saves scans)
 const SAFE_DOMAINS = [
-    'google.com', 'www.google.com', 'google.co.uk',
-    'youtube.com', 'www.youtube.com',
-    'facebook.com', 'www.facebook.com',
-    'amazon.com', 'www.amazon.com',
-    'microsoft.com', 'www.microsoft.com',
-    'apple.com', 'www.apple.com',
-    'github.com', 'www.github.com',
-    'stackoverflow.com', 'www.stackoverflow.com',
-    'wikipedia.org', 'en.wikipedia.org',
-    'reddit.com', 'www.reddit.com',
-    'twitter.com', 'x.com',
+    // Search engines
+    'google.com', 'www.google.com', 'google.co.uk', 'google.ca', 'google.com.au',
+    'bing.com', 'www.bing.com',
+    'duckduckgo.com', 'www.duckduckgo.com',
+    'yahoo.com', 'www.yahoo.com', 'search.yahoo.com',
+    
+    // Social media
+    'youtube.com', 'www.youtube.com', 'youtu.be',
+    'facebook.com', 'www.facebook.com', 'm.facebook.com',
+    'instagram.com', 'www.instagram.com',
+    'twitter.com', 'www.twitter.com', 'x.com', 'www.x.com',
     'linkedin.com', 'www.linkedin.com',
+    'reddit.com', 'www.reddit.com', 'old.reddit.com',
+    'tiktok.com', 'www.tiktok.com',
+    'pinterest.com', 'www.pinterest.com',
+    'snapchat.com', 'www.snapchat.com',
+    'discord.com', 'www.discord.com', 'discord.gg',
+    'twitch.tv', 'www.twitch.tv',
+    
+    // Shopping
+    'amazon.com', 'www.amazon.com', 'amazon.co.uk', 'amazon.ca',
+    'ebay.com', 'www.ebay.com',
+    'walmart.com', 'www.walmart.com',
+    'target.com', 'www.target.com',
+    'bestbuy.com', 'www.bestbuy.com',
+    'etsy.com', 'www.etsy.com',
+    'shopify.com', 'www.shopify.com',
+    
+    // Tech giants
+    'microsoft.com', 'www.microsoft.com', 'office.com', 'live.com', 'outlook.com',
+    'apple.com', 'www.apple.com', 'icloud.com',
+    'google.com', 'accounts.google.com', 'mail.google.com', 'drive.google.com', 'docs.google.com',
+    
+    // Development
+    'github.com', 'www.github.com', 'gist.github.com',
+    'gitlab.com', 'www.gitlab.com',
+    'stackoverflow.com', 'www.stackoverflow.com', 'stackexchange.com',
+    'npmjs.com', 'www.npmjs.com',
+    'pypi.org', 'www.pypi.org',
+    
+    // News & Reference
+    'wikipedia.org', 'en.wikipedia.org', 'www.wikipedia.org',
+    'cnn.com', 'www.cnn.com',
+    'bbc.com', 'www.bbc.com', 'bbc.co.uk',
+    'nytimes.com', 'www.nytimes.com',
+    'reuters.com', 'www.reuters.com',
+    
+    // Streaming
     'netflix.com', 'www.netflix.com',
+    'hulu.com', 'www.hulu.com',
+    'disneyplus.com', 'www.disneyplus.com',
+    'spotify.com', 'www.spotify.com', 'open.spotify.com',
+    'hbomax.com', 'www.hbomax.com', 'max.com',
+    
+    // Financial (major banks)
+    'paypal.com', 'www.paypal.com',
+    'chase.com', 'www.chase.com',
+    'bankofamerica.com', 'www.bankofamerica.com',
+    'wellsfargo.com', 'www.wellsfargo.com',
+    'stripe.com', 'www.stripe.com',
+    
+    // Cloud services
+    'aws.amazon.com', 'console.aws.amazon.com',
+    'azure.microsoft.com', 'portal.azure.com',
+    'cloud.google.com', 'console.cloud.google.com',
+    'digitalocean.com', 'www.digitalocean.com',
+    'cloudflare.com', 'www.cloudflare.com', 'dash.cloudflare.com',
+    'vercel.com', 'www.vercel.com',
+    'heroku.com', 'www.heroku.com',
+    'netlify.com', 'www.netlify.com',
+    
+    // Communication
+    'zoom.us', 'www.zoom.us',
+    'slack.com', 'www.slack.com',
+    'teams.microsoft.com',
+    'meet.google.com',
+    
+    // Other common
+    'dropbox.com', 'www.dropbox.com',
+    'notion.so', 'www.notion.so',
+    'trello.com', 'www.trello.com',
+    'canva.com', 'www.canva.com',
+    'figma.com', 'www.figma.com',
+    'godaddy.com', 'www.godaddy.com',
+    'squarespace.com', 'www.squarespace.com',
+    'wix.com', 'www.wix.com',
+    'wordpress.com', 'www.wordpress.com',
+    
+    // SecureLink
     'securelinkapp.com', 'www.securelinkapp.com'
 ];
 

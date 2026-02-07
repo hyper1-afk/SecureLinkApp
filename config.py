@@ -44,12 +44,24 @@ class Config:
     ENABLE_EMAIL_NOTIFICATIONS = os.getenv('ENABLE_EMAIL_NOTIFICATIONS', 'True').lower() == 'true'
     NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL', '')
     
+    # Support/Admin email for ticket notifications
+    SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', '')
+    
+    # Support Inbox Settings (IMAP - for auto-creating tickets from emails)
+    SUPPORT_EMAIL_ADDRESS = os.getenv('SUPPORT_EMAIL_ADDRESS', '')  # e.g., support@securelinkapp.com
+    SUPPORT_EMAIL_PASSWORD = os.getenv('SUPPORT_EMAIL_PASSWORD', '')
+    SUPPORT_IMAP_HOST = os.getenv('SUPPORT_IMAP_HOST', 'imap.secureserver.net')  # GoDaddy default
+    SUPPORT_IMAP_PORT = int(os.getenv('SUPPORT_IMAP_PORT', 993))
+    SUPPORT_IMAP_SSL = os.getenv('SUPPORT_IMAP_SSL', 'True').lower() == 'true'
+    SUPPORT_EMAIL_CHECK_INTERVAL = int(os.getenv('SUPPORT_EMAIL_CHECK_INTERVAL', 60))  # seconds
+    
     # SMTP Settings for outgoing emails
     SMTP_HOST = os.getenv('SMTP_HOST', 'smtp.gmail.com')
     SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
     SMTP_USERNAME = os.getenv('SMTP_USERNAME', '')
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
     SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'True').lower() == 'true'
+    SMTP_USE_SSL = os.getenv('SMTP_USE_SSL', 'False').lower() == 'true'  # For port 465
     
     # Risk Thresholds
     HIGH_RISK_THRESHOLD = float(os.getenv('HIGH_RISK_THRESHOLD', 0.7))

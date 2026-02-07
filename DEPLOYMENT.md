@@ -110,7 +110,80 @@ Click **Create Web Service** - Render deploys automatically!
 
 ---
 
-## 🔐 Important Security Notes
+## � Deploy with Docker (VM / Self-Hosted)
+
+Use Docker to run SecureLinkApp on any VM or self-hosted server.
+
+### Prerequisites
+- Docker and Docker Compose installed
+- A VM or server with at least 1GB RAM
+
+### Step 1: Configure Environment
+```bash
+# Copy the example environment file
+cp .env.docker.example .env
+
+# Edit with your values
+nano .env
+```
+
+**Required settings:**
+- `SECRET_KEY` - Generate with: `python -c "import secrets; print(secrets.token_hex(32))"`
+- `POSTGRES_PASSWORD` - Set a strong database password
+- `APP_URL` - Your server's URL (e.g., `https://yourdomain.com`)
+- Stripe keys if using payments
+
+### Step 2: Build and Run
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Check status
+docker-compose ps
+```
+
+### Step 3: Verify Installation
+```bash
+# Check if app is running
+curl http://localhost:5000
+
+# View container health
+docker-compose ps
+```
+
+### Useful Commands
+```bash
+# Stop all services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up -d --build
+
+# View logs for specific service
+docker-compose logs -f web
+
+# Access database
+docker-compose exec db psql -U securelink -d securelink
+
+# Backup database
+docker-compose exec db pg_dump -U securelink securelink > backup.sql
+
+# Restore database
+cat backup.sql | docker-compose exec -T db psql -U securelink -d securelink
+```
+
+### Production Recommendations
+1. **Use a reverse proxy** (Nginx/Caddy) for SSL termination
+2. **Enable firewall** - only expose ports 80/443
+3. **Set up backups** for the PostgreSQL volume
+4. **Monitor resources** with `docker stats`
+
+---
+
+## �🔐 Important Security Notes
 
 ### Never Commit Secrets
 Ensure these are in `.gitignore`:

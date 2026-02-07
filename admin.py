@@ -19,6 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 from config import Config
+from notifications import send_ticket_notification
 
 Base = declarative_base()
 
@@ -806,7 +807,17 @@ class AdminManager:
             session.add(ticket)
             session.commit()
             
-            return {'success': True, 'ticket': ticket.to_dict()}
+            ticket_dict = ticket.to_dict()
+            
+            # Send email notification to support team
+            try:
+                send_ticket_notification(ticket_dict, self.config)
+            except Exception as notify_error:
+                # Don't fail ticket creation if notification fails
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to send ticket notification: {notify_error}")
+            
+            return {'success': True, 'ticket': ticket_dict}
             
         except Exception as e:
             session.rollback()

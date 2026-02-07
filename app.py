@@ -25,6 +25,7 @@ from payments import PaymentManager, get_payment_manager, PLAN_PRICES
 from oauth import init_oauth, get_configured_providers, get_oauth_client, parse_user_info, generate_username_from_email
 from cyber_news import get_cyber_news
 from admin import get_admin_manager, EmployeeRole
+from support_email_monitor import start_support_email_monitor
 from features import (
     get_ai_threat_explanation, check_password_breach, check_email_breach,
     send_slack_notification, send_discord_notification, send_teams_notification,
@@ -607,11 +608,11 @@ extension_scan_counts = {}
 def get_scan_limit(subscription_tier):
     """Get daily scan limit based on subscription tier"""
     limits = {
-        'free': 10,
+        'free': 50,      # Increased from 10
         'pro': 500,
         'enterprise': float('inf')  # Unlimited
     }
-    return limits.get(subscription_tier, 10)
+    return limits.get(subscription_tier, 50)
 
 @app.route('/api/extension/auth', methods=['POST'])
 def extension_auth():
@@ -656,13 +657,13 @@ def extension_status():
     token = get_token_from_request()
     
     if not token:
-        # Anonymous user - very limited access
+        # Anonymous user - limited access (still encourages sign-up)
         return jsonify({
             'authenticated': False,
             'subscription_tier': 'anonymous',
-            'scan_limit': 5,
-            'scans_remaining': 5,
-            'message': 'Sign in for more scans'
+            'scan_limit': 15,
+            'scans_remaining': 15,
+            'message': 'Sign in for 50 free scans per day'
         })
     
     user_data = auth_manager.validate_token(token)
@@ -670,8 +671,8 @@ def extension_status():
         return jsonify({
             'authenticated': False,
             'subscription_tier': 'anonymous',
-            'scan_limit': 5,
-            'scans_remaining': 5,
+            'scan_limit': 15,
+            'scans_remaining': 15,
             'message': 'Session expired. Please sign in again.'
         })
     
@@ -3258,6 +3259,11 @@ if __name__ == '__main__':
     
     # Start hourly threat report scheduler (sends alerts when threats detected)
     report_generator.start_hourly_scheduler(auth_manager)
+    
+    # Start support email monitor (auto-creates tickets from support@securelinkapp.com)
+    if config.SUPPORT_EMAIL_ADDRESS:
+        start_support_email_monitor(config, interval=config.SUPPORT_EMAIL_CHECK_INTERVAL)
+        logger.info(f"Support email monitor started for {config.SUPPORT_EMAIL_ADDRESS}")
     
     print("""
     ╔═══════════════════════════════════════════════════════════╗
