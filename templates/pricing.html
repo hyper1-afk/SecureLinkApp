@@ -371,7 +371,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="/" id="brandLink">
                 <i class="bi bi-shield-check me-2"></i>SecureLink
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -379,10 +379,10 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/" id="homeLink">Home</a></li>
                     <li class="nav-item"><a class="nav-link" href="/features">Features</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/pricing">Pricing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/login" id="authLink">Login</a></li>
                 </ul>
             </div>
         </div>
@@ -696,6 +696,24 @@
                     if (proCard) {
                         proCard.style.boxShadow = '0 0 30px rgba(245, 158, 11, 0.4)';
                     }
+                }
+            }
+        })();
+        
+        // Update navbar for logged-in users
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                // User is logged in - update links
+                const homeLink = document.getElementById('homeLink');
+                const brandLink = document.getElementById('brandLink');
+                const authLink = document.getElementById('authLink');
+                
+                if (homeLink) homeLink.href = '/home';
+                if (brandLink) brandLink.href = '/home';
+                if (authLink) {
+                    authLink.href = '/profile';
+                    authLink.textContent = 'Profile';
                 }
             }
         })();
