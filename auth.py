@@ -919,11 +919,25 @@ class AuthManager:
             username = user.username
             email = user.email
             
-            # Delete all user sessions first
+            # Delete all related records to avoid foreign key violations
+            session.query(DailyScanCount).filter(DailyScanCount.user_id == user_id).delete()
+            session.query(PasswordResetToken).filter(PasswordResetToken.user_id == user_id).delete()
             session.query(UserSession).filter(UserSession.user_id == user_id).delete()
-            
-            # Delete all email accounts
             session.query(EmailAccount).filter(EmailAccount.user_id == user_id).delete()
+            
+            # Delete community/forum data (no FK constraints but clean up anyway)
+            from database import (VerificationRecord, CommunityReport, ReportVote, 
+                                  UserReputation, ShortLink, OrganizationMember,
+                                  ForumPost, ForumComment, ForumVote)
+            session.query(VerificationRecord).filter(VerificationRecord.user_id == user_id).delete()
+            session.query(CommunityReport).filter(CommunityReport.reporter_id == user_id).delete()
+            session.query(ReportVote).filter(ReportVote.user_id == user_id).delete()
+            session.query(UserReputation).filter(UserReputation.user_id == user_id).delete()
+            session.query(ShortLink).filter(ShortLink.user_id == user_id).delete()
+            session.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).delete()
+            session.query(ForumVote).filter(ForumVote.user_id == user_id).delete()
+            session.query(ForumComment).filter(ForumComment.author_id == user_id).delete()
+            session.query(ForumPost).filter(ForumPost.author_id == user_id).delete()
             
             # Delete the user
             session.delete(user)
