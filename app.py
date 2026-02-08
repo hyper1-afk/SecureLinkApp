@@ -806,7 +806,7 @@ def extension_verify():
         'url': url,
         'risk_score': result.risk_score,
         'is_safe': result.is_safe,
-        'risk_level': result.risk_level,
+        'risk_level': result.risk_level.value if hasattr(result.risk_level, 'value') else str(result.risk_level),
         'threats_detected': result.threats_detected,
         'warnings': result.warnings,
         'subscription_tier': tier,
