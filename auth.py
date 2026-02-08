@@ -509,7 +509,7 @@ class AuthManager:
             
             msg = MIMEMultipart('alternative')
             msg['Subject'] = 'Reset your SecureLink password'
-            msg['From'] = 'admin@securelinkapp.com'
+            msg['From'] = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
             msg['To'] = email
             
             msg.attach(MIMEText(text_content, 'plain'))
