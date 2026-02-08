@@ -217,6 +217,20 @@ class DailyScanCount(Base):
     count = Column(Integer, default=0)
 
 
+class PasswordResetToken(Base):
+    """Password reset tokens"""
+    __tablename__ = 'password_reset_tokens'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    token_hash = Column(String(256), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    
+    user = relationship("User")
+
+
 class AuthManager:
     """Handles user authentication and session management"""
     
@@ -385,6 +399,219 @@ class AuthManager:
             print(f"Failed to send verification email: {e}")
             return False
     
+    def request_password_reset(self, email: str, base_url: str = None) -> Dict:
+        """Request a password reset - sends email with reset link"""
+        session = self.get_session()
+        try:
+            # Find user by email
+            user = session.query(User).filter(User.email == email).first()
+            
+            if not user:
+                # Don't reveal if email exists - security best practice
+                return {'success': True, 'message': 'If that email exists, a reset link has been sent.'}
+            
+            # Generate reset token
+            token = secrets.token_urlsafe(32)
+            token_hash = self._hash_token(token)
+            
+            # Delete any existing reset tokens for this user
+            session.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
+            
+            # Create new reset token (expires in 1 hour)
+            reset_token = PasswordResetToken(
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=datetime.utcnow() + timedelta(hours=1)
+            )
+            session.add(reset_token)
+            session.commit()
+            
+            # Send reset email
+            self._send_password_reset_email(user.email, user.username, token, base_url)
+            
+            return {'success': True, 'message': 'If that email exists, a reset link has been sent.'}
+            
+        except Exception as e:
+            session.rollback()
+            print(f"Password reset request error: {e}")
+            return {'success': False, 'error': 'Failed to process reset request'}
+        finally:
+            session.close()
+    
+    def _send_password_reset_email(self, email: str, username: str, token: str, base_url: str = None) -> bool:
+        """Send password reset email"""
+        try:
+            if not base_url:
+                base_url = 'https://securelinkapp.com'
+            
+            reset_url = f"{base_url}/reset-password?token={token}"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 40px; }}
+                    .logo {{ text-align: center; margin-bottom: 30px; }}
+                    .logo h1 {{ color: #0ea5e9; margin: 0; font-size: 28px; }}
+                    h2 {{ color: #f8fafc; margin-top: 0; }}
+                    p {{ color: #cbd5e1; line-height: 1.6; }}
+                    .btn {{ display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; }}
+                    .btn:hover {{ background: linear-gradient(135deg, #dc2626, #b91c1c); }}
+                    .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; text-align: center; }}
+                    .link {{ color: #0ea5e9; word-break: break-all; }}
+                    .warning {{ background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 8px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">
+                        <h1>🔒 SecureLink</h1>
+                    </div>
+                    <h2>Reset Your Password</h2>
+                    <p>Hi {username},</p>
+                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                    <p style="text-align: center;">
+                        <a href="{reset_url}" class="btn">Reset Password</a>
+                    </p>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p class="link">{reset_url}</p>
+                    <div class="warning">
+                        ⚠️ This link will expire in 1 hour for security reasons.
+                    </div>
+                    <p>If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+                    <div class="footer">
+                        <p>© 2026 SecureLink. All rights reserved.</p>
+                        <p>Protecting you from malicious links, one click at a time.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+            Reset Your Password
+            
+            Hi {username},
+            
+            We received a request to reset your password. Click the link below to create a new password:
+            
+            {reset_url}
+            
+            This link will expire in 1 hour for security reasons.
+            
+            If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+            
+            © 2026 SecureLink
+            """
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'Reset your SecureLink password'
+            msg['From'] = 'admin@securelinkapp.com'
+            msg['To'] = email
+            
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            smtp_host = self.config.SMTP_HOST or 'smtp.gmail.com'
+            smtp_port = self.config.SMTP_PORT or 587
+            smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
+            
+            if not smtp_user or not smtp_pass:
+                print("Warning: SMTP not configured - password reset email not sent")
+                return False
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+            
+            print(f"Password reset email sent to {email}")
+            return True
+            
+        except Exception as e:
+            print(f"Failed to send password reset email: {e}")
+            return False
+    
+    def verify_password_reset_token(self, token: str) -> Dict:
+        """Verify a password reset token is valid"""
+        session = self.get_session()
+        try:
+            token_hash = self._hash_token(token)
+            
+            reset_token = session.query(PasswordResetToken).filter(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used == False,
+                PasswordResetToken.expires_at > datetime.utcnow()
+            ).first()
+            
+            if not reset_token:
+                return {'valid': False, 'error': 'Invalid or expired reset link'}
+            
+            user = session.query(User).filter(User.id == reset_token.user_id).first()
+            
+            return {
+                'valid': True,
+                'email': user.email if user else None
+            }
+            
+        except Exception as e:
+            print(f"Token verification error: {e}")
+            return {'valid': False, 'error': 'Failed to verify token'}
+        finally:
+            session.close()
+    
+    def reset_password_with_token(self, token: str, new_password: str) -> Dict:
+        """Reset password using a valid reset token"""
+        session = self.get_session()
+        try:
+            # Validate password strength
+            if len(new_password) < 8:
+                return {'success': False, 'error': 'Password must be at least 8 characters'}
+            
+            token_hash = self._hash_token(token)
+            
+            reset_token = session.query(PasswordResetToken).filter(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used == False,
+                PasswordResetToken.expires_at > datetime.utcnow()
+            ).first()
+            
+            if not reset_token:
+                return {'success': False, 'error': 'Invalid or expired reset link'}
+            
+            # Get user
+            user = session.query(User).filter(User.id == reset_token.user_id).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Update password
+            salt = secrets.token_hex(32)
+            password_hash = self._hash_password(new_password, salt)
+            
+            user.password_hash = password_hash
+            user.salt = salt
+            
+            # Mark token as used
+            reset_token.used = True
+            
+            # Invalidate all existing sessions for security
+            session.query(UserSession).filter(UserSession.user_id == user.id).delete()
+            
+            session.commit()
+            
+            return {'success': True, 'message': 'Password reset successfully. Please log in with your new password.'}
+            
+        except Exception as e:
+            session.rollback()
+            print(f"Password reset error: {e}")
+            return {'success': False, 'error': 'Failed to reset password'}
+        finally:
+            session.close()
+
     def register(self, email: str, username: str, password: str, full_name: str = None) -> Dict:
         """Register a new user"""
         session = self.get_session()

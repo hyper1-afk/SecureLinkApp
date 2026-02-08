@@ -237,6 +237,124 @@ class ThreatEvent(Base):
         }
 
 
+# ==================== FORUM / COMMUNITY CHAT MODELS ====================
+
+class ForumCategory(Base):
+    """Forum categories/rooms (like subreddits)"""
+    __tablename__ = 'forum_categories'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, unique=True)
+    slug = Column(String(100), nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    icon = Column(String(50), default='fa-comments')  # FontAwesome icon
+    color = Column(String(20), default='blue')  # Tailwind color
+    post_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def to_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'slug': self.slug,
+            'description': self.description,
+            'icon': self.icon,
+            'color': self.color,
+            'post_count': self.post_count,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class ForumPost(Base):
+    """Forum posts/threads"""
+    __tablename__ = 'forum_posts'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category_id = Column(Integer, ForeignKey('forum_categories.id'), nullable=False, index=True)
+    author_id = Column(Integer, nullable=False, index=True)
+    author_username = Column(String(100), nullable=False)
+    title = Column(String(300), nullable=False)
+    content = Column(Text, nullable=False)
+    upvotes = Column(Integer, default=0)
+    downvotes = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+    view_count = Column(Integer, default=0)
+    is_pinned = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self, include_content=True) -> Dict:
+        data = {
+            'id': self.id,
+            'category_id': self.category_id,
+            'author_id': self.author_id,
+            'author_username': self.author_username,
+            'title': self.title,
+            'upvotes': self.upvotes,
+            'downvotes': self.downvotes,
+            'score': self.upvotes - self.downvotes,
+            'comment_count': self.comment_count,
+            'view_count': self.view_count,
+            'is_pinned': self.is_pinned,
+            'is_locked': self.is_locked,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        if include_content:
+            data['content'] = self.content
+        return data
+
+
+class ForumComment(Base):
+    """Comments on forum posts"""
+    __tablename__ = 'forum_comments'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('forum_posts.id'), nullable=False, index=True)
+    parent_id = Column(Integer, ForeignKey('forum_comments.id'), nullable=True, index=True)  # For nested replies
+    author_id = Column(Integer, nullable=False, index=True)
+    author_username = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    upvotes = Column(Integer, default=0)
+    downvotes = Column(Integer, default=0)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'post_id': self.post_id,
+            'parent_id': self.parent_id,
+            'author_id': self.author_id,
+            'author_username': self.author_username,
+            'content': self.content,
+            'upvotes': self.upvotes,
+            'downvotes': self.downvotes,
+            'score': self.upvotes - self.downvotes,
+            'is_deleted': self.is_deleted,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class ForumVote(Base):
+    """Votes on posts and comments"""
+    __tablename__ = 'forum_votes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    post_id = Column(Integer, nullable=True, index=True)  # Either post_id or comment_id
+    comment_id = Column(Integer, nullable=True, index=True)
+    vote = Column(Integer, nullable=False)  # 1 = upvote, -1 = downvote
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Database:
     """Database manager class"""
     

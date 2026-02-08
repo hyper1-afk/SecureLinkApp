@@ -18,7 +18,7 @@ from config import Config
 from link_verifier import LinkVerifier, VerificationResult
 from email_monitor import EmailMonitor, EmailLink
 from notifications import NotificationService
-from database import Database
+from database import Database, ForumCategory, ForumPost, ForumComment, ForumVote
 from auth import AuthManager, SUBSCRIPTION_PLANS, SubscriptionTier
 from weekly_reports import WeeklyReportGenerator, get_report_generator
 from payments import PaymentManager, get_payment_manager, PLAN_PRICES
@@ -485,6 +485,49 @@ def validate_token():
     if user_data:
         return jsonify({'valid': True, 'user': user_data['user']})
     return jsonify({'valid': False})
+
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    """Request a password reset email"""
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    # Get base URL for reset link
+    base_url = request.host_url.rstrip('/')
+    
+    result = auth_manager.request_password_reset(email, base_url)
+    return jsonify(result)
+
+
+@app.route('/api/auth/verify-reset-token/<token>', methods=['GET'])
+def verify_reset_token(token):
+    """Verify a password reset token is valid"""
+    result = auth_manager.verify_password_reset_token(token)
+    return jsonify(result)
+
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password_with_token():
+    """Reset password using a valid reset token"""
+    data = request.get_json()
+    token = data.get('token', '')
+    new_password = data.get('new_password', '')
+    
+    if not token or not new_password:
+        return jsonify({'success': False, 'error': 'Token and new password are required'}), 400
+    
+    result = auth_manager.reset_password_with_token(token, new_password)
+    return jsonify(result)
+
+
+@app.route('/reset-password')
+def reset_password_page():
+    """Render the password reset page"""
+    return render_template('reset_password.html')
 
 
 @app.route('/api/admin/emergency-reset', methods=['POST'])
@@ -3296,6 +3339,408 @@ def explain_threat():
     return jsonify({
         'explanation': explanation
     })
+
+
+# ==================== FORUM / COMMUNITY CHAT ROUTES ====================
+
+@app.route('/forum')
+def forum_page():
+    """Redirect to community page with discussions tab"""
+    return redirect('/community')
+
+
+@app.route('/api/forum/categories', methods=['GET'])
+def get_forum_categories():
+    """Get all forum categories"""
+    session = db.get_session()
+    try:
+        categories = session.query(ForumCategory).filter_by(is_active=True).order_by(ForumCategory.sort_order).all()
+        return jsonify({
+            'categories': [cat.to_dict() for cat in categories]
+        })
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/categories', methods=['POST'])
+@require_auth
+def create_forum_category():
+    """Create a new forum category (admin only in future)"""
+    data = request.get_json()
+    
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+    icon = data.get('icon', 'fa-comments')
+    color = data.get('color', 'blue')
+    
+    if not name:
+        return jsonify({'error': 'Category name is required'}), 400
+    
+    # Create slug from name
+    import re
+    slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    
+    session = db.get_session()
+    try:
+        # Check if category exists
+        existing = session.query(ForumCategory).filter_by(slug=slug).first()
+        if existing:
+            return jsonify({'error': 'Category already exists'}), 400
+        
+        category = ForumCategory(
+            name=name,
+            slug=slug,
+            description=description,
+            icon=icon,
+            color=color
+        )
+        session.add(category)
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'category': category.to_dict()
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/posts', methods=['GET'])
+def get_forum_posts():
+    """Get posts, optionally filtered by category"""
+    category_slug = request.args.get('category')
+    sort_by = request.args.get('sort', 'newest')  # newest, top, hot
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    
+    session = db.get_session()
+    try:
+        query = session.query(ForumPost).filter_by(is_deleted=False)
+        
+        # Filter by category if provided
+        if category_slug:
+            category = session.query(ForumCategory).filter_by(slug=category_slug).first()
+            if category:
+                query = query.filter_by(category_id=category.id)
+        
+        # Sort posts
+        if sort_by == 'top':
+            query = query.order_by((ForumPost.upvotes - ForumPost.downvotes).desc())
+        elif sort_by == 'hot':
+            # Hot = score + recency bonus
+            query = query.order_by(ForumPost.is_pinned.desc(), ForumPost.upvotes.desc(), ForumPost.created_at.desc())
+        else:  # newest
+            query = query.order_by(ForumPost.is_pinned.desc(), ForumPost.created_at.desc())
+        
+        # Paginate
+        total = query.count()
+        posts = query.offset((page - 1) * per_page).limit(per_page).all()
+        
+        # Get category info for each post
+        category_ids = list(set(p.category_id for p in posts))
+        categories_map = {}
+        if category_ids:
+            cats = session.query(ForumCategory).filter(ForumCategory.id.in_(category_ids)).all()
+            categories_map = {c.id: c.to_dict() for c in cats}
+        
+        posts_data = []
+        for post in posts:
+            post_dict = post.to_dict(include_content=False)
+            post_dict['category'] = categories_map.get(post.category_id)
+            posts_data.append(post_dict)
+        
+        return jsonify({
+            'posts': posts_data,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page
+        })
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/posts', methods=['POST'])
+@require_auth
+def create_forum_post():
+    """Create a new forum post"""
+    data = request.get_json()
+    
+    category_id = data.get('category_id')
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    
+    if not category_id:
+        return jsonify({'error': 'Category is required'}), 400
+    if not title or len(title) < 5:
+        return jsonify({'error': 'Title must be at least 5 characters'}), 400
+    if not content or len(content) < 10:
+        return jsonify({'error': 'Content must be at least 10 characters'}), 400
+    if len(title) > 300:
+        return jsonify({'error': 'Title too long (max 300 characters)'}), 400
+    
+    user = request.current_user
+    
+    session = db.get_session()
+    try:
+        # Verify category exists
+        category = session.query(ForumCategory).filter_by(id=category_id, is_active=True).first()
+        if not category:
+            return jsonify({'error': 'Invalid category'}), 400
+        
+        post = ForumPost(
+            category_id=category_id,
+            author_id=user['id'],
+            author_username=user.get('username', user.get('email', 'Anonymous')),
+            title=title,
+            content=content
+        )
+        session.add(post)
+        
+        # Increment category post count
+        category.post_count += 1
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'post': post.to_dict()
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/posts/<int:post_id>', methods=['GET'])
+def get_forum_post(post_id):
+    """Get a single post with its comments"""
+    session = db.get_session()
+    try:
+        post = session.query(ForumPost).filter_by(id=post_id, is_deleted=False).first()
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        # Increment view count
+        post.view_count += 1
+        session.commit()
+        
+        # Get category
+        category = session.query(ForumCategory).filter_by(id=post.category_id).first()
+        
+        # Get comments
+        comments = session.query(ForumComment).filter_by(
+            post_id=post_id, 
+            is_deleted=False
+        ).order_by(ForumComment.created_at.asc()).all()
+        
+        post_dict = post.to_dict()
+        post_dict['category'] = category.to_dict() if category else None
+        
+        return jsonify({
+            'post': post_dict,
+            'comments': [c.to_dict() for c in comments]
+        })
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/posts/<int:post_id>/comments', methods=['POST'])
+@require_auth
+def create_forum_comment(post_id):
+    """Add a comment to a post"""
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    parent_id = data.get('parent_id')
+    
+    if not content or len(content) < 2:
+        return jsonify({'error': 'Comment must be at least 2 characters'}), 400
+    
+    user = request.current_user
+    
+    session = db.get_session()
+    try:
+        # Verify post exists and is not locked
+        post = session.query(ForumPost).filter_by(id=post_id, is_deleted=False).first()
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        if post.is_locked:
+            return jsonify({'error': 'This post is locked'}), 403
+        
+        comment = ForumComment(
+            post_id=post_id,
+            parent_id=parent_id,
+            author_id=user['id'],
+            author_username=user.get('username', user.get('email', 'Anonymous')),
+            content=content
+        )
+        session.add(comment)
+        
+        # Increment post comment count
+        post.comment_count += 1
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'comment': comment.to_dict()
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/vote', methods=['POST'])
+@require_auth
+def forum_vote():
+    """Vote on a post or comment"""
+    data = request.get_json()
+    
+    post_id = data.get('post_id')
+    comment_id = data.get('comment_id')
+    vote_value = data.get('vote', 0)  # 1, -1, or 0 (remove vote)
+    
+    if not post_id and not comment_id:
+        return jsonify({'error': 'Must specify post_id or comment_id'}), 400
+    if vote_value not in [-1, 0, 1]:
+        return jsonify({'error': 'Invalid vote value'}), 400
+    
+    user = request.current_user
+    
+    session = db.get_session()
+    try:
+        # Find existing vote
+        vote_query = session.query(ForumVote).filter_by(user_id=user['id'])
+        if post_id:
+            vote_query = vote_query.filter_by(post_id=post_id, comment_id=None)
+            target = session.query(ForumPost).filter_by(id=post_id).first()
+        else:
+            vote_query = vote_query.filter_by(comment_id=comment_id, post_id=None)
+            target = session.query(ForumComment).filter_by(id=comment_id).first()
+        
+        if not target:
+            return jsonify({'error': 'Target not found'}), 404
+        
+        existing_vote = vote_query.first()
+        old_vote_value = existing_vote.vote if existing_vote else 0
+        
+        # Update vote counts on target
+        if old_vote_value == 1:
+            target.upvotes -= 1
+        elif old_vote_value == -1:
+            target.downvotes -= 1
+        
+        if vote_value == 1:
+            target.upvotes += 1
+        elif vote_value == -1:
+            target.downvotes += 1
+        
+        # Update or create vote record
+        if vote_value == 0:
+            if existing_vote:
+                session.delete(existing_vote)
+        else:
+            if existing_vote:
+                existing_vote.vote = vote_value
+            else:
+                new_vote = ForumVote(
+                    user_id=user['id'],
+                    post_id=post_id if post_id else None,
+                    comment_id=comment_id if comment_id else None,
+                    vote=vote_value
+                )
+                session.add(new_vote)
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'upvotes': target.upvotes,
+            'downvotes': target.downvotes,
+            'score': target.upvotes - target.downvotes
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/my-votes', methods=['GET'])
+@require_auth
+def get_my_forum_votes():
+    """Get current user's votes for display"""
+    post_ids = request.args.get('post_ids', '')
+    comment_ids = request.args.get('comment_ids', '')
+    
+    user = request.current_user
+    
+    session = db.get_session()
+    try:
+        votes = {}
+        
+        if post_ids:
+            pids = [int(p) for p in post_ids.split(',') if p.isdigit()]
+            post_votes = session.query(ForumVote).filter(
+                ForumVote.user_id == user['id'],
+                ForumVote.post_id.in_(pids)
+            ).all()
+            for v in post_votes:
+                votes[f'post_{v.post_id}'] = v.vote
+        
+        if comment_ids:
+            cids = [int(c) for c in comment_ids.split(',') if c.isdigit()]
+            comment_votes = session.query(ForumVote).filter(
+                ForumVote.user_id == user['id'],
+                ForumVote.comment_id.in_(cids)
+            ).all()
+            for v in comment_votes:
+                votes[f'comment_{v.comment_id}'] = v.vote
+        
+        return jsonify({'votes': votes})
+    finally:
+        session.close()
+
+
+@app.route('/api/forum/seed-categories', methods=['POST'])
+def seed_forum_categories():
+    """Seed default forum categories (dev only)"""
+    session = db.get_session()
+    try:
+        # Check if categories already exist
+        existing = session.query(ForumCategory).count()
+        if existing > 0:
+            return jsonify({'message': 'Categories already exist', 'count': existing})
+        
+        default_categories = [
+            {'name': 'General Discussion', 'slug': 'general', 'description': 'Talk about anything security-related', 'icon': 'fa-comments', 'color': 'blue', 'sort_order': 1},
+            {'name': 'Phishing Reports', 'slug': 'phishing', 'description': 'Report and discuss phishing attempts', 'icon': 'fa-fish', 'color': 'red', 'sort_order': 2},
+            {'name': 'Scam Alerts', 'slug': 'scams', 'description': 'Warn others about scams you\'ve encountered', 'icon': 'fa-exclamation-triangle', 'color': 'yellow', 'sort_order': 3},
+            {'name': 'Security Tips', 'slug': 'tips', 'description': 'Share and learn security best practices', 'icon': 'fa-lightbulb', 'color': 'green', 'sort_order': 4},
+            {'name': 'Help & Support', 'slug': 'help', 'description': 'Get help with SecureLink or security questions', 'icon': 'fa-question-circle', 'color': 'purple', 'sort_order': 5},
+        ]
+        
+        for cat_data in default_categories:
+            category = ForumCategory(**cat_data)
+            session.add(category)
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Created {len(default_categories)} categories'
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
 
 
 def setup_logging():

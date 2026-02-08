@@ -604,7 +604,7 @@
                             Keep me signed in
                         </label>
                     </div>
-                    <a href="#" class="auth-link">Forgot password?</a>
+                    <a href="#" class="auth-link" onclick="openForgotPasswordModal(event)">Forgot password?</a>
                 </div>
                 
                 <button type="submit" class="btn btn-primary w-100" id="loginBtn">
@@ -1195,6 +1195,58 @@
             document.getElementById('supportModal').classList.remove('active');
         }
 
+        // Forgot Password Modal Functions
+        function openForgotPasswordModal(e) {
+            if (e) e.preventDefault();
+            document.getElementById('forgotPasswordModal').classList.add('active');
+            document.getElementById('forgotPasswordForm').style.display = 'block';
+            document.getElementById('forgotPasswordSuccess').style.display = 'none';
+            document.getElementById('forgotPasswordForm').reset();
+            document.getElementById('forgotPasswordAlert').innerHTML = '';
+        }
+
+        function closeForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').classList.remove('active');
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('forgotEmail').value.trim();
+            const submitBtn = document.getElementById('forgotPasswordBtn');
+            const alertDiv = document.getElementById('forgotPasswordAlert');
+            
+            if (!email) {
+                alertDiv.innerHTML = '<div class="alert alert-danger" style="background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: none; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;"><i class="bi bi-exclamation-circle me-2"></i>Please enter your email address.</div>';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+            alertDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const result = await response.json();
+                
+                // Always show success to prevent email enumeration
+                document.getElementById('forgotPasswordForm').style.display = 'none';
+                document.getElementById('forgotPasswordSuccess').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Forgot password error:', error);
+                alertDiv.innerHTML = '<div class="alert alert-danger" style="background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: none; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;"><i class="bi bi-exclamation-circle me-2"></i>An error occurred. Please try again.</div>';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-envelope-fill"></i> Send Reset Link';
+            }
+        }
+
         // Wait for DOM to load before attaching event listeners to modal
         document.addEventListener('DOMContentLoaded', function() {
             const supportModalClose = document.getElementById('supportModalClose');
@@ -1217,7 +1269,29 @@
                 if (e.key === 'Escape' && supportModal && supportModal.classList.contains('active')) {
                     closeSupportModal();
                 }
+                if (e.key === 'Escape') {
+                    const forgotModal = document.getElementById('forgotPasswordModal');
+                    if (forgotModal && forgotModal.classList.contains('active')) {
+                        closeForgotPasswordModal();
+                    }
+                }
             });
+
+            // Forgot Password Modal event listeners
+            const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            
+            if (forgotPasswordModal) {
+                forgotPasswordModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'forgotPasswordModal') {
+                        closeForgotPasswordModal();
+                    }
+                });
+            }
+            
+            if (forgotPasswordForm) {
+                forgotPasswordForm.addEventListener('submit', handleForgotPassword);
+            }
 
             if (supportForm) {
                 supportForm.addEventListener('submit', async (e) => {
@@ -1269,6 +1343,51 @@
             }
         });
     </script>
+
+    <!-- Forgot Password Modal -->
+    <div class="support-modal" id="forgotPasswordModal">
+        <div class="support-modal-content">
+            <div class="support-modal-header">
+                <h3>
+                    <i class="bi bi-key text-primary"></i>
+                    Reset Password
+                </h3>
+                <button class="support-modal-close" onclick="closeForgotPasswordModal()">&times;</button>
+            </div>
+            <div class="support-modal-body">
+                <form id="forgotPasswordForm">
+                    <p class="text-secondary mb-4" style="text-align: center;">
+                        Enter your email address and we'll send you a link to reset your password.
+                    </p>
+                    
+                    <div id="forgotPasswordAlert"></div>
+                    
+                    <div class="support-form-group">
+                        <label for="forgotEmail">Email Address</label>
+                        <input type="email" id="forgotEmail" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <button type="submit" class="support-submit-btn" id="forgotPasswordBtn">
+                        <i class="bi bi-envelope-fill"></i>
+                        Send Reset Link
+                    </button>
+                </form>
+                
+                <div id="forgotPasswordSuccess" class="support-success" style="display: none;">
+                    <div class="support-success-icon">
+                        <i class="bi bi-envelope-check"></i>
+                    </div>
+                    <h4>Check Your Email</h4>
+                    <p>If an account exists with that email, we've sent a password reset link.</p>
+                    <p class="text-secondary">The link will expire in 1 hour.</p>
+                    <button class="support-submit-btn" onclick="closeForgotPasswordModal()" style="margin-top: 20px;">
+                        <i class="bi bi-arrow-left"></i>
+                        Back to Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Support Modal -->
     <div class="support-modal" id="supportModal">
