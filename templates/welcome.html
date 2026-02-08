@@ -1217,16 +1217,8 @@
         });
         
         function updateScansRemaining() {
-            const el = document.getElementById('scansRemaining');
-            if (el) {
-                let remaining = parseInt(el.textContent) || 5;
-                remaining = Math.max(0, remaining - 1);
-                el.textContent = remaining;
-                
-                if (remaining <= 2) {
-                    document.getElementById('scannerInfo').classList.add('warning');
-                }
-            }
+            // Fetch actual remaining count from server
+            loadScanStatus();
         }
         
         function displayScanResult(data) {
@@ -1275,6 +1267,33 @@
             
             result.classList.add('show');
         }
+        
+        // Fetch and display current scan status on page load
+        async function loadScanStatus() {
+            try {
+                const response = await fetch('/api/scan-status');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('scansRemaining').textContent = data.remaining;
+                    
+                    if (data.remaining === 0) {
+                        document.getElementById('scannerInfo').innerHTML = `
+                            <span class="warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Daily limit reached • <a href="/login">Sign up for 50/day →</a>
+                            </span>
+                        `;
+                    } else if (data.remaining <= 3) {
+                        document.getElementById('scannerInfo').classList.add('warning');
+                    }
+                }
+            } catch (error) {
+                console.log('Could not fetch scan status');
+            }
+        }
+        
+        // Load scan status when page loads
+        loadScanStatus();
         
     </script>
 </body>

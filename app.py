@@ -1514,6 +1514,22 @@ def stripe_webhook():
 # Track anonymous website scan counts (in production, use Redis)
 website_anonymous_scans = {}
 
+@app.route('/api/scan-status', methods=['GET'])
+def get_scan_status():
+    """Get current scan count for anonymous users"""
+    from datetime import date
+    today = date.today().isoformat()
+    ip_key = f"{request.remote_addr}:{today}"
+    scans_today = website_anonymous_scans.get(ip_key, 0)
+    limit = 15
+    remaining = max(0, limit - scans_today)
+    
+    return jsonify({
+        'scans_today': scans_today,
+        'limit': limit,
+        'remaining': remaining
+    })
+
 @app.route('/api/verify', methods=['POST'])
 def verify_link():
     """API endpoint to verify a single link"""
