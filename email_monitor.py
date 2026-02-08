@@ -1,7 +1,7 @@
 """
 Email Monitor - Module for monitoring email inbox and extracting links for verification.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
 import re

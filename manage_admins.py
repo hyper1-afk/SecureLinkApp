@@ -16,7 +16,7 @@ Usage:
     python manage_admins.py deactivate <username>   - Deactivate account
     python manage_admins.py info <username>         - Show employee details
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 
 import sys

@@ -2,7 +2,7 @@
 SecureLink - Flask Web Application
 Main entry point for the web interface with user authentication.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 This software is proprietary and confidential.
 """
 import logging

@@ -9,7 +9,7 @@ Usage:
     python deploy.py --push       # Push to production
     python deploy.py --logs       # View production logs
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 
 import os

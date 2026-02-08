@@ -1,7 +1,7 @@
 """
 Database models for the SecureLink application.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict

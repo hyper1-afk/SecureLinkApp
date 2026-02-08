@@ -2,7 +2,7 @@
 User Authentication and Session Management
 Handles user registration, login, persistent sessions, and subscriptions.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import os
 import hashlib

@@ -2,7 +2,7 @@
 SecureLink - Payment Processing Module
 Handles Stripe integration for subscription payments.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import stripe
 import logging

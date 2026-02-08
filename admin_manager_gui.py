@@ -6,7 +6,7 @@ Supports both local and production database connections.
 
 Double-click this file or run: python admin_manager_gui.py
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 
 import sys

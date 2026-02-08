@@ -1,7 +1,7 @@
 """
 Link Verification Engine - Core module for analyzing URLs and detecting threats.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import re
 import ssl

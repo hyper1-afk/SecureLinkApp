@@ -2,7 +2,7 @@
 SecureLink Environment Configuration
 Manages local and production database connections.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 
 import os

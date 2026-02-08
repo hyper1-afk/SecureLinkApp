@@ -2,7 +2,7 @@
 Admin Panel and Support Ticket System
 Handles employee management, customer support, and backend operations.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
 import os

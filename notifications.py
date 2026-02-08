@@ -1,7 +1,7 @@
 """
 Notification Service - Handles desktop and email notifications for link verification results.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
 import logging

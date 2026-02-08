@@ -2,7 +2,7 @@
 Weekly Security Report Generator
 Sends users email reports of threats identified and risk levels.
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
 import logging

@@ -5,7 +5,7 @@ Advanced Features Module for SecureLink
 - Slack/Discord/Teams Webhooks
 - Threat Geolocation
 
-Copyright (c) 2026 Ryan Haley. All Rights Reserved.
+Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import os
 import hashlib
