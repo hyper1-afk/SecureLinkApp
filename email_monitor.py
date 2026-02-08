@@ -213,8 +213,8 @@ class EmailMonitor:
             msg.attach(html_part)
             
             # SMTP settings
-            smtp_host = getattr(self.config, 'SMTP_HOST', None) or 'smtpout.secureserver.net'
-            smtp_port = getattr(self.config, 'SMTP_PORT', None) or 465
+            smtp_host = getattr(self.config, 'SMTP_HOST', None) or 'email-smtp.us-east-2.amazonaws.com'
+            smtp_port = getattr(self.config, 'SMTP_PORT', None) or 587
             smtp_user = getattr(self.config, 'SMTP_USERNAME', None) or self.config.EMAIL_USERNAME
             smtp_pass = getattr(self.config, 'SMTP_PASSWORD', None) or self.config.EMAIL_PASSWORD
             

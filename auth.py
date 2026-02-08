@@ -379,8 +379,8 @@ class AuthManager:
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
-            smtp_host = self.config.SMTP_HOST or 'smtpout.secureserver.net'
-            smtp_port = self.config.SMTP_PORT or 465
+            smtp_host = self.config.SMTP_HOST or 'email-smtp.us-east-2.amazonaws.com'
+            smtp_port = self.config.SMTP_PORT or 587
             smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
             smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
             
@@ -520,8 +520,8 @@ class AuthManager:
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
-            smtp_host = self.config.SMTP_HOST or 'smtpout.secureserver.net'
-            smtp_port = self.config.SMTP_PORT or 465
+            smtp_host = self.config.SMTP_HOST or 'email-smtp.us-east-2.amazonaws.com'
+            smtp_port = self.config.SMTP_PORT or 587
             smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
             smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
             

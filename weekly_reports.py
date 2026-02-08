@@ -413,7 +413,7 @@ class WeeklyReportGenerator:
             msg.attach(html_part)
             
             # Send
-            smtp_host = smtp_settings.get('host', 'smtp.gmail.com') if smtp_settings else 'smtp.gmail.com'
+            smtp_host = smtp_settings.get('host', 'email-smtp.us-east-2.amazonaws.com') if smtp_settings else 'email-smtp.us-east-2.amazonaws.com'
             smtp_port = smtp_settings.get('port', 587) if smtp_settings else 587
             smtp_user = smtp_settings.get('username', self.config.EMAIL_USERNAME) if smtp_settings else self.config.EMAIL_USERNAME
             smtp_pass = smtp_settings.get('password', self.config.EMAIL_PASSWORD) if smtp_settings else self.config.EMAIL_PASSWORD
@@ -752,7 +752,7 @@ class WeeklyReportGenerator:
             msg.attach(html_part)
             
             # Send
-            smtp_host = smtp_settings.get('host', 'smtp.gmail.com') if smtp_settings else getattr(self.config, 'SMTP_HOST', 'smtp.gmail.com')
+            smtp_host = smtp_settings.get('host', 'email-smtp.us-east-2.amazonaws.com') if smtp_settings else getattr(self.config, 'SMTP_HOST', 'email-smtp.us-east-2.amazonaws.com')
             smtp_port = smtp_settings.get('port', 587) if smtp_settings else getattr(self.config, 'SMTP_PORT', 587)
             smtp_user = smtp_settings.get('username') if smtp_settings else getattr(self.config, 'SMTP_USERNAME', self.config.EMAIL_USERNAME)
             smtp_pass = smtp_settings.get('password') if smtp_settings else getattr(self.config, 'SMTP_PASSWORD', self.config.EMAIL_PASSWORD)
