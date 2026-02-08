@@ -769,7 +769,7 @@ def extension_verify():
     token = get_token_from_request()
     user_id = None
     tier = 'anonymous'
-    limit = 5
+    limit = 15  # Anonymous users get 15 scans, free registered users get 50
     
     if token:
         user_data = auth_manager.validate_token(token)
@@ -1544,18 +1544,18 @@ def verify_link():
                     'upgrade_url': '/pricing'
                 }), 429
     
-    # Rate limit for anonymous users (5 scans/day per IP)
+    # Rate limit for anonymous users (15 scans/day per IP)
     if is_anonymous:
         from datetime import date
         today = date.today().isoformat()
         ip_key = f"{request.remote_addr}:{today}"
         scans_today = website_anonymous_scans.get(ip_key, 0)
         
-        if scans_today >= 5:
+        if scans_today >= 15:
             return jsonify({
                 'error': 'Daily scan limit reached',
-                'message': 'Sign up for free to get 10 scans per day!',
-                'limit': 5,
+                'message': 'Sign up for free to get 50 scans per day!',
+                'limit': 15,
                 'used': scans_today,
                 'signup_url': '/login'
             }), 429
