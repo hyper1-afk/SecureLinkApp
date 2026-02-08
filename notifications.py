@@ -144,7 +144,7 @@ class NotificationService:
             
             msg = MIMEMultipart('alternative')
             msg['Subject'] = title
-            msg['From'] = self.config.EMAIL_USERNAME
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', None) or getattr(self.config, 'SMTP_USERNAME', None) or 'support@securelinkapp.com'
             msg['To'] = self.config.NOTIFICATION_EMAIL
             
             # Plain text version
@@ -156,15 +156,20 @@ class NotificationService:
             msg.attach(html_part)
             
             # Send via SMTP
-            # Note: This uses the same credentials as IMAP
-            # For production, you might want separate SMTP settings
-            smtp_host = self.config.EMAIL_HOST.replace('imap.', 'smtp.')
-            smtp_port = 587
+            smtp_host = getattr(self.config, 'SMTP_HOST', None) or 'smtpout.secureserver.net'
+            smtp_port = getattr(self.config, 'SMTP_PORT', None) or 465
+            smtp_user = getattr(self.config, 'SMTP_USERNAME', None) or self.config.EMAIL_USERNAME
+            smtp_pass = getattr(self.config, 'SMTP_PASSWORD', None) or self.config.EMAIL_PASSWORD
             
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(self.config.EMAIL_USERNAME, self.config.EMAIL_PASSWORD)
-                server.send_message(msg)
+            if getattr(self.config, 'SMTP_USE_SSL', False) or smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
             
             logger.info(f"Email notification sent to {self.config.NOTIFICATION_EMAIL}")
             

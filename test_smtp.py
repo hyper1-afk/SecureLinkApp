@@ -18,7 +18,7 @@ for host, port, use_tls in servers:
             s.starttls()
         else:
             s = smtplib.SMTP_SSL(host, port, timeout=10)
-        s.login('admin@securelinkapp.com', password)
+        s.login('support@securelinkapp.com', password)
         print(f"SUCCESS with {host}:{port}!")
         s.quit()
         break

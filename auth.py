@@ -373,14 +373,14 @@ class AuthManager:
             
             msg = MIMEMultipart('alternative')
             msg['Subject'] = 'Verify your SecureLink email address'
-            msg['From'] = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', None) or self.config.SMTP_USERNAME or 'support@securelinkapp.com'
             msg['To'] = email
             
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
-            smtp_host = self.config.SMTP_HOST or 'smtp.gmail.com'
-            smtp_port = self.config.SMTP_PORT or 587
+            smtp_host = self.config.SMTP_HOST or 'smtpout.secureserver.net'
+            smtp_port = self.config.SMTP_PORT or 465
             smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
             smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
             
@@ -388,10 +388,15 @@ class AuthManager:
                 print("Warning: SMTP not configured - verification email not sent")
                 return False
             
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
+            if getattr(self.config, 'SMTP_USE_SSL', False) or smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
             
             return True
             
@@ -509,14 +514,14 @@ class AuthManager:
             
             msg = MIMEMultipart('alternative')
             msg['Subject'] = 'Reset your SecureLink password'
-            msg['From'] = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', None) or self.config.SMTP_USERNAME or 'support@securelinkapp.com'
             msg['To'] = email
             
             msg.attach(MIMEText(text_content, 'plain'))
             msg.attach(MIMEText(html_content, 'html'))
             
-            smtp_host = self.config.SMTP_HOST or 'smtp.gmail.com'
-            smtp_port = self.config.SMTP_PORT or 587
+            smtp_host = self.config.SMTP_HOST or 'smtpout.secureserver.net'
+            smtp_port = self.config.SMTP_PORT or 465
             smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
             smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
             
@@ -524,10 +529,15 @@ class AuthManager:
                 print("Warning: SMTP not configured - password reset email not sent")
                 return False
             
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
+            if getattr(self.config, 'SMTP_USE_SSL', False) or smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
             
             print(f"Password reset email sent to {email}")
             return True

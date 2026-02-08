@@ -403,7 +403,7 @@ class WeeklyReportGenerator:
             # Create email
             msg = MIMEMultipart('alternative')
             msg['Subject'] = f"🛡️ Your Weekly Security Report - {datetime.now().strftime('%b %d, %Y')}"
-            msg['From'] = smtp_settings.get('username', self.config.EMAIL_USERNAME) if smtp_settings else self.config.EMAIL_USERNAME
+            msg['From'] = smtp_settings.get('username', getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')) if smtp_settings else getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')
             msg['To'] = user['email']
             
             # Attach parts
@@ -742,7 +742,7 @@ class WeeklyReportGenerator:
             # Create email
             msg = MIMEMultipart('alternative')
             msg['Subject'] = f"🚨 SecureLink Alert: {len(flagged_emails)} Threat(s) Detected - {datetime.now().strftime('%I:%M %p')}"
-            msg['From'] = smtp_settings.get('username', self.config.SMTP_USERNAME) if smtp_settings else getattr(self.config, 'SMTP_USERNAME', self.config.EMAIL_USERNAME)
+            msg['From'] = smtp_settings.get('username', getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')) if smtp_settings else getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')
             msg['To'] = user['email']
             
             # Attach parts
