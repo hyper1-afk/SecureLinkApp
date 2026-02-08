@@ -3125,7 +3125,8 @@
             console.log('Auth check - Token exists:', !!token);
             
             if (!token) {
-                updateNavForLoggedOut();
+                // Not logged in - redirect to landing page
+                window.location.href = '/';
                 return;
             }
 
@@ -3143,11 +3144,13 @@
                     console.log('Token invalid, clearing');
                     localStorage.removeItem('auth_token');
                     localStorage.removeItem('user');
-                    updateNavForLoggedOut();
+                    // Redirect to landing page
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                updateNavForLoggedOut();
+                // Redirect to landing page on error
+                window.location.href = '/';
             }
         }
 
