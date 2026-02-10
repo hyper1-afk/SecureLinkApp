@@ -164,64 +164,13 @@
         </div>
         
         <div class="buttons">
-            <button class="btn btn-safe" onclick="goBack()">← Go Back to Safety</button>
-            <button class="btn btn-danger" onclick="proceedAnyway()">Proceed Anyway (Not Recommended)</button>
+            <button class="btn btn-safe" id="btn-back">← Go Back to Safety</button>
+            <button class="btn btn-danger" id="btn-proceed">Proceed Anyway (Not Recommended)</button>
         </div>
         
         <p class="powered-by">Protected by <a href="https://securelinkapp.com" target="_blank">SecureLink</a></p>
     </div>
 
-    <script>
-        // Parse URL parameters
-        const params = new URLSearchParams(window.location.search);
-        const blockedUrl = params.get('url') || 'Unknown URL';
-        const riskScore = params.get('score') || '?';
-        let threats = [];
-        
-        try {
-            threats = JSON.parse(params.get('threats') || '[]');
-        } catch (e) {
-            threats = ['Suspicious activity detected'];
-        }
-
-        // Display blocked URL
-        document.getElementById('blocked-url').textContent = blockedUrl;
-        
-        // Display risk score
-        document.getElementById('risk-score').textContent = `Risk Score: ${riskScore}/100`;
-        
-        // Display threats
-        const threatsList = document.getElementById('threats-list');
-        if (threats.length === 0) {
-            threats = ['This site has been flagged as potentially dangerous'];
-        }
-        threats.forEach(threat => {
-            const item = document.createElement('div');
-            item.className = 'threat-item';
-            item.innerHTML = `<span>⚠️</span> ${threat}`;
-            threatsList.appendChild(item);
-        });
-
-        // Go back to safety
-        function goBack() {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = 'https://google.com';
-            }
-        }
-
-        // Proceed anyway (at user's risk)
-        function proceedAnyway() {
-            if (confirm('Are you sure you want to proceed? This site may be dangerous and could harm your computer or steal your information.')) {
-                // Store bypass for this URL temporarily
-                chrome.storage.local.set({ 
-                    [`bypass_${blockedUrl}`]: Date.now() 
-                }, () => {
-                    window.location.href = blockedUrl;
-                });
-            }
-        }
-    </script>
+    <script src="warning.js"></script>
 </body>
 </html>

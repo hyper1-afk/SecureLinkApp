@@ -31,7 +31,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["warning.html", "upgrade.html"],
+      "resources": ["warning.html", "warning.js", "upgrade.html", "upgrade.js"],
       "matches": ["<all_urls>"]
     }
   ]
