@@ -1666,7 +1666,7 @@ def verify_link():
         if scans_today >= 15:
             return jsonify({
                 'error': 'Daily scan limit reached',
-                'message': 'Sign up for free to get 50 scans per day!',
+                'message': 'Create a free account to get 25 scans per day!',
                 'limit': 15,
                 'used': scans_today,
                 'signup_url': '/login'

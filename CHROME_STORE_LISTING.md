@@ -30,9 +30,9 @@ SecureLink automatically scans every URL you visit and warns you before you land
 
 **📊 Subscription Tiers:**
 
-• **Free** - 50 scans per day (sign up required)
-• **Pro ($9.99/mo)** - 500 scans per day + priority support
-• **Enterprise ($49.99/mo)** - Unlimited scans + team features
+• **Free** - 25 scans per day (account required)
+• **Pro ($14.99/mo)** - Unlimited scans + email monitoring
+• **Enterprise ($59.99/mo)** - Everything + Attack Surface Monitoring
 
 **🏢 Perfect For:**
 

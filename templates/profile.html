@@ -878,7 +878,7 @@
                                         <p class="text-secondary">Perfect for casual users</p>
                                         
                                         <ul class="plan-features">
-                                            <li><i class="bi bi-check-circle-fill"></i>50 scans per day</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>25 scans per day</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Basic threat detection</li>
                                             <li><i class="bi bi-check-circle-fill"></i>7-day history</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Desktop notifications</li>
@@ -895,15 +895,15 @@
                                     <div class="plan-card popular" id="plan-pro">
                                         <div class="popular-badge">Most Popular</div>
                                         <h5>Pro</h5>
-                                        <div class="plan-price" id="proPriceDisplay">$9.99<span>/month</span></div>
-                                        <p class="text-secondary yearly-savings d-none" id="proYearlySavings">Save $19.89/year!</p>
+                                        <div class="plan-price" id="proPriceDisplay">$14.99<span>/month</span></div>
+                                        <p class="text-secondary yearly-savings d-none" id="proYearlySavings">Save $29.89/year!</p>
                                         <p class="text-secondary">For power users</p>
                                         
                                         <ul class="plan-features">
-                                            <li><i class="bi bi-check-circle-fill"></i>500 scans per day</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Advanced threat detection</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Full history</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Monitor 5 email accounts</strong></li>
+                                            <li><i class="bi bi-check-circle-fill"></i><strong>Monitor 3 email accounts</strong></li>
                                             <li><i class="bi bi-check-circle-fill"></i>API access</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Whitelist/Blacklist</li>
                                         </ul>
@@ -918,17 +918,17 @@
                                 <div class="col-md-4 mb-4">
                                     <div class="plan-card" id="plan-enterprise">
                                         <h5>Enterprise</h5>
-                                        <div class="plan-price" id="enterprisePriceDisplay">$49.99<span>/month</span></div>
-                                        <p class="text-secondary yearly-savings d-none" id="enterpriseYearlySavings">Save $99.89/year!</p>
+                                        <div class="plan-price" id="enterprisePriceDisplay">$59.99<span>/month</span></div>
+                                        <p class="text-secondary yearly-savings d-none" id="enterpriseYearlySavings">Save $119.89/year!</p>
                                         <p class="text-secondary">For teams & businesses</p>
                                         
                                         <ul class="plan-features">
                                             <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Everything in Pro</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Monitor 25 email accounts</strong></li>
+                                            <li><i class="bi bi-check-circle-fill"></i><strong>Unlimited email monitoring</strong></li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Attack Surface Monitoring</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Team management</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Priority support</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Custom integrations</li>
                                         </ul>
                                         
                                         <button class="btn btn-outline-light w-100" id="enterpriseBtn" onclick="handlePlanClick('enterprise')">
@@ -1750,13 +1750,13 @@
             const isYearly = document.getElementById('yearlyBilling')?.checked;
             
             if (isYearly) {
-                document.getElementById('proPriceDisplay').innerHTML = '$99.99<span>/year</span>';
-                document.getElementById('enterprisePriceDisplay').innerHTML = '$499.99<span>/year</span>';
+                document.getElementById('proPriceDisplay').innerHTML = '$149.99<span>/year</span>';
+                document.getElementById('enterprisePriceDisplay').innerHTML = '$599.99<span>/year</span>';
                 document.getElementById('proYearlySavings')?.classList.remove('d-none');
                 document.getElementById('enterpriseYearlySavings')?.classList.remove('d-none');
             } else {
-                document.getElementById('proPriceDisplay').innerHTML = '$9.99<span>/month</span>';
-                document.getElementById('enterprisePriceDisplay').innerHTML = '$49.99<span>/month</span>';
+                document.getElementById('proPriceDisplay').innerHTML = '$14.99<span>/month</span>';
+                document.getElementById('enterprisePriceDisplay').innerHTML = '$59.99<span>/month</span>';
                 document.getElementById('proYearlySavings')?.classList.add('d-none');
                 document.getElementById('enterpriseYearlySavings')?.classList.add('d-none');
             }
@@ -1785,8 +1785,8 @@
             const billingPeriod = document.querySelector('input[name="billingPeriod"]:checked')?.value || 'monthly';
             const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
             const priceText = billingPeriod === 'yearly' 
-                ? (plan === 'pro' ? '$99.99/year' : '$499.99/year')
-                : (plan === 'pro' ? '$9.99/month' : '$49.99/month');
+                ? (plan === 'pro' ? '$149.99/year' : '$599.99/year')
+                : (plan === 'pro' ? '$14.99/month' : '$59.99/month');
             
             if (!confirm(`Upgrade to ${planName} for ${priceText}?\n\nYou will be redirected to our secure payment page.`)) {
                 return;

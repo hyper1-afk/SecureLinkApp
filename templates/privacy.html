@@ -143,10 +143,10 @@
     <!-- Content -->
     <div class="content-container">
         <h1>Privacy Policy</h1>
-        <p class="last-updated">Last Updated: February 5, 2026</p>
+        <p class="last-updated">Last Updated: June 27, 2025</p>
         
         <div class="highlight-box important">
-            <strong><i class="bi bi-shield-check me-2"></i>Our Commitment:</strong> SecureLink is designed to protect your privacy and security. We collect only the minimum data necessary to provide our URL scanning service and never sell your personal information.
+            <strong><i class="bi bi-shield-check me-2"></i>Our Commitment:</strong> SecureLink is designed to protect your privacy and security. We collect only the minimum data necessary to provide our URL scanning and Attack Surface Monitoring services and never sell your personal information.
         </div>
 
         <h2>1. Introduction</h2>
@@ -154,10 +154,10 @@
 
         <h2>2. Information We Collect</h2>
         
-        <h3>2.1 URLs You Visit</h3>
-        <p>When the SecureLink browser extension is active, it sends the URLs you visit to our servers for security analysis. This is the core functionality that allows us to warn you about malicious websites.</p>
+        <h3>2.1 URLs You Scan</h3>
+        <p>When you use the SecureLink browser extension or web app, URLs you submit are sent to our servers for security analysis. An account is required to use the scanning service.</p>
         <ul>
-            <li><strong>What we analyze:</strong> The URL/domain of websites you navigate to</li>
+            <li><strong>What we analyze:</strong> The URL/domain of websites you submit for scanning</li>
             <li><strong>What we DON'T collect:</strong> Page content, form data, passwords, personal files, or browsing history</li>
             <li><strong>Exceptions:</strong> We skip internal browser pages, localhost, and known-safe domains (Google, Amazon, etc.)</li>
         </ul>
@@ -182,6 +182,18 @@
         <h3>2.4 Payment Information</h3>
         <p>For paid subscriptions, payment is processed by Stripe. We do not store your credit card numbers. Stripe's privacy policy applies to payment processing.</p>
 
+        <h3>2.5 Attack Surface Monitoring Data (Enterprise)</h3>
+        <p>If you subscribe to our Enterprise plan and use Attack Surface Monitoring, we collect and store the following for domains you register:</p>
+        <ul>
+            <li><strong>DNS Records:</strong> A, AAAA, MX, TXT, NS, and CNAME records for your domains</li>
+            <li><strong>SSL/TLS Certificate Details:</strong> Issuer, expiration dates, protocol versions, and cipher suites</li>
+            <li><strong>WHOIS Data:</strong> Registrar, creation/expiration dates, and nameserver information</li>
+            <li><strong>Open Port Information:</strong> Discovered open ports and associated services</li>
+            <li><strong>HTTP Security Headers:</strong> Presence and configuration of security headers on your domains</li>
+            <li><strong>Security Scores:</strong> Computed risk scores and historical trends</li>
+        </ul>
+        <p>This data is collected exclusively for domains you explicitly register for monitoring and is used solely to provide security insights to you.</p>
+
         <h2>3. How We Use Your Information</h2>
         <ul>
             <li><strong>Security Analysis:</strong> URLs are analyzed against threat databases to identify phishing, malware, and suspicious sites</li>
@@ -194,6 +206,7 @@
         <ul>
             <li><strong>URL Scan Data:</strong> Temporarily cached for performance (typically 5 minutes), then discarded</li>
             <li><strong>Account Data:</strong> Retained while your account is active; deleted upon account deletion request</li>
+            <li><strong>Attack Surface Monitoring Data:</strong> Scan results and historical trends are retained while your Enterprise subscription is active. Data is deleted within 30 days of subscription cancellation or domain removal</li>
             <li><strong>Anonymized Statistics:</strong> May be retained indefinitely for service improvement</li>
         </ul>
 

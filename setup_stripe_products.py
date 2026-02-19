@@ -29,22 +29,22 @@ def create_products_and_prices():
     # Create Pro Monthly Price
     pro_monthly = stripe.Price.create(
         product=pro_product.id,
-        unit_amount=999,  # $9.99 in cents
+        unit_amount=1499,  # $14.99 in cents
         currency="usd",
         recurring={"interval": "month"},
         metadata={"plan": "pro", "period": "monthly"}
     )
-    print(f"   ✅ Pro Monthly Price: {pro_monthly.id} ($9.99/month)")
+    print(f"   ✅ Pro Monthly Price: {pro_monthly.id} ($14.99/month)")
     
     # Create Pro Yearly Price
     pro_yearly = stripe.Price.create(
         product=pro_product.id,
-        unit_amount=9999,  # $99.99 in cents
+        unit_amount=14999,  # $149.99 in cents
         currency="usd",
         recurring={"interval": "year"},
         metadata={"plan": "pro", "period": "yearly"}
     )
-    print(f"   ✅ Pro Yearly Price: {pro_yearly.id} ($99.99/year)")
+    print(f"   ✅ Pro Yearly Price: {pro_yearly.id} ($149.99/year)")
     
     # Create Enterprise Plan Product
     print("\n📦 Creating Enterprise Plan product...")
@@ -58,22 +58,22 @@ def create_products_and_prices():
     # Create Enterprise Monthly Price
     enterprise_monthly = stripe.Price.create(
         product=enterprise_product.id,
-        unit_amount=4999,  # $49.99 in cents
+        unit_amount=5999,  # $59.99 in cents
         currency="usd",
         recurring={"interval": "month"},
         metadata={"plan": "enterprise", "period": "monthly"}
     )
-    print(f"   ✅ Enterprise Monthly Price: {enterprise_monthly.id} ($49.99/month)")
+    print(f"   ✅ Enterprise Monthly Price: {enterprise_monthly.id} ($59.99/month)")
     
     # Create Enterprise Yearly Price
     enterprise_yearly = stripe.Price.create(
         product=enterprise_product.id,
-        unit_amount=49999,  # $499.99 in cents
+        unit_amount=59999,  # $599.99 in cents
         currency="usd",
         recurring={"interval": "year"},
         metadata={"plan": "enterprise", "period": "yearly"}
     )
-    print(f"   ✅ Enterprise Yearly Price: {enterprise_yearly.id} ($499.99/year)")
+    print(f"   ✅ Enterprise Yearly Price: {enterprise_yearly.id} ($599.99/year)")
     
     # Print summary
     print("\n" + "=" * 50)

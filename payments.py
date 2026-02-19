@@ -13,20 +13,20 @@ logger = logging.getLogger(__name__)
 
 # Stripe Price IDs - Replace with your actual Stripe Price IDs
 STRIPE_PRICES = {
-    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $9.99/month
-    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $99.99/year (save ~17%)
-    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $49.99/month
-    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',    # $499.99/year (save ~17%)
+    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $14.99/month (needs new Stripe price)
+    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $149.99/year (needs new Stripe price)
+    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $59.99/month (needs new Stripe price)
+    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',    # $599.99/year (needs new Stripe price)
 }
 
 PLAN_PRICES = {
     'pro': {
-        'monthly': 9.99,
-        'yearly': 99.99,
+        'monthly': 14.99,
+        'yearly': 149.99,
     },
     'enterprise': {
-        'monthly': 49.99,
-        'yearly': 499.99,
+        'monthly': 59.99,
+        'yearly': 599.99,
     }
 }
 
@@ -254,11 +254,11 @@ class PaymentManager:
                 'name': 'Pro',
                 'monthly': {
                     'price': PLAN_PRICES['pro']['monthly'],
-                    'display': '$9.99/month'
+                    'display': '$14.99/month'
                 },
                 'yearly': {
                     'price': PLAN_PRICES['pro']['yearly'],
-                    'display': '$99.99/year',
+                    'display': '$149.99/year',
                     'savings': '2 months free!'
                 }
             },
@@ -266,11 +266,11 @@ class PaymentManager:
                 'name': 'Enterprise',
                 'monthly': {
                     'price': PLAN_PRICES['enterprise']['monthly'],
-                    'display': '$49.99/month'
+                    'display': '$59.99/month'
                 },
                 'yearly': {
                     'price': PLAN_PRICES['enterprise']['yearly'],
-                    'display': '$499.99/year',
+                    'display': '$599.99/year',
                     'savings': '2 months free!'
                 }
             }

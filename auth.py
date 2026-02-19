@@ -110,7 +110,7 @@ class User(Base):
         """Get feature limits based on subscription tier"""
         limits = {
             SubscriptionTier.FREE.value: {
-                'daily_scans': 50,
+                'daily_scans': 25,
                 'email_monitoring': False,
                 'max_email_accounts': 0,
                 'api_access': False,
@@ -124,9 +124,9 @@ class User(Base):
                 'attack_surface': False,
             },
             SubscriptionTier.PRO.value: {
-                'daily_scans': 500,
+                'daily_scans': -1,  # Unlimited
                 'email_monitoring': True,
-                'max_email_accounts': 5,
+                'max_email_accounts': 3,
                 'api_access': True,
                 'priority_support': False,
                 'advanced_analysis': True,
@@ -140,7 +140,7 @@ class User(Base):
             SubscriptionTier.ENTERPRISE.value: {
                 'daily_scans': -1,  # Unlimited
                 'email_monitoring': True,
-                'max_email_accounts': 25,
+                'max_email_accounts': -1,  # Unlimited
                 'api_access': True,
                 'priority_support': True,
                 'advanced_analysis': True,
@@ -1632,53 +1632,56 @@ SUBSCRIPTION_PLANS = {
     'free': {
         'name': 'Free',
         'price': 0,
-        'period': None,
+        'period': 'forever',
+        'max_email_accounts': 0,
         'features': [
-            '50 link scans per day',
+            '25 link scans per day',
             'Basic threat detection',
-            'Monitor 1 domain (weekly scans)',
             'Security scorecard & grade',
+            '7-day scan history',
+            'Browser extension',
             'Desktop notifications'
         ],
         'limitations': [
             'No email monitoring',
-            'No AI remediation advice',
+            'No Attack Surface Monitoring',
             'No API access'
         ]
     },
     'pro': {
         'name': 'Pro',
-        'price': 9.99,
+        'price': 14.99,
         'period': 'month',
-        'max_email_accounts': 5,
+        'max_email_accounts': 3,
         'features': [
-            '500 link scans per day',
-            'Monitor up to 5 domains (daily scans)',
-            'AI-powered remediation advice',
-            'SSL expiry & config drift alerts',
-            'Score trend & history charts',
-            'Monitor up to 5 email accounts',
-            'Full scan history & export reports',
+            'Unlimited link scans',
+            'Advanced threat detection',
+            'Full scan history',
+            'Monitor up to 3 email accounts',
             'API access',
-            'Slack/Discord/Teams alerts'
+            'Whitelist/Blacklist',
+            'Export reports',
+            'Email support'
         ],
-        'limitations': []
+        'limitations': [
+            'No Attack Surface Monitoring',
+            'No AI remediation advice'
+        ]
     },
     'enterprise': {
         'name': 'Enterprise',
-        'price': 49.99,
+        'price': 59.99,
         'period': 'month',
-        'max_email_accounts': 25,
+        'max_email_accounts': -1,
         'features': [
             'Unlimited link scans',
-            'Monitor up to 25 domains (hourly scans)',
+            'Everything in Pro',
+            'Unlimited email monitoring',
+            'Attack Surface Monitoring (25 domains, hourly)',
             'AI-powered remediation advice',
-            'Continuous attack surface monitoring',
-            'Breach & dark web monitoring',
-            'Monitor up to 25 email accounts',
-            'Full API access & custom integrations',
-            'Priority phone support',
-            'Team management & SSO'
+            'Team management',
+            'Scheduled reports',
+            'Priority support'
         ],
         'limitations': []
     }
