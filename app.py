@@ -26,6 +26,8 @@ from oauth import init_oauth, get_configured_providers, get_oauth_client, parse_
 from cyber_news import get_cyber_news
 from admin import get_admin_manager, EmployeeRole
 from support_email_monitor import start_support_email_monitor
+from attack_surface_routes import attack_surface_bp, init_attack_surface
+from scan_scheduler import get_scan_scheduler
 from features import (
     get_ai_threat_explanation, check_password_breach, check_email_breach,
     send_slack_notification, send_discord_notification, send_teams_notification,
@@ -45,6 +47,53 @@ app.config.from_object(Config)
 app.secret_key = Config.SECRET_KEY  # Required for OAuth sessions
 CORS(app)
 
+
+# ================================================================
+#  Security Headers — applied to every HTTP response
+# ================================================================
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to every response to harden the application."""
+    # Enforce HTTPS (HSTS) — 1 year, include subdomains, allow preload list
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+
+    # Prevent XSS — restrict resources to same origin by default
+    # Allow inline scripts/styles needed by the app, plus CDN resources
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://api.stripe.com; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self';"
+    )
+
+    # Prevent MIME-type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+
+    # Prevent clickjacking — block all framing
+    response.headers['X-Frame-Options'] = 'DENY'
+
+    # Enable browser XSS filter
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    # Control referrer information sent to other sites
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+    # Restrict browser features/APIs
+    response.headers['Permissions-Policy'] = (
+        'camera=(), microphone=(), geolocation=(), '
+        'payment=(self), usb=(), magnetometer=(), gyroscope=()'
+    )
+
+    # Remove server version disclosure (Flask/Werkzeug)
+    response.headers.pop('Server', None)
+
+    return response
+
 # Initialize services
 config = Config()
 verifier = LinkVerifier(config)
@@ -57,6 +106,10 @@ admin_manager = get_admin_manager(config)
 
 # Initialize OAuth
 oauth = init_oauth(app, config)
+
+# Initialize Attack Surface Monitoring
+init_attack_surface(config, auth_manager)
+app.register_blueprint(attack_surface_bp)
 
 # Store email monitors per user
 user_email_monitors = {}
@@ -3774,6 +3827,11 @@ if __name__ == '__main__':
         start_support_email_monitor(config, interval=config.SUPPORT_EMAIL_CHECK_INTERVAL)
         logger.info(f"Support email monitor started for {config.SUPPORT_EMAIL_ADDRESS}")
     
+    # Start attack surface scan scheduler
+    scan_scheduler = get_scan_scheduler(config)
+    scan_scheduler.start()
+    logger.info("Attack surface scan scheduler started")
+    
     print("""
     ╔═══════════════════════════════════════════════════════════╗
     ║                 SecureLink - Starting Up                   ║
@@ -3783,6 +3841,7 @@ if __name__ == '__main__':
     ║  Features:                                                ║
     ║  • User accounts with persistent login (stay signed in)   ║
     ║  • Paste links to verify their safety                     ║
+    ║  • Attack Surface Monitoring (domain security scans)      ║
     ║  • Email monitoring for Pro users                         ║
     ║  • Desktop notifications for dangerous links              ║
     ║  • Hourly threat alerts via email                         ║

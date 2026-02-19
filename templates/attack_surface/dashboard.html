@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Attack Surface Monitor - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --primary-light: #38bdf8;
+            --accent-color: #8b5cf6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.25);
+        }
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body {
+            background: var(--bg-dark);
+            background-image:
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh; color: var(--text-primary); font-size: 15px;
+        }
+        .navbar {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 0;
+        }
+        .navbar-brand {
+            font-weight: 800; font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-link { color: var(--text-secondary) !important; font-weight: 500; }
+        .nav-link:hover { color: var(--text-primary) !important; }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: rgba(14, 165, 233, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        h5, .card h5 { color: #ffffff !important; font-weight: 700; }
+        .card-body { color: var(--text-primary); }
+        .stat-card {
+            padding: 1.5rem; text-align: center;
+        }
+        .stat-value { font-size: 2.2rem; font-weight: 800; color: #ffffff; }
+        .stat-label { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+
+        /* Grade badges */
+        .grade-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 48px; height: 48px; border-radius: 12px;
+            font-weight: 800; font-size: 1.2rem; color: #fff;
+        }
+        .grade-badge-sm { width: 36px; height: 36px; font-size: 0.95rem; border-radius: 8px; }
+        .grade-a-plus, .grade-a { background: linear-gradient(135deg, #10b981, #059669); }
+        .grade-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .grade-d { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .grade-f { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .domain-row {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);
+            cursor: pointer; transition: background 0.2s;
+        }
+        .domain-row:hover { background: var(--bg-card-hover); }
+        .domain-row:last-child { border-bottom: none; }
+
+        .score-bar {
+            height: 8px; border-radius: 4px; background: rgba(148,163,184,0.15);
+            flex: 1; max-width: 120px; overflow: hidden;
+        }
+        .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+
+        .severity-dot {
+            width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+        }
+        .severity-critical { background: #ef4444; }
+        .severity-high { background: #f97316; }
+        .severity-medium { background: #f59e0b; }
+        .severity-low { background: #3b82f6; }
+        .severity-info { background: #94a3b8; }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none; padding: 10px 24px; border-radius: 10px;
+            font-weight: 600; color: #fff; transition: all 0.3s;
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14,165,233,0.3); color: #fff;
+        }
+        .btn-outline-custom {
+            border: 1px solid var(--border-color); background: transparent;
+            padding: 8px 18px; border-radius: 10px; font-weight: 500; color: var(--text-secondary);
+        }
+        .btn-outline-custom:hover { border-color: var(--primary-color); color: var(--text-primary); }
+
+        .input-dark {
+            background: rgba(15,23,42,0.8); border: 2px solid var(--border-color);
+            border-radius: 10px; color: var(--text-primary); padding: 10px 16px;
+        }
+        .input-dark:focus {
+            border-color: var(--primary-color); background: rgba(15,23,42,0.9);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.15); color: var(--text-primary);
+        }
+        .input-dark::placeholder { color: var(--text-muted); }
+
+        .alert-item {
+            display: flex; gap: 0.75rem; padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color); align-items: flex-start;
+        }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-unread { background: rgba(14,165,233,0.05); }
+
+        .empty-state {
+            text-align: center; padding: 3rem; color: var(--text-muted);
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        .page-header {
+            padding: 2rem 0 1rem;
+        }
+        .page-header h1 {
+            font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem;
+        }
+        .page-header p { color: var(--text-secondary); margin-bottom: 0; }
+
+        /* Modal styles */
+        .modal-content {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; color: var(--text-primary);
+        }
+        .modal-header { border-bottom: 1px solid var(--border-color); }
+        .modal-footer { border-top: 1px solid var(--border-color); }
+
+        .loading-spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid rgba(14,165,233,0.2);
+            border-top-color: var(--primary-color);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .score-change-up { color: var(--success-color); }
+        .score-change-down { color: var(--danger-color); }
+
+        /* ====== Dark-mode text legibility overrides ====== */
+        /* Force all headings white */
+        h1, h2, h3, h4, h5, h6,
+        .modal-title,
+        .card h5, .card h6 {
+            color: #ffffff !important;
+        }
+
+        /* Page subtitle */
+        .page-header p {
+            color: #e2e8f0;
+        }
+
+        /* Nav active link brighter */
+        .nav-link.active {
+            color: var(--primary-light) !important;
+        }
+
+        /* Empty state text visible */
+        .empty-state {
+            color: #cbd5e1;
+        }
+        .empty-state i {
+            opacity: 0.7;
+            color: #94a3b8;
+        }
+        .empty-state p {
+            color: #cbd5e1;
+        }
+
+        /* Domain row text */
+        .domain-row .fw-semibold {
+            color: #f1f5f9;
+        }
+        .domain-row small.text-muted {
+            color: #94a3b8 !important;
+        }
+
+        /* Modal form labels & helpers */
+        .modal-content label,
+        .modal-content .form-label {
+            color: #e2e8f0 !important;
+            font-weight: 600;
+        }
+        .modal-content small.text-muted,
+        .modal-content .text-muted {
+            color: #94a3b8 !important;
+        }
+        .modal-content .form-select {
+            background-color: rgba(15,23,42,0.8);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .modal-content .form-select option {
+            background: #1e293b;
+            color: #f8fafc;
+        }
+
+        /* Alert items */
+        .alert-item .fw-semibold {
+            color: #f1f5f9;
+        }
+        .alert-item small.text-muted {
+            color: #94a3b8 !important;
+        }
+
+        /* Quick scan results */
+        #quickScanResult h5 {
+            color: #ffffff !important;
+        }
+        #quickScanResult h6 {
+            color: #e2e8f0 !important;
+        }
+        #quickScanResult .fw-semibold {
+            color: #f1f5f9;
+        }
+        #quickScanResult .text-muted {
+            color: #94a3b8 !important;
+        }
+        #quickScanResult code {
+            color: var(--primary-light);
+            background: rgba(14,165,233,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Bootstrap text-muted override for dark mode */
+        .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        /* Badge text */
+        .badge.bg-secondary {
+            background: rgba(100, 116, 139, 0.4) !important;
+            color: #e2e8f0 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-lock-fill me-2"></i>SecureLink</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/attack-surface"><i class="bi bi-radar me-1"></i>Attack Surface</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/security-news">News</a></li>
+                </ul>
+                <div id="userArea"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="bi bi-radar me-2" style="color: var(--primary-color);"></i>Attack Surface Monitor</h1>
+                <p>Continuously monitor your domains for security vulnerabilities, misconfigurations, and threats.</p>
+            </div>
+            <button class="btn btn-primary-custom" onclick="openAddDomainModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add Domain
+            </button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row g-3 mb-4" id="statsRow">
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="statDomains">-</div>
+                    <div class="stat-label">Domains Monitored</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="statAvgScore">-</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="statFindings">-</div>
+                    <div class="stat-label">Findings (7 days)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="statAlerts">-</div>
+                    <div class="stat-label">Unread Alerts</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Domains List -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="d-flex justify-content-between align-items-center p-3 pb-0">
+                            <h5 class="mb-0"><i class="bi bi-globe2 me-2"></i>Monitored Domains</h5>
+                            <!-- Quick Scan -->
+                            <button class="btn btn-outline-custom btn-sm" onclick="openQuickScanModal()">
+                                <i class="bi bi-search me-1"></i> Quick Scan
+                            </button>
+                        </div>
+                        <div id="domainsList" class="mt-3">
+                            <div class="empty-state">
+                                <div class="loading-spinner"></div>
+                                <p class="mt-2">Loading domains...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Sidebar -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="d-flex justify-content-between align-items-center p-3 pb-0">
+                            <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Recent Alerts</h5>
+                            <span class="badge bg-danger rounded-pill" id="alertBadge" style="display:none;">0</span>
+                        </div>
+                        <div id="alertsList" class="mt-3">
+                            <div class="empty-state py-4">
+                                <i class="bi bi-bell-slash"></i>
+                                <p>No alerts yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Domain Modal -->
+    <div class="modal fade" id="addDomainModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add Domain to Monitor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Domain</label>
+                        <input type="text" class="form-control input-dark" id="addDomainInput" placeholder="example.com">
+                        <small class="text-muted">Enter the root domain (e.g., example.com)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Label (optional)</label>
+                        <input type="text" class="form-control input-dark" id="addDomainLabel" placeholder="My Company Website">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Scan Frequency</label>
+                        <select class="form-select input-dark" id="addDomainFrequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                    <div id="addDomainError" class="text-danger small" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary-custom" onclick="addDomain()" id="addDomainBtn">
+                        Add & Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Scan Modal -->
+    <div class="modal fade" id="quickScanModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-search me-2"></i>Quick Domain Scan</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control input-dark" id="quickScanInput" placeholder="Enter any domain to scan...">
+                        <button class="btn btn-primary-custom" onclick="runQuickScan()" id="quickScanBtn">
+                            <i class="bi bi-radar me-1"></i> Scan
+                        </button>
+                    </div>
+                    <div id="quickScanResult" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/attack-surface';
+        let authToken = localStorage.getItem('auth_token');
+
+        function headers() {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+        }
+
+        // ============ Init ============
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!authToken) {
+                window.location.href = '/login';
+                return;
+            }
+            loadDashboard();
+            loadAlerts();
+        });
+
+        // ============ Dashboard ============
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API_BASE}/dashboard`, { headers: headers() });
+                if (res.status === 401) { window.location.href = '/login'; return; }
+                const data = await res.json();
+
+                document.getElementById('statDomains').textContent = data.total_domains || 0;
+                document.getElementById('statAvgScore').textContent = data.average_score != null ? data.average_score : '-';
+                document.getElementById('statFindings').textContent = data.findings_last_7_days || 0;
+                document.getElementById('statAlerts').textContent = data.unread_alerts || 0;
+
+                renderDomains(data.domains || []);
+            } catch(e) {
+                console.error('Dashboard load error:', e);
+            }
+        }
+
+        function renderDomains(domains) {
+            const el = document.getElementById('domainsList');
+            if (!domains.length) {
+                el.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-globe2"></i>
+                        <h5>No domains monitored yet</h5>
+                        <p>Add your first domain to start monitoring its security posture.</p>
+                        <button class="btn btn-primary-custom mt-2" onclick="openAddDomainModal()">
+                            <i class="bi bi-plus-lg me-1"></i> Add Domain
+                        </button>
+                    </div>`;
+                return;
+            }
+
+            el.innerHTML = domains.map(d => {
+                const gradeClass = getGradeClass(d.latest_grade);
+                const scoreColor = getScoreColor(d.latest_score);
+                const scoreChange = d.score_change;
+                const changeHtml = scoreChange != null
+                    ? `<span class="${scoreChange >= 0 ? 'score-change-up' : 'score-change-down'}">
+                        <i class="bi bi-arrow-${scoreChange >= 0 ? 'up' : 'down'}"></i> ${Math.abs(scoreChange)}
+                       </span>`
+                    : '';
+
+                return `
+                <div class="domain-row" onclick="viewDomain(${d.id})">
+                    <div class="grade-badge grade-badge-sm ${gradeClass}">${d.latest_grade || '?'}</div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${escHtml(d.label || d.domain)}</div>
+                        <small class="text-muted">${escHtml(d.domain)}</small>
+                    </div>
+                    <div class="text-end me-2">
+                        <div class="fw-bold" style="color:${scoreColor}">${d.latest_score != null ? d.latest_score + '/100' : 'No scan'}</div>
+                        ${changeHtml}
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-fill" style="width:${d.latest_score || 0}%;background:${scoreColor}"></div>
+                    </div>
+                    <div>
+                        ${d.is_verified
+                            ? '<i class="bi bi-patch-check-fill text-success" title="Verified"></i>'
+                            : '<i class="bi bi-exclamation-triangle text-warning" title="Not verified"></i>'}
+                    </div>
+                    <button class="btn btn-outline-custom btn-sm" onclick="event.stopPropagation();scanNow(${d.id})" title="Scan now">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        // ============ Alerts ============
+        async function loadAlerts() {
+            try {
+                const res = await fetch(`${API_BASE}/alerts`, { headers: headers() });
+                const data = await res.json();
+                const alerts = data.alerts || [];
+                const badge = document.getElementById('alertBadge');
+
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = '';
+                }
+
+                const el = document.getElementById('alertsList');
+                if (!alerts.length) {
+                    el.innerHTML = '<div class="empty-state py-4"><i class="bi bi-bell-slash"></i><p>No alerts yet</p></div>';
+                    return;
+                }
+
+                el.innerHTML = alerts.slice(0, 10).map(a => `
+                    <div class="alert-item ${a.is_read ? '' : 'alert-unread'}" onclick="markAlertRead(${a.id})">
+                        <span class="severity-dot severity-${a.severity}"></span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small">${escHtml(a.title)}</div>
+                            <small class="text-muted">${timeAgo(a.created_at)}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                console.error('Alerts load error:', e);
+            }
+        }
+
+        async function markAlertRead(id) {
+            await fetch(`${API_BASE}/alerts/${id}/read`, { method: 'POST', headers: headers() });
+            loadAlerts();
+        }
+
+        // ============ Add Domain ============
+        function openAddDomainModal() {
+            document.getElementById('addDomainInput').value = '';
+            document.getElementById('addDomainLabel').value = '';
+            document.getElementById('addDomainError').style.display = 'none';
+            new bootstrap.Modal(document.getElementById('addDomainModal')).show();
+        }
+
+        async function addDomain() {
+            const domain = document.getElementById('addDomainInput').value.trim();
+            const label = document.getElementById('addDomainLabel').value.trim();
+            const frequency = document.getElementById('addDomainFrequency').value;
+            const errEl = document.getElementById('addDomainError');
+            const btn = document.getElementById('addDomainBtn');
+
+            if (!domain) { errEl.textContent = 'Please enter a domain.'; errEl.style.display = ''; return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Adding...';
+
+            try {
+                const res = await fetch(`${API_BASE}/domains`, {
+                    method: 'POST',
+                    headers: headers(),
+                    body: JSON.stringify({ domain, label, scan_frequency: frequency })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    errEl.textContent = data.error || 'Failed to add domain.';
+                    errEl.style.display = '';
+                    return;
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('addDomainModal')).hide();
+
+                // Trigger immediate scan
+                if (data.domain && data.domain.id) {
+                    scanNow(data.domain.id);
+                }
+
+                loadDashboard();
+            } catch(e) {
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = '';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Add & Scan';
+            }
+        }
+
+        // ============ Scan Now ============
+        async function scanNow(domainId) {
+            try {
+                const res = await fetch(`${API_BASE}/domains/${domainId}/scan`, {
+                    method: 'POST', headers: headers()
+                });
+                const data = await res.json();
+                loadDashboard();
+                loadAlerts();
+            } catch(e) {
+                console.error('Scan error:', e);
+            }
+        }
+
+        // ============ Quick Scan ============
+        function openQuickScanModal() {
+            document.getElementById('quickScanInput').value = '';
+            document.getElementById('quickScanResult').style.display = 'none';
+            new bootstrap.Modal(document.getElementById('quickScanModal')).show();
+        }
+
+        async function runQuickScan() {
+            const domain = document.getElementById('quickScanInput').value.trim();
+            if (!domain) return;
+
+            const btn = document.getElementById('quickScanBtn');
+            const resultEl = document.getElementById('quickScanResult');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>';
+            resultEl.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/scan-quick`, {
+                    method: 'POST',
+                    headers: headers(),
+                    body: JSON.stringify({ domain })
+                });
+                const data = await res.json();
+                const scan = data.scan;
+
+                if (!scan) {
+                    resultEl.innerHTML = '<div class="alert alert-danger">Scan failed.</div>';
+                    resultEl.style.display = '';
+                    return;
+                }
+
+                const gradeClass = getGradeClass(scan.grade);
+                resultEl.innerHTML = `
+                    <div class="card p-3">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="grade-badge ${gradeClass}">${scan.grade}</div>
+                            <div>
+                                <h5 class="mb-0">${escHtml(scan.domain)}</h5>
+                                <span style="color:${getScoreColor(scan.score)}" class="fw-bold">${scan.score}/100</span>
+                                <span class="text-muted ms-2">${scan.scan_duration_ms}ms</span>
+                            </div>
+                        </div>
+                        <h6>Findings (${scan.findings.length})</h6>
+                        ${scan.findings.length ? scan.findings.map(f => `
+                            <div class="d-flex align-items-start gap-2 mb-2">
+                                <span class="severity-dot severity-${f.severity} mt-1"></span>
+                                <div>
+                                    <div class="fw-semibold small">${escHtml(f.title)}</div>
+                                    <small class="text-muted">${escHtml(f.description)}</small>
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-muted small">No issues found!</p>'}
+                        <h6 class="mt-3">Technologies</h6>
+                        <p class="small text-muted mb-0">
+                            ${(scan.technology_info?.detected || []).map(t => `<span class="badge bg-secondary me-1">${escHtml(t)}</span>`).join('') || 'None detected'}
+                        </p>
+                    </div>
+                `;
+                resultEl.style.display = '';
+            } catch(e) {
+                resultEl.innerHTML = '<div class="alert alert-danger">Scan failed. Check domain and try again.</div>';
+                resultEl.style.display = '';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-radar me-1"></i> Scan';
+            }
+        }
+
+        // ============ Navigation ============
+        function viewDomain(id) {
+            window.location.href = `/attack-surface/domain/${id}`;
+        }
+
+        // ============ Helpers ============
+        function getGradeClass(grade) {
+            if (!grade) return '';
+            const g = grade.replace('+', '-plus').toLowerCase();
+            return `grade-${g}`;
+        }
+
+        function getScoreColor(score) {
+            if (score == null) return 'var(--text-muted)';
+            if (score >= 80) return 'var(--success-color)';
+            if (score >= 65) return 'var(--primary-color)';
+            if (score >= 50) return 'var(--warning-color)';
+            return 'var(--danger-color)';
+        }
+
+        function timeAgo(iso) {
+            if (!iso) return '';
+            const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+            return Math.floor(diff/86400) + 'd ago';
+        }
+
+        function escHtml(s) {
+            if (!s) return '';
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+    </script>
+</body>
+</html>

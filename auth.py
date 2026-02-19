@@ -110,14 +110,17 @@ class User(Base):
         """Get feature limits based on subscription tier"""
         limits = {
             SubscriptionTier.FREE.value: {
-                'daily_scans': 50,  # Increased from 10
+                'daily_scans': 50,
                 'email_monitoring': False,
                 'max_email_accounts': 0,
                 'api_access': False,
                 'priority_support': False,
                 'advanced_analysis': False,
                 'whitelist_blacklist': False,
-                'export_reports': False
+                'export_reports': False,
+                'max_monitored_domains': 1,
+                'scan_frequency': 'weekly',
+                'ai_remediation': False,
             },
             SubscriptionTier.PRO.value: {
                 'daily_scans': 500,
@@ -127,7 +130,10 @@ class User(Base):
                 'priority_support': False,
                 'advanced_analysis': True,
                 'whitelist_blacklist': True,
-                'export_reports': True
+                'export_reports': True,
+                'max_monitored_domains': 5,
+                'scan_frequency': 'daily',
+                'ai_remediation': True,
             },
             SubscriptionTier.ENTERPRISE.value: {
                 'daily_scans': -1,  # Unlimited
@@ -137,7 +143,10 @@ class User(Base):
                 'priority_support': True,
                 'advanced_analysis': True,
                 'whitelist_blacklist': True,
-                'export_reports': True
+                'export_reports': True,
+                'max_monitored_domains': 25,
+                'scan_frequency': 'hourly',
+                'ai_remediation': True,
             }
         }
         return limits.get(self.subscription_tier, limits[SubscriptionTier.FREE.value])
@@ -1622,15 +1631,16 @@ SUBSCRIPTION_PLANS = {
         'price': 0,
         'period': None,
         'features': [
-            '10 link scans per day',
+            '50 link scans per day',
             'Basic threat detection',
-            'Scan history (7 days)',
+            'Monitor 1 domain (weekly scans)',
+            'Security scorecard & grade',
             'Desktop notifications'
         ],
         'limitations': [
             'No email monitoring',
-            'No API access',
-            'No advanced analysis'
+            'No AI remediation advice',
+            'No API access'
         ]
     },
     'pro': {
@@ -1640,13 +1650,14 @@ SUBSCRIPTION_PLANS = {
         'max_email_accounts': 5,
         'features': [
             '500 link scans per day',
-            'Advanced threat detection',
+            'Monitor up to 5 domains (daily scans)',
+            'AI-powered remediation advice',
+            'SSL expiry & config drift alerts',
+            'Score trend & history charts',
             'Monitor up to 5 email accounts',
-            'Full scan history',
+            'Full scan history & export reports',
             'API access',
-            'Whitelist/Blacklist management',
-            'Export reports',
-            'Priority email support'
+            'Slack/Discord/Teams alerts'
         ],
         'limitations': []
     },
@@ -1657,14 +1668,14 @@ SUBSCRIPTION_PLANS = {
         'max_email_accounts': 25,
         'features': [
             'Unlimited link scans',
-            'Advanced threat detection',
+            'Monitor up to 25 domains (hourly scans)',
+            'AI-powered remediation advice',
+            'Continuous attack surface monitoring',
+            'Breach & dark web monitoring',
             'Monitor up to 25 email accounts',
-            'Full scan history',
-            'Full API access',
-            'Custom integrations',
+            'Full API access & custom integrations',
             'Priority phone support',
-            'Team management',
-            'SSO integration'
+            'Team management & SSO'
         ],
         'limitations': []
     }

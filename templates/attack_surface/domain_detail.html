@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Domain Details - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0ea5e9; --primary-dark: #0284c7; --primary-light: #38bdf8;
+            --accent-color: #8b5cf6; --success-color: #10b981; --warning-color: #f59e0b;
+            --danger-color: #ef4444; --bg-dark: #0f172a; --bg-card: #1e293b;
+            --bg-card-hover: #334155; --text-primary: #f8fafc; --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8; --border-color: rgba(148, 163, 184, 0.25);
+        }
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body {
+            background: var(--bg-dark);
+            background-image:
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            min-height: 100vh; color: var(--text-primary); font-size: 15px;
+        }
+        .navbar {
+            background: rgba(15, 23, 42, 0.9) !important; backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color); padding: 12px 0;
+        }
+        .navbar-brand {
+            font-weight: 800; font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-link { color: var(--text-secondary) !important; font-weight: 500; }
+        .nav-link:hover { color: var(--text-primary) !important; }
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; transition: all 0.3s ease;
+        }
+        .grade-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 72px; height: 72px; border-radius: 16px;
+            font-weight: 800; font-size: 1.8rem; color: #fff;
+        }
+        .grade-a-plus, .grade-a { background: linear-gradient(135deg, #10b981, #059669); }
+        .grade-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .grade-d { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .grade-f { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .finding-card {
+            padding: 1rem; border-bottom: 1px solid var(--border-color);
+            display: flex; gap: 0.75rem; align-items: flex-start;
+        }
+        .finding-card:last-child { border-bottom: none; }
+        .severity-badge {
+            padding: 3px 10px; border-radius: 6px; font-size: 0.7rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+        }
+        .severity-critical { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .severity-high { background: rgba(249,115,22,0.2); color: #f97316; }
+        .severity-medium { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .severity-low { background: rgba(59,130,246,0.2); color: #3b82f6; }
+        .severity-info { background: rgba(148,163,184,0.2); color: #94a3b8; }
+
+        .info-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--text-muted); font-size: 0.85rem; }
+        .info-value { font-weight: 600; font-size: 0.9rem; }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none; padding: 10px 24px; border-radius: 10px;
+            font-weight: 600; color: #fff; transition: all 0.3s;
+        }
+        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14,165,233,0.3); color: #fff; }
+        .btn-outline-custom {
+            border: 1px solid var(--border-color); background: transparent;
+            padding: 8px 18px; border-radius: 10px; font-weight: 500; color: var(--text-secondary);
+        }
+        .btn-outline-custom:hover { border-color: var(--primary-color); color: var(--text-primary); }
+
+        .tab-pills .nav-link {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-secondary) !important; border-radius: 10px; margin-right: 0.5rem; font-size: 0.9rem;
+        }
+        .tab-pills .nav-link.active {
+            background: rgba(14,165,233,0.15); border-color: var(--primary-color);
+            color: var(--primary-color) !important;
+        }
+
+        .tech-badge {
+            display: inline-block; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+            color: var(--accent-color); padding: 4px 12px; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 600; margin: 2px;
+        }
+
+        .header-present { color: var(--success-color); }
+        .header-missing { color: var(--danger-color); }
+
+        .loading-spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid rgba(14,165,233,0.2); border-top-color: var(--primary-color);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .ai-advice {
+            background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
+            border-radius: 12px; padding: 1.25rem; white-space: pre-wrap; line-height: 1.7;
+        }
+        .chart-container { position: relative; height: 250px; }
+
+        /* ====== Dark-mode text legibility overrides ====== */
+        /* Force all headings white */
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff !important;
+        }
+
+        /* Info row values & labels */
+        .info-value {
+            color: #f1f5f9;
+        }
+        .info-label {
+            color: #94a3b8;
+        }
+
+        /* Code blocks visible on dark */
+        code {
+            color: var(--primary-light);
+            background: rgba(14,165,233,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* Back link */
+        a.text-muted {
+            color: #94a3b8 !important;
+        }
+        a.text-muted:hover {
+            color: var(--primary-light) !important;
+        }
+
+        /* Finding card text */
+        .finding-card .fw-semibold {
+            color: #f1f5f9;
+        }
+        .finding-card .text-muted {
+            color: #94a3b8 !important;
+        }
+        .finding-card .text-info {
+            color: var(--primary-light) !important;
+        }
+
+        /* General text-muted override */
+        .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        /* Card body text */
+        .card {
+            color: var(--text-primary);
+        }
+        .card p {
+            color: #cbd5e1;
+        }
+
+        /* AI advice text */
+        .ai-advice {
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+
+        /* Tab pills text */
+        .tab-pills .nav-link {
+            color: #cbd5e1 !important;
+        }
+        .tab-pills .nav-link.active {
+            color: var(--primary-light) !important;
+        }
+
+        /* Technology badges */
+        .tech-badge {
+            color: #c4b5fd;
+        }
+
+        /* Nav active link */
+        .navbar .nav-link.active {
+            color: var(--primary-light) !important;
+        }
+
+        /* Badge overrides */
+        .badge.bg-warning {
+            color: #1e293b !important;
+        }
+        .badge.bg-secondary {
+            background: rgba(100, 116, 139, 0.4) !important;
+            color: #e2e8f0 !important;
+        }
+
+        /* DNS/Header section h6 with colored icons */
+        h6.header-present { color: var(--success-color) !important; }
+        h6.header-missing { color: var(--danger-color) !important; }
+        h6.text-warning { color: var(--warning-color) !important; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shield-lock-fill me-2"></i>SecureLink</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/attack-surface"><i class="bi bi-radar me-1"></i>Attack Surface</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Back link -->
+        <a href="/attack-surface" class="text-decoration-none text-muted mb-3 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+
+        <!-- Domain Header -->
+        <div id="domainHeader" class="d-flex align-items-center gap-3 mb-4">
+            <div class="loading-spinner"></div>
+            <span class="text-muted">Loading domain details...</span>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav tab-pills mb-4" id="detailTabs">
+            <li><a class="nav-link active" href="#" onclick="switchTab('findings',this)">Findings</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('ssl',this)">SSL</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('headers',this)">Headers</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('dns',this)">DNS</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('tech',this)">Technology</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('trend',this)">Trend</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('ai',this)">AI Advice</a></li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div id="tabContent">
+            <div class="text-center py-5"><div class="loading-spinner"></div></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const DOMAIN_ID = {{ domain_id }};
+        const API_BASE = '/api/attack-surface';
+        let authToken = localStorage.getItem('auth_token');
+        let domainInfo = null;
+        let latestScan = null;
+        let currentTab = 'findings';
+
+        function headers() {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!authToken) { window.location.href = '/login'; return; }
+            loadDomainDetail();
+        });
+
+        async function loadDomainDetail() {
+            try {
+                const [domRes, scanRes] = await Promise.all([
+                    fetch(`${API_BASE}/domains/${DOMAIN_ID}`, { headers: headers() }),
+                    fetch(`${API_BASE}/domains/${DOMAIN_ID}/latest`, { headers: headers() })
+                ]);
+
+                if (domRes.status === 401) { window.location.href = '/login'; return; }
+
+                const domData = await domRes.json();
+                domainInfo = domData.domain;
+
+                if (scanRes.ok) {
+                    const scanData = await scanRes.json();
+                    latestScan = scanData.scan;
+                }
+
+                renderHeader();
+                switchTab(currentTab);
+            } catch(e) {
+                console.error(e);
+                document.getElementById('domainHeader').innerHTML = '<div class="text-danger">Failed to load domain.</div>';
+            }
+        }
+
+        function renderHeader() {
+            const d = domainInfo;
+            const s = latestScan;
+            const gradeClass = getGradeClass(s?.grade);
+            const scoreColor = getScoreColor(s?.score);
+
+            document.getElementById('domainHeader').innerHTML = `
+                <div class="grade-badge ${gradeClass}">${s?.grade || '?'}</div>
+                <div class="flex-grow-1">
+                    <h2 class="mb-0">${escHtml(d.label || d.domain)}</h2>
+                    <span class="text-muted">${escHtml(d.domain)}</span>
+                    ${d.is_verified ? '<i class="bi bi-patch-check-fill text-success ms-2" title="Verified"></i>' : '<span class="badge bg-warning text-dark ms-2">Unverified</span>'}
+                </div>
+                <div class="text-end">
+                    <div style="font-size:2rem;font-weight:800;color:${scoreColor}">${s?.score != null ? s.score : '-'}<span style="font-size:1rem;color:var(--text-muted)">/100</span></div>
+                    ${s ? `<small class="text-muted">${s.findings_summary?.total || 0} findings · ${s.scan_duration_ms}ms</small>` : '<small class="text-muted">No scan yet</small>'}
+                </div>
+                <button class="btn btn-primary-custom ms-3" onclick="rescan()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Rescan
+                </button>
+            `;
+        }
+
+        // ============ Tabs ============
+        function switchTab(tab, el) {
+            currentTab = tab;
+            document.querySelectorAll('#detailTabs .nav-link').forEach(l => l.classList.remove('active'));
+            if (el) el.classList.add('active');
+            else document.querySelector(`#detailTabs .nav-link`).classList.add('active');
+
+            const content = document.getElementById('tabContent');
+            if (!latestScan && tab !== 'trend' && tab !== 'ai') {
+                content.innerHTML = '<div class="card p-4 text-center text-muted">No scan data yet. Click "Rescan" to run the first scan.</div>';
+                return;
+            }
+
+            switch(tab) {
+                case 'findings': renderFindings(content); break;
+                case 'ssl': renderSSL(content); break;
+                case 'headers': renderHeaders(content); break;
+                case 'dns': renderDNS(content); break;
+                case 'tech': renderTech(content); break;
+                case 'trend': loadTrend(content); break;
+                case 'ai': loadAIAdvice(content); break;
+            }
+        }
+
+        function renderFindings(el) {
+            const findings = latestScan?.findings || [];
+            if (!findings.length) {
+                el.innerHTML = '<div class="card p-4 text-center"><i class="bi bi-check-circle text-success" style="font-size:2rem"></i><h5 class="mt-2">No issues found!</h5><p class="text-muted">Your domain passed all security checks.</p></div>';
+                return;
+            }
+
+            // Sort: critical first
+            const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+            findings.sort((a, b) => (order[a.severity] || 9) - (order[b.severity] || 9));
+
+            el.innerHTML = `<div class="card p-0">
+                ${findings.map(f => `
+                    <div class="finding-card">
+                        <span class="severity-badge severity-${f.severity}">${f.severity}</span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">${escHtml(f.title)}</div>
+                            <p class="text-muted small mb-1">${escHtml(f.description)}</p>
+                            ${f.remediation ? `<small class="text-info"><i class="bi bi-lightbulb me-1"></i>${escHtml(f.remediation)}</small>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        function renderSSL(el) {
+            const ssl = latestScan?.ssl_info || {};
+            if (!ssl.has_ssl && ssl.has_ssl !== false) { el.innerHTML = '<div class="card p-4 text-muted">No SSL data available.</div>'; return; }
+
+            el.innerHTML = `<div class="card p-4">
+                <h5><i class="bi bi-lock me-2"></i>SSL/TLS Certificate</h5>
+                <div class="info-row"><span class="info-label">Has SSL</span><span class="info-value">${ssl.has_ssl ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</span></div>
+                ${ssl.valid != null ? `<div class="info-row"><span class="info-label">Valid</span><span class="info-value">${ssl.valid ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</span></div>` : ''}
+                ${ssl.protocol ? `<div class="info-row"><span class="info-label">Protocol</span><span class="info-value">${escHtml(ssl.protocol)}</span></div>` : ''}
+                ${ssl.cipher ? `<div class="info-row"><span class="info-label">Cipher</span><span class="info-value">${escHtml(ssl.cipher)}</span></div>` : ''}
+                ${ssl.cipher_bits ? `<div class="info-row"><span class="info-label">Cipher Bits</span><span class="info-value">${ssl.cipher_bits}-bit</span></div>` : ''}
+                ${ssl.issuer ? `<div class="info-row"><span class="info-label">Issuer</span><span class="info-value">${escHtml(ssl.issuer)}</span></div>` : ''}
+                ${ssl.subject_cn ? `<div class="info-row"><span class="info-label">Subject</span><span class="info-value">${escHtml(ssl.subject_cn)}</span></div>` : ''}
+                ${ssl.not_after ? `<div class="info-row"><span class="info-label">Expires</span><span class="info-value">${new Date(ssl.not_after).toLocaleDateString()} (${ssl.days_until_expiry} days)</span></div>` : ''}
+                ${ssl.san?.length ? `<div class="info-row"><span class="info-label">SANs</span><span class="info-value">${ssl.san.slice(0, 8).map(s => escHtml(s)).join(', ')}${ssl.san.length > 8 ? ` +${ssl.san.length - 8} more` : ''}</span></div>` : ''}
+                ${ssl.error ? `<div class="info-row"><span class="info-label">Error</span><span class="info-value text-danger">${escHtml(ssl.error)}</span></div>` : ''}
+            </div>`;
+        }
+
+        function renderHeaders(el) {
+            const h = latestScan?.headers_info || {};
+            const present = h.headers_present || [];
+            const missing = h.headers_missing || [];
+            const leaky = h.leaky_headers || [];
+
+            el.innerHTML = `<div class="card p-4">
+                <h5><i class="bi bi-shield-check me-2"></i>Security Headers</h5>
+                ${h.redirects_to_https != null ? `<div class="info-row"><span class="info-label">HTTPS Redirect</span><span class="info-value">${h.redirects_to_https ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</span></div>` : ''}
+
+                <h6 class="mt-3 header-present"><i class="bi bi-check-circle me-1"></i>Present (${present.length})</h6>
+                ${present.length ? present.map(p => `<div class="small ms-3 mb-1"><code>${escHtml(p)}</code></div>`).join('') : '<p class="text-muted small ms-3">None</p>'}
+
+                <h6 class="mt-3 header-missing"><i class="bi bi-x-circle me-1"></i>Missing (${missing.length})</h6>
+                ${missing.length ? missing.map(m => `<div class="small ms-3 mb-1"><code>${escHtml(m)}</code></div>`).join('') : '<p class="text-success small ms-3">All recommended headers present!</p>'}
+
+                ${leaky.length ? `
+                    <h6 class="mt-3 text-warning"><i class="bi bi-eye me-1"></i>Information Disclosure (${leaky.length})</h6>
+                    ${leaky.map(l => `<div class="small ms-3 mb-1"><code>${escHtml(l.header)}</code>: <span class="text-muted">${escHtml(l.value)}</span></div>`).join('')}
+                ` : ''}
+            </div>`;
+        }
+
+        function renderDNS(el) {
+            const d = latestScan?.dns_info || {};
+            el.innerHTML = `<div class="card p-4">
+                <h5><i class="bi bi-diagram-3 me-2"></i>DNS Configuration</h5>
+                <div class="info-row"><span class="info-label">A Records</span><span class="info-value">${(d.a_records || []).join(', ') || 'None'}</span></div>
+                <div class="info-row"><span class="info-label">AAAA Records</span><span class="info-value">${(d.aaaa_records || []).join(', ') || 'None'}</span></div>
+                <div class="info-row"><span class="info-label">MX Records</span><span class="info-value">${(d.mx_records || []).map(m => m.host || m).join(', ') || 'None'}</span></div>
+                <div class="info-row"><span class="info-label">NS Records</span><span class="info-value">${(d.ns_records || []).join(', ') || 'None'}</span></div>
+
+                <h6 class="mt-3">Email Security</h6>
+                <div class="info-row"><span class="info-label">SPF</span><span class="info-value">${d.has_spf ? '<span class="text-success">Present</span>' : '<span class="text-danger">Missing</span>'}</span></div>
+                ${d.spf_record ? `<div class="small text-muted ms-3 mb-2"><code>${escHtml(d.spf_record)}</code></div>` : ''}
+                <div class="info-row"><span class="info-label">DMARC</span><span class="info-value">${d.has_dmarc ? '<span class="text-success">Present</span>' : '<span class="text-danger">Missing</span>'}</span></div>
+                ${d.dmarc_record ? `<div class="small text-muted ms-3 mb-2"><code>${escHtml(d.dmarc_record)}</code></div>` : ''}
+                ${d.dmarc_policy ? `<div class="info-row"><span class="info-label">DMARC Policy</span><span class="info-value">${escHtml(d.dmarc_policy)}</span></div>` : ''}
+                <div class="info-row"><span class="info-label">DNSSEC</span><span class="info-value">${d.has_dnssec ? '<span class="text-success">Enabled</span>' : '<span class="text-warning">Not enabled</span>'}</span></div>
+            </div>`;
+        }
+
+        function renderTech(el) {
+            const t = latestScan?.technology_info || {};
+            const detected = t.detected || [];
+
+            el.innerHTML = `<div class="card p-4">
+                <h5><i class="bi bi-cpu me-2"></i>Technology Stack</h5>
+                ${detected.length
+                    ? `<div class="mt-2">${detected.map(d => `<span class="tech-badge">${escHtml(d)}</span>`).join('')}</div>`
+                    : '<p class="text-muted">No technologies detected from HTTP headers.</p>'}
+                ${t.cms ? `<div class="info-row mt-3"><span class="info-label">CMS/Generator</span><span class="info-value">${escHtml(t.cms)}</span></div>` : ''}
+            </div>`;
+        }
+
+        async function loadTrend(el) {
+            el.innerHTML = '<div class="text-center py-4"><div class="loading-spinner"></div></div>';
+            try {
+                const res = await fetch(`${API_BASE}/domains/${DOMAIN_ID}/trend?days=30`, { headers: headers() });
+                const data = await res.json();
+                const trend = data.trend || [];
+
+                if (!trend.length) {
+                    el.innerHTML = '<div class="card p-4 text-center text-muted">Not enough scan data for a trend chart. Run multiple scans over time.</div>';
+                    return;
+                }
+
+                el.innerHTML = `<div class="card p-4"><h5><i class="bi bi-graph-up me-2"></i>Score Trend (30 days)</h5><div class="chart-container"><canvas id="trendChart"></canvas></div></div>`;
+
+                new Chart(document.getElementById('trendChart'), {
+                    type: 'line',
+                    data: {
+                        labels: trend.map(t => new Date(t.date).toLocaleDateString()),
+                        datasets: [{
+                            label: 'Security Score',
+                            data: trend.map(t => t.score),
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14,165,233,0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#0ea5e9'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            y: { min: 0, max: 100, grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            } catch(e) {
+                el.innerHTML = '<div class="card p-4 text-danger">Failed to load trend data.</div>';
+            }
+        }
+
+        async function loadAIAdvice(el) {
+            el.innerHTML = '<div class="text-center py-4"><div class="loading-spinner"></div><p class="text-muted mt-2">Generating AI remediation advice...</p></div>';
+            try {
+                const res = await fetch(`${API_BASE}/domains/${DOMAIN_ID}/ai-advice`, { headers: headers() });
+                const data = await res.json();
+
+                if (data.advice) {
+                    el.innerHTML = `<div class="card p-4">
+                        <h5><i class="bi bi-robot me-2" style="color:var(--accent-color)"></i>AI Remediation Advice</h5>
+                        <p class="text-muted small mb-3">Generated for ${escHtml(data.domain)} (Score: ${data.score}/100)</p>
+                        <div class="ai-advice">${escHtml(data.advice)}</div>
+                    </div>`;
+                } else {
+                    el.innerHTML = `<div class="card p-4 text-muted text-center">
+                        <i class="bi bi-robot" style="font-size:2rem"></i>
+                        <p class="mt-2">${data.message || 'AI advice is not available. Set up an Anthropic API key to enable this feature.'}</p>
+                    </div>`;
+                }
+            } catch(e) {
+                el.innerHTML = '<div class="card p-4 text-danger">Failed to generate AI advice.</div>';
+            }
+        }
+
+        // ============ Rescan ============
+        async function rescan() {
+            const btn = document.querySelector('[onclick="rescan()"]');
+            btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Scanning...';
+            try {
+                await fetch(`${API_BASE}/domains/${DOMAIN_ID}/scan`, { method: 'POST', headers: headers() });
+                await loadDomainDetail();
+            } catch(e) {
+                console.error(e);
+            } finally {
+                btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Rescan';
+            }
+        }
+
+        // ============ Helpers ============
+        function getGradeClass(grade) {
+            if (!grade) return '';
+            return `grade-${grade.replace('+','-plus').toLowerCase()}`;
+        }
+        function getScoreColor(score) {
+            if (score == null) return 'var(--text-muted)';
+            if (score >= 80) return 'var(--success-color)';
+            if (score >= 65) return 'var(--primary-color)';
+            if (score >= 50) return 'var(--warning-color)';
+            return 'var(--danger-color)';
+        }
+        function escHtml(s) {
+            if (!s) return '';
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+    </script>
+</body>
+</html>

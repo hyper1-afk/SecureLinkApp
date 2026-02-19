@@ -29,9 +29,12 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self'"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["warning.html", "warning.js", "upgrade.html", "upgrade.js"],
+      "resources": ["warning.html", "warning.js", "warning.css", "upgrade.html", "upgrade.js", "upgrade.css"],
       "matches": ["<all_urls>"]
     }
   ]
