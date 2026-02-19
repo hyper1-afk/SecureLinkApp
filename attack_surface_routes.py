@@ -60,6 +60,12 @@ def require_auth_as(f):
             'organization_id': user_info.get('organization_id'),
             'plan_limits': raw.get('plan_limits', {}),
         }
+        # Enterprise-only gate
+        if user_data['subscription_tier'] != 'enterprise':
+            return jsonify({
+                'error': 'Attack Surface Monitoring is available on the Enterprise plan only.',
+                'upgrade_required': True
+            }), 403
         kwargs['user_data'] = user_data
         return f(*args, **kwargs)
     return decorated
@@ -399,25 +405,17 @@ Provide a prioritized action plan (max 5 items) for the domain owner. Be specifi
 # ================================================================
 
 def _get_domain_limits(tier: str) -> dict:
-    """Get domain monitoring limits based on subscription tier"""
-    limits = {
-        'free': {
-            'max_domains': 1,
-            'default_frequency': 'weekly',
-            'allowed_frequencies': ['weekly'],
+    """Get domain monitoring limits based on subscription tier (enterprise only)"""
+    if tier != 'enterprise':
+        return {
+            'max_domains': 0,
+            'default_frequency': None,
+            'allowed_frequencies': [],
             'ai_advice': False,
-        },
-        'pro': {
-            'max_domains': 5,
-            'default_frequency': 'daily',
-            'allowed_frequencies': ['daily', 'weekly'],
-            'ai_advice': True,
-        },
-        'enterprise': {
-            'max_domains': 25,
-            'default_frequency': 'daily',
-            'allowed_frequencies': ['hourly', 'daily', 'weekly'],
-            'ai_advice': True,
         }
+    return {
+        'max_domains': 25,
+        'default_frequency': 'daily',
+        'allowed_frequencies': ['hourly', 'daily', 'weekly'],
+        'ai_advice': True,
     }
-    return limits.get(tier, limits['free'])

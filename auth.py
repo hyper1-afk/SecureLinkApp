@@ -118,9 +118,10 @@ class User(Base):
                 'advanced_analysis': False,
                 'whitelist_blacklist': False,
                 'export_reports': False,
-                'max_monitored_domains': 1,
-                'scan_frequency': 'weekly',
+                'max_monitored_domains': 0,
+                'scan_frequency': None,
                 'ai_remediation': False,
+                'attack_surface': False,
             },
             SubscriptionTier.PRO.value: {
                 'daily_scans': 500,
@@ -131,9 +132,10 @@ class User(Base):
                 'advanced_analysis': True,
                 'whitelist_blacklist': True,
                 'export_reports': True,
-                'max_monitored_domains': 5,
-                'scan_frequency': 'daily',
-                'ai_remediation': True,
+                'max_monitored_domains': 0,
+                'scan_frequency': None,
+                'ai_remediation': False,
+                'attack_surface': False,
             },
             SubscriptionTier.ENTERPRISE.value: {
                 'daily_scans': -1,  # Unlimited
@@ -147,6 +149,7 @@ class User(Base):
                 'max_monitored_domains': 25,
                 'scan_frequency': 'hourly',
                 'ai_remediation': True,
+                'attack_surface': True,
             }
         }
         return limits.get(self.subscription_tier, limits[SubscriptionTier.FREE.value])

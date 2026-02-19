@@ -439,11 +439,29 @@
             loadAlerts();
         });
 
+        function showUpgradeRequired() {
+            document.querySelector('.container-fluid').innerHTML = `
+                <div style="text-align:center; padding:80px 20px;">
+                    <i class="bi bi-shield-lock" style="font-size:4rem; color:#f59e0b;"></i>
+                    <h2 style="margin-top:20px; color:#fff;">Enterprise Feature</h2>
+                    <p style="color:#94a3b8; font-size:1.1rem; max-width:500px; margin:15px auto;">
+                        Attack Surface Monitoring is available exclusively on the <strong style="color:#f59e0b;">Enterprise plan</strong>.
+                        Monitor up to 25 domains with hourly scanning, AI-powered remediation advice, and real-time alerts.
+                    </p>
+                    <a href="/pricing" class="btn btn-primary-custom" style="margin-top:15px; padding:12px 30px; font-size:1.1rem;">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Upgrade to Enterprise
+                    </a>
+                    <br>
+                    <a href="/profile" style="color:#64748b; margin-top:15px; display:inline-block;">← Back to Dashboard</a>
+                </div>`;
+        }
+
         // ============ Dashboard ============
         async function loadDashboard() {
             try {
                 const res = await fetch(`${API_BASE}/dashboard`, { headers: headers() });
                 if (res.status === 401) { window.location.href = '/login'; return; }
+                if (res.status === 403) { showUpgradeRequired(); return; }
                 const data = await res.json();
 
                 document.getElementById('statDomains').textContent = data.total_domains || 0;
