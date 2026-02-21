@@ -586,7 +586,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const profile = await res.json();
-                const tier = profile.subscription_tier || 'free';
+                const tier = (profile.user && profile.user.subscription_tier) || 'free';
                 if (tier !== 'enterprise') {
                     window.location.href = '/pricing?upgrade=enterprise&feature=organization';
                 }
