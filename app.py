@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from sqlalchemy import and_
 
 from config import Config
@@ -33,6 +35,10 @@ from features import (
     send_slack_notification, send_discord_notification, send_teams_notification,
     get_threat_location, generate_demo_threat_events
 )
+from security import (
+    PasswordPolicy, lockout_manager, request_firewall,
+    sanitize_error, _get_client_ip
+)
 
 # Configure logging
 logging.basicConfig(
@@ -45,7 +51,50 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = Config.SECRET_KEY  # Required for OAuth sessions
-CORS(app)
+
+# ================================================================
+#  Max upload size — reject oversized bodies early (16 MB)
+# ================================================================
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# ================================================================
+#  CORS — restrict to our own origins only
+# ================================================================
+ALLOWED_ORIGINS = [
+    'https://securelinkapp.com',
+    'https://www.securelinkapp.com',
+]
+# Allow localhost in development
+if Config.DEBUG:
+    ALLOWED_ORIGINS += ['http://localhost:5000', 'http://127.0.0.1:5000']
+
+CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+
+# ================================================================
+#  Rate Limiting (flask-limiter)
+# ================================================================
+def _limiter_key_func():
+    """Get client IP for rate limiting, respecting X-Forwarded-For."""
+    return _get_client_ip()
+
+limiter = Limiter(
+    app=app,
+    key_func=_limiter_key_func,
+    default_limits=["200 per minute"],           # Global default
+    storage_uri="memory://",                      # Use Redis URI in production
+    strategy="fixed-window",
+)
+
+# ================================================================
+#  Firewall — inspect every request before routing
+# ================================================================
+@app.before_request
+def firewall_check():
+    """Application-layer firewall: block bad IPs and suspicious requests."""
+    allowed, reason = request_firewall.check_request()
+    if not allowed:
+        logger.warning(f"Firewall blocked {_get_client_ip()}: {reason}")
+        return jsonify({'error': reason}), 403
 
 
 # ================================================================
@@ -57,18 +106,21 @@ def add_security_headers(response):
     # Enforce HTTPS (HSTS) — 1 year, include subdomains, allow preload list
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
 
-    # Prevent XSS — restrict resources to same origin by default
-    # Allow inline scripts/styles needed by the app, plus CDN resources
+    # Content Security Policy — restrict resources tightly
+    # 'unsafe-inline' kept for styles (Bootstrap requirement) but removed from scripts where possible
+    # Nonce-based CSP would be ideal but requires template changes
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.stripe.com; "
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
         "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://api.stripe.com; "
+        "frame-src https://js.stripe.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
-        "form-action 'self';"
+        "form-action 'self'; "
+        "upgrade-insecure-requests;"
     )
 
     # Prevent MIME-type sniffing
@@ -77,8 +129,9 @@ def add_security_headers(response):
     # Prevent clickjacking — block all framing
     response.headers['X-Frame-Options'] = 'DENY'
 
-    # Enable browser XSS filter
-    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # X-XSS-Protection is deprecated — modern CSP is sufficient
+    # Explicitly disable it to avoid edge-case XSS in older IE
+    response.headers['X-XSS-Protection'] = '0'
 
     # Control referrer information sent to other sites
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
@@ -91,6 +144,11 @@ def add_security_headers(response):
 
     # Remove server version disclosure (Flask/Werkzeug)
     response.headers.pop('Server', None)
+
+    # Cache control for authenticated API responses
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
 
     return response
 
@@ -302,6 +360,7 @@ def shortener_page():
 # ============== Auth Routes ==============
 
 @app.route('/api/auth/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     """Register a new user - requires email verification"""
     data = request.get_json()
@@ -315,8 +374,10 @@ def register():
     if not email or not username or not password:
         return jsonify({'success': False, 'error': 'Email, username, and password are required'}), 400
     
-    if len(password) < 8:
-        return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
+    # Enforce password policy
+    pw_check = PasswordPolicy.validate(password)
+    if not pw_check['valid']:
+        return jsonify({'success': False, 'error': pw_check['errors'][0]}), 400
     
     result = auth_manager.register(email, username, password, full_name)
     
@@ -354,6 +415,7 @@ def verify_email():
 
 
 @app.route('/api/auth/resend-verification', methods=['POST'])
+@limiter.limit("3 per minute")
 def resend_verification():
     """Resend verification email"""
     data = request.get_json()
@@ -368,6 +430,7 @@ def resend_verification():
 
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     """Authenticate user and create session"""
     data = request.get_json()
@@ -379,13 +442,29 @@ def login():
     if not email_or_username or not password:
         return jsonify({'success': False, 'error': 'Credentials required'}), 400
     
+    # Check account lockout
+    lockout_key = email_or_username.lower()
+    if lockout_manager.is_locked(lockout_key):
+        remaining = lockout_manager.get_remaining_lockout(lockout_key)
+        return jsonify({
+            'success': False,
+            'error': f'Account temporarily locked. Try again in {remaining // 60 + 1} minutes.',
+            'locked': True
+        }), 429
+    
     result = auth_manager.login(
         email_or_username,
         password,
         remember_me=remember_me,
         device_info=request.headers.get('User-Agent'),
-        ip_address=request.remote_addr
+        ip_address=_get_client_ip()
     )
+    
+    # Track failed attempts
+    if not result.get('success'):
+        lockout_manager.record_failure(lockout_key)
+    else:
+        lockout_manager.clear(lockout_key)
     
     return jsonify(result)
 
@@ -442,6 +521,7 @@ def validate_token():
 
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
+@limiter.limit("3 per minute")
 def forgot_password():
     """Request a password reset email"""
     data = request.get_json()
@@ -465,6 +545,7 @@ def verify_reset_token(token):
 
 
 @app.route('/api/auth/reset-password', methods=['POST'])
+@limiter.limit("5 per minute")
 def reset_password_with_token():
     """Reset password using a valid reset token"""
     data = request.get_json()
@@ -473,6 +554,11 @@ def reset_password_with_token():
     
     if not token or not new_password:
         return jsonify({'success': False, 'error': 'Token and new password are required'}), 400
+    
+    # Enforce password policy
+    pw_check = PasswordPolicy.validate(new_password)
+    if not pw_check['valid']:
+        return jsonify({'success': False, 'error': pw_check['errors'][0]}), 400
     
     result = auth_manager.reset_password_with_token(token, new_password)
     return jsonify(result)
@@ -485,13 +571,16 @@ def reset_password_page():
 
 
 @app.route('/api/admin/emergency-reset', methods=['POST'])
+@limiter.limit("3 per minute")
 def emergency_password_reset():
-    """Emergency password reset endpoint - requires secret key"""
+    """Emergency password reset endpoint - requires ADMIN_SECRET_KEY env variable"""
     data = request.get_json()
     
-    # Require a secret key for security
+    # Require the admin secret key from environment (never hardcoded)
     secret_key = data.get('secret_key', '')
-    if secret_key != 'SecureLink2026EmergencyReset!':
+    expected_key = Config.ADMIN_SECRET_KEY
+    if not expected_key or secret_key != expected_key:
+        logger.warning(f"Unauthorized emergency reset attempt from {_get_client_ip()}")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     email = data.get('email', '').strip()
@@ -505,12 +594,15 @@ def emergency_password_reset():
 
 
 @app.route('/api/admin/check-user', methods=['POST'])
+@limiter.limit("5 per minute")
 def check_user_exists():
     """Check if user exists in database - requires secret key"""
     data = request.get_json()
     
     secret_key = data.get('secret_key', '')
-    if secret_key != 'SecureLink2026EmergencyReset!':
+    expected_key = Config.ADMIN_SECRET_KEY
+    if not expected_key or secret_key != expected_key:
+        logger.warning(f"Unauthorized check-user attempt from {_get_client_ip()}")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     email = data.get('email', '').strip()
@@ -525,34 +617,31 @@ def check_user_exists():
                 'found': True,
                 'user': {
                     'id': user.id,
-                    'email': user.email,
                     'username': user.username,
                     'has_password': bool(user.password_hash),
-                    'has_salt': bool(user.salt),
                     'is_active': user.is_active,
                     'created_at': str(user.created_at) if user.created_at else None
                 }
             })
         else:
-            # List all users for debugging
-            all_users = session.query(User).limit(10).all()
             return jsonify({
                 'success': True,
-                'found': False,
-                'total_users': len(all_users),
-                'sample_emails': [u.email for u in all_users]
+                'found': False
             })
     finally:
         session.close()
 
 
 @app.route('/api/admin/reset-admin-password', methods=['POST'])
+@limiter.limit("3 per minute")
 def reset_admin_password():
     """Reset admin/employee password - requires secret key"""
     data = request.get_json()
     
     secret_key = data.get('secret_key', '')
-    if secret_key != 'SecureLink2026EmergencyReset!':
+    expected_key = Config.ADMIN_SECRET_KEY
+    if not expected_key or secret_key != expected_key:
+        logger.warning(f"Unauthorized admin password reset attempt from {_get_client_ip()}")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     username = data.get('username', '').strip()
@@ -561,39 +650,40 @@ def reset_admin_password():
     if not username or not new_password:
         return jsonify({'success': False, 'error': 'Username and new_password required'}), 400
     
-    # Reset admin/employee password
-    import hashlib
-    import secrets as sec
+    # Reset admin/employee password using bcrypt
+    import bcrypt as _bcrypt
     from admin import Employee
     
     admin_session = admin_manager.get_session()
     try:
         employee = admin_session.query(Employee).filter(Employee.username == username).first()
         if not employee:
-            return jsonify({'success': False, 'error': f'Employee {username} not found'})
+            return jsonify({'success': False, 'error': 'Employee not found'})
         
-        salt = sec.token_hex(32)
-        password_hash = hashlib.sha256((new_password + salt).encode()).hexdigest()
-        
-        employee.salt = salt
-        employee.password_hash = password_hash
+        hashed = _bcrypt.hashpw(new_password.encode('utf-8'), _bcrypt.gensalt(rounds=12))
+        employee.salt = 'bcrypt'
+        employee.password_hash = hashed.decode('utf-8')
         admin_session.commit()
         
-        return jsonify({'success': True, 'message': f'Password reset for admin user: {username}'})
+        return jsonify({'success': True, 'message': 'Admin password reset successfully'})
     except Exception as e:
         admin_session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred'})
     finally:
         admin_session.close()
 
 
 @app.route('/api/admin/verify-all-users', methods=['POST'])
+@limiter.limit("3 per minute")
 def verify_all_users():
     """Mark all existing users as verified - requires secret key"""
     data = request.get_json()
     
     secret_key = data.get('secret_key', '')
-    if secret_key != 'SecureLink2026EmergencyReset!':
+    expected_key = Config.ADMIN_SECRET_KEY
+    if not expected_key or secret_key != expected_key:
+        logger.warning(f"Unauthorized verify-all-users attempt from {_get_client_ip()}")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     try:
@@ -604,7 +694,8 @@ def verify_all_users():
         db_session.close()
         return jsonify({'success': True, 'message': f'Verified {count} users'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred'})
 
 
 # ============== Browser Extension API ==============
@@ -638,7 +729,7 @@ def extension_auth():
         password,
         remember_me=True,
         device_info='SecureLink Browser Extension',
-        ip_address=request.remote_addr
+        ip_address=_get_client_ip()
     )
     
     if result.get('success'):
@@ -779,7 +870,7 @@ def extension_verify():
     # Check rate limit
     from datetime import date
     today = date.today().isoformat()
-    key = f"{user_id or request.remote_addr}:{today}"
+    key = f"{user_id or _get_client_ip()}:{today}"
     scans_today = extension_scan_counts.get(key, 0)
     
     if limit != float('inf') and scans_today >= limit:
@@ -814,15 +905,22 @@ def extension_verify():
 
 
 @app.route('/api/auth/change-password', methods=['POST'])
+@limiter.limit("5 per minute")
 @require_auth
 def change_password():
     """Change user password"""
     data = request.get_json()
     
+    new_password = data.get('new_password', '')
+    if new_password:
+        pw_check = PasswordPolicy.validate(new_password)
+        if not pw_check['valid']:
+            return jsonify({'success': False, 'error': pw_check['errors'][0]}), 400
+    
     result = auth_manager.change_password(
         request.current_user['id'],
         data.get('old_password', ''),
-        data.get('new_password', '')
+        new_password
     )
     
     return jsonify(result)
@@ -876,11 +974,12 @@ def oauth_callback(provider):
             auth_token = auth_manager.create_session_for_oauth_user(
                 existing_oauth_user['id'],
                 user_agent=request.headers.get('User-Agent'),
-                ip_address=request.remote_addr
+                ip_address=_get_client_ip()
             )
             if auth_token:
-                # Redirect to home with token in URL (will be stored by JS)
-                return redirect(f'/?oauth_token={auth_token}')
+                # Store token in server-side session (NOT in URL) for secure handoff
+                session['oauth_auth_token'] = auth_token
+                return redirect('/?oauth_complete=1')
             return redirect('/login?error=Failed to create session')
         
         # Check if user exists with this email
@@ -904,10 +1003,11 @@ def oauth_callback(provider):
             auth_token = auth_manager.create_session_for_oauth_user(
                 existing_email_user['id'],
                 user_agent=request.headers.get('User-Agent'),
-                ip_address=request.remote_addr
+                ip_address=_get_client_ip()
             )
             if auth_token:
-                return redirect(f'/?oauth_token={auth_token}')
+                session['oauth_auth_token'] = auth_token
+                return redirect('/?oauth_complete=1')
             return redirect('/login?error=Failed to create session')
         
         # No existing user - check if trying to login or signup
@@ -937,16 +1037,27 @@ def oauth_callback(provider):
             auth_token = auth_manager.create_session_for_oauth_user(
                 result['user']['id'],
                 user_agent=request.headers.get('User-Agent'),
-                ip_address=request.remote_addr
+                ip_address=_get_client_ip()
             )
             if auth_token:
-                return redirect(f'/?oauth_token={auth_token}&welcome=true')
+                session['oauth_auth_token'] = auth_token
+                return redirect('/?oauth_complete=1&welcome=true')
         
         return redirect('/login?error=Failed to create account')
         
     except Exception as e:
         logger.error(f"OAuth callback error: {e}")
         return redirect(f'/login?error=OAuth authentication failed')
+
+
+@app.route('/api/auth/oauth/token', methods=['POST'])
+def get_oauth_token():
+    """Retrieve the auth token stored in the server-side session after OAuth callback.
+    This avoids putting the token in URL query parameters."""
+    auth_token = session.pop('oauth_auth_token', None)
+    if auth_token:
+        return jsonify({'success': True, 'token': auth_token})
+    return jsonify({'success': False, 'error': 'No pending OAuth token'}), 400
 
 
 @app.route('/api/auth/oauth/complete-signup', methods=['POST'])
@@ -978,7 +1089,7 @@ def complete_oauth_signup():
         auth_token = auth_manager.create_session_for_oauth_user(
             result['user']['id'],
             user_agent=request.headers.get('User-Agent'),
-            ip_address=request.remote_addr
+            ip_address=_get_client_ip()
         )
         if auth_token:
             return jsonify({
@@ -1047,7 +1158,8 @@ def mark_tutorial_seen():
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'User not found'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 
@@ -1110,6 +1222,7 @@ def delete_dark_web_asset(asset_id):
 
 
 @app.route('/api/dark-web/scan', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_pro
 def scan_dark_web():
     """Run a dark web scan for a specific asset or all assets"""
@@ -1163,11 +1276,12 @@ def scan_dark_web():
             'assets_scanned': len(all_results)
         })
     except Exception as e:
-        logger.error(f"Dark web scan error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Dark web scan error: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/dark-web/scan-quick', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_auth
 def quick_dark_web_scan():
     """Quick one-off scan without saving as monitored asset (available to all users)"""
@@ -1183,8 +1297,8 @@ def quick_dark_web_scan():
         result = dark_web_monitor.full_scan(email)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Quick dark web scan error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Quick dark web scan error: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/dark-web/alerts', methods=['GET'])
@@ -1223,6 +1337,7 @@ def resolve_dark_web_alert(alert_id):
 
 
 @app.route('/api/dark-web/password-check', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_auth
 def check_password_dark_web():
     """Check if a password has appeared in data breaches"""
@@ -1503,7 +1618,7 @@ def get_scan_status():
     """Get current scan count for anonymous users"""
     from datetime import date
     today = date.today().isoformat()
-    ip_key = f"{request.remote_addr}:{today}"
+    ip_key = f"{_get_client_ip()}:{today}"
     scans_today = website_anonymous_scans.get(ip_key, 0)
     limit = 15
     remaining = max(0, limit - scans_today)
@@ -1548,7 +1663,7 @@ def verify_link():
     if is_anonymous:
         from datetime import date
         today = date.today().isoformat()
-        ip_key = f"{request.remote_addr}:{today}"
+        ip_key = f"{_get_client_ip()}:{today}"
         scans_today = website_anonymous_scans.get(ip_key, 0)
         
         if scans_today >= 15:
@@ -1581,11 +1696,12 @@ def verify_link():
         return jsonify(result.to_dict())
     
     except Exception as e:
-        logger.error(f"Error verifying link: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error verifying link: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/scan-file', methods=['POST'])
+@limiter.limit("10 per minute")
 def scan_file():
     """API endpoint to scan a file for security threats"""
     import re
@@ -1786,8 +1902,8 @@ def scan_file():
         })
         
     except Exception as e:
-        logger.error(f"Error scanning file: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error scanning file: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/history', methods=['GET'])
@@ -1823,8 +1939,8 @@ def get_history():
         # If not authenticated, return empty list (no anonymous history)
         return jsonify([])
     except Exception as e:
-        logger.error(f"Error getting history: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting history: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/stats', methods=['GET'])
@@ -1834,8 +1950,8 @@ def get_stats():
         stats = db.get_statistics()
         return jsonify(stats)
     except Exception as e:
-        logger.error(f"Error getting stats: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting stats: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 # ============== Cyber News Routes ==============
@@ -2029,8 +2145,8 @@ def send_test_hourly_report():
         })
         
     except Exception as e:
-        logger.error(f"Failed to send test hourly report: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Failed to send test hourly report: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'An internal error occurred'}), 500
 
 
 @app.route('/api/reports/preferences', methods=['PUT'])
@@ -2106,6 +2222,7 @@ def admin_database_page():
 # ==================== Admin API Routes ====================
 
 @app.route('/admin/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def admin_api_login():
     """Admin employee login"""
     data = request.get_json()
@@ -2115,12 +2232,27 @@ def admin_api_login():
     if not email_or_username or not password:
         return jsonify({'success': False, 'error': 'Email/username and password required'}), 400
     
+    # Check account lockout
+    lockout_key = f'admin:{email_or_username.lower()}'
+    if lockout_manager.is_locked(lockout_key):
+        remaining = lockout_manager.get_remaining_lockout(lockout_key)
+        return jsonify({
+            'success': False,
+            'error': f'Account temporarily locked. Try again in {remaining // 60 + 1} minutes.',
+            'locked': True
+        }), 429
+    
     result = admin_manager.login_employee(
         email_or_username, 
         password,
         device_info=request.headers.get('User-Agent'),
-        ip_address=request.remote_addr
+        ip_address=_get_client_ip()
     )
+    
+    if not result.get('success'):
+        lockout_manager.record_failure(lockout_key)
+    else:
+        lockout_manager.clear(lockout_key)
     
     if result['success']:
         return jsonify(result)
@@ -2492,8 +2624,8 @@ def admin_api_database_stats():
         })
         
     except Exception as e:
-        logger.error(f"Error fetching database stats: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching database stats: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 # ==================== Customer Support Ticket Submission ====================
@@ -2530,6 +2662,7 @@ def create_support_ticket():
 
 
 @app.route('/api/support/tickets/guest', methods=['POST'])
+@limiter.limit("3 per hour")
 def create_guest_support_ticket():
     """Allow guests (non-logged-in users) to submit support tickets"""
     data = request.get_json()
@@ -2606,6 +2739,7 @@ def customer_ticket_respond(ticket_id):
 # ============================================================================
 
 @app.route('/api/breach/password', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_pro
 def check_password_breach_route():
     """Check if a password has been exposed in data breaches (requires Pro)"""
@@ -2620,6 +2754,7 @@ def check_password_breach_route():
 
 
 @app.route('/api/breach/email', methods=['POST'])
+@limiter.limit("10 per minute")
 @require_auth
 def check_email_breach_route():
     """Check if an email has been in data breaches (requires Pro)"""
@@ -2680,7 +2815,7 @@ def create_short_link():
     except Exception as e:
         tb = traceback.format_exc()
         app.logger.error(f"Exception in /api/shorten: {e}\n{tb}")
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 @app.route('/s/<short_code>')
@@ -2825,8 +2960,10 @@ def get_threat_map_stats():
 
 
 @app.route('/api/threatmap/fetch-live', methods=['POST'])
+@limiter.limit("5 per minute")
+@require_auth
 def fetch_live_threats():
-    """Fetch real threats from AbuseIPDB"""
+    """Fetch real threats from AbuseIPDB (requires authentication)"""
     import os
     from features import fetch_abuseipdb_recent_reports
     
@@ -2854,10 +2991,10 @@ def fetch_live_threats():
             )
             threats_added += 1
     except Exception as e:
-        logger.error(f"AbuseIPDB fetch error: {e}")
+        logger.error(f"AbuseIPDB fetch error: {e}", exc_info=True)
         return jsonify({
             'success': False, 
-            'error': str(e),
+            'error': 'An internal error occurred',
             'count': 0,
             'sources': {'abuseipdb': 0}
         }), 500
@@ -3170,7 +3307,8 @@ def create_forum_category():
         })
     except Exception as e:
         session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 
@@ -3278,7 +3416,8 @@ def create_forum_post():
         })
     except Exception as e:
         session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 
@@ -3358,7 +3497,8 @@ def create_forum_comment(post_id):
         })
     except Exception as e:
         session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 
@@ -3434,7 +3574,8 @@ def forum_vote():
         })
     except Exception as e:
         session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 
@@ -3476,8 +3617,15 @@ def get_my_forum_votes():
 
 
 @app.route('/api/forum/seed-categories', methods=['POST'])
+@limiter.limit("3 per minute")
 def seed_forum_categories():
-    """Seed default forum categories (dev only)"""
+    """Seed default forum categories (admin only - requires ADMIN_SECRET_KEY)"""
+    data = request.get_json() or {}
+    secret_key = data.get('secret_key', '')
+    expected_key = Config.ADMIN_SECRET_KEY
+    if not expected_key or secret_key != expected_key:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
     session = db.get_session()
     try:
         # Check if categories already exist
@@ -3505,7 +3653,8 @@ def seed_forum_categories():
         })
     except Exception as e:
         session.rollback()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Operation failed: {e}", exc_info=True)
+        return jsonify({'error': 'An internal error occurred'}), 500
     finally:
         session.close()
 

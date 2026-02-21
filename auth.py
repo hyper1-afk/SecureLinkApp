@@ -8,6 +8,7 @@ import os
 import hashlib
 import secrets
 import smtplib
+import bcrypt
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -20,6 +21,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 from config import Config
+
+import logging
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
@@ -376,7 +380,7 @@ class AuthManager:
             
             with self.engine.connect() as conn:
                 if 'weekly_reports_enabled' not in columns:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN weekly_reports_enabled BOOLEAN DEFAULT 1'))
+                    conn.execute(text('ALTER TABLE users ADD COLUMN weekly_reports_enabled BOOLEAN DEFAULT TRUE'))
                     conn.commit()
                 
                 if 'stripe_subscription_id' not in columns:
@@ -398,26 +402,47 @@ class AuthManager:
                 
                 # Tutorial tracking
                 if 'tutorial_seen' not in columns:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN tutorial_seen BOOLEAN DEFAULT 0'))
+                    conn.execute(text('ALTER TABLE users ADD COLUMN tutorial_seen BOOLEAN DEFAULT FALSE'))
                     conn.commit()
                 
                 # Dark web monitoring columns
                 if 'dark_web_monitoring_enabled' not in columns:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_monitoring_enabled BOOLEAN DEFAULT 0'))
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_monitoring_enabled BOOLEAN DEFAULT FALSE'))
                     conn.commit()
                 if 'dark_web_last_scan' not in columns:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_last_scan DATETIME'))
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_last_scan TIMESTAMP'))
                     conn.commit()
                 if 'dark_web_alert_email' not in columns:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_alert_email BOOLEAN DEFAULT 1'))
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_alert_email BOOLEAN DEFAULT TRUE'))
                     conn.commit()
     
     def get_session(self):
         return self.Session()
     
-    def _hash_password(self, password: str, salt: str) -> str:
-        """Hash password with salt using SHA-256"""
-        return hashlib.sha256((password + salt).encode()).hexdigest()
+    def _hash_password(self, password: str, salt: str = None) -> str:
+        """Hash password using bcrypt (salt is embedded in the hash).
+        The `salt` parameter is kept for API compatibility but ignored by bcrypt.
+        Bcrypt generates and embeds its own salt in the output hash."""
+        pw_bytes = password.encode('utf-8')
+        hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt(rounds=12))
+        return hashed.decode('utf-8')
+
+    def _verify_password(self, password: str, stored_hash: str, legacy_salt: str = None) -> bool:
+        """Verify a password against a stored hash.
+        Supports both bcrypt hashes (start with $2b$) and legacy SHA-256 hashes."""
+        if stored_hash.startswith('$2b$') or stored_hash.startswith('$2a$'):
+            # Modern bcrypt hash
+            return bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8'))
+        else:
+            # Legacy SHA-256 hash — verify then caller should upgrade
+            if legacy_salt:
+                legacy_hash = hashlib.sha256((password + legacy_salt).encode()).hexdigest()
+                return legacy_hash == stored_hash
+            return False
+
+    def _needs_rehash(self, stored_hash: str) -> bool:
+        """Check if a password hash needs to be upgraded from SHA-256 to bcrypt."""
+        return not (stored_hash.startswith('$2b$') or stored_hash.startswith('$2a$'))
     
     def _generate_salt(self) -> str:
         """Generate a random salt"""
@@ -724,12 +749,11 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
-            # Update password
-            salt = secrets.token_hex(32)
-            password_hash = self._hash_password(new_password, salt)
+            # Update password with bcrypt
+            password_hash = self._hash_password(new_password)
             
             user.password_hash = password_hash
-            user.salt = salt
+            user.salt = 'bcrypt'
             
             # Mark token as used
             reset_token.used = True
@@ -762,15 +786,14 @@ class AuthManager:
                     return {'success': False, 'error': 'Email already registered'}
                 return {'success': False, 'error': 'Username already taken'}
             
-            # Create user
-            salt = self._generate_salt()
-            password_hash = self._hash_password(password, salt)
+            # Create user with bcrypt password hash
+            password_hash = self._hash_password(password)
             
             user = User(
                 email=email,
                 username=username,
                 password_hash=password_hash,
-                salt=salt,
+                salt='bcrypt',
                 full_name=full_name,
                 verification_token=secrets.token_urlsafe(32)
             )
@@ -787,7 +810,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -815,7 +839,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -843,7 +868,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -863,10 +889,15 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'Invalid credentials'}
             
-            # Verify password (case-sensitive)
-            password_hash = self._hash_password(password, user.salt)
-            if password_hash != user.password_hash:
+            # Verify password using bcrypt (with legacy SHA-256 fallback)
+            if not self._verify_password(password, user.password_hash, user.salt):
                 return {'success': False, 'error': 'Invalid credentials'}
+            
+            # Transparently upgrade legacy SHA-256 hashes to bcrypt on successful login
+            if self._needs_rehash(user.password_hash):
+                user.password_hash = self._hash_password(password)
+                user.salt = 'bcrypt'  # Mark as bcrypt-managed
+                session.commit()
             
             if not user.is_active:
                 return {'success': False, 'error': 'Account is deactivated'}
@@ -918,7 +949,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -982,18 +1014,18 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
-            # Generate new salt and hash
-            salt = secrets.token_hex(32)
-            password_hash = self._hash_password(new_password, salt)
+            # Hash with bcrypt
+            password_hash = self._hash_password(new_password)
             
-            user.salt = salt
+            user.salt = 'bcrypt'
             user.password_hash = password_hash
             session.commit()
             
             return {'success': True, 'message': f'Password reset for {email}'}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1005,18 +1037,18 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
-            # Generate new salt and hash
-            salt = secrets.token_hex(32)
-            password_hash = self._hash_password(new_password, salt)
+            # Hash with bcrypt
+            password_hash = self._hash_password(new_password)
             
-            user.salt = salt
+            user.salt = 'bcrypt'
             user.password_hash = password_hash
             session.commit()
             
             return {'success': True, 'message': f'Password reset for {username}'}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
 
@@ -1076,7 +1108,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1115,7 +1148,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1182,7 +1216,8 @@ class AuthManager:
             }
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1202,7 +1237,8 @@ class AuthManager:
             return {'success': True, 'message': 'Asset removed from monitoring'}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1254,7 +1290,8 @@ class AuthManager:
             return {'success': True}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1270,7 +1307,8 @@ class AuthManager:
             return {'success': True}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1291,7 +1329,8 @@ class AuthManager:
             return {'success': True}
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1383,8 +1422,8 @@ class AuthManager:
             return {'success': True, 'new_alerts': new_alerts}
         except Exception as e:
             session.rollback()
-            logger.error(f"Error saving scan results: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error saving scan results: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1416,16 +1455,14 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
-            # Verify old password
-            old_hash = self._hash_password(old_password, user.salt)
-            if old_hash != user.password_hash:
+            # Verify old password (supports both bcrypt and legacy SHA-256)
+            if not self._verify_password(old_password, user.password_hash, user.salt):
                 return {'success': False, 'error': 'Current password is incorrect'}
             
-            # Update password
-            new_salt = self._generate_salt()
-            new_hash = self._hash_password(new_password, new_salt)
+            # Update password with bcrypt
+            new_hash = self._hash_password(new_password)
             
-            user.salt = new_salt
+            user.salt = 'bcrypt'
             user.password_hash = new_hash
             
             session.commit()
@@ -1433,7 +1470,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1457,7 +1495,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1594,8 +1633,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            logger.error(f"Error creating OAuth user: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error creating OAuth user: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1618,8 +1657,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            logger.error(f"Error linking OAuth: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error linking OAuth: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1760,8 +1799,17 @@ class AuthManager:
                 EmailAccount.user_id == user_id
             ).first()
             if account and account.password_encrypted:
-                # Decrypt the password (base64 encoded)
-                return base64.b64decode(account.password_encrypted.encode()).decode()
+                # Decrypt the password using Fernet symmetric encryption
+                from security import decrypt_value
+                try:
+                    return decrypt_value(account.password_encrypted)
+                except Exception:
+                    # Fallback: try legacy base64 decoding for pre-migration data
+                    import base64
+                    try:
+                        return base64.b64decode(account.password_encrypted.encode()).decode()
+                    except Exception:
+                        return None
             return None
         finally:
             session.close()
@@ -1799,9 +1847,9 @@ class AuthManager:
             if existing:
                 return {'success': False, 'error': 'This email is already being monitored'}
             
-            # Encrypt password
-            import base64
-            encrypted_password = base64.b64encode(password.encode()).decode()
+            # Encrypt password with Fernet symmetric encryption
+            from security import encrypt_value
+            encrypted_password = encrypt_value(password)
             
             # Create new account
             account = EmailAccount(
@@ -1825,7 +1873,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1853,8 +1902,8 @@ class AuthManager:
             if 'check_frequency' in data:
                 account.check_frequency = data['check_frequency']
             if 'password' in data and data['password']:
-                import base64
-                account.password_encrypted = base64.b64encode(data['password'].encode()).decode()
+                from security import encrypt_value
+                account.password_encrypted = encrypt_value(data['password'])
             
             session.commit()
             return {
@@ -1865,7 +1914,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1888,7 +1938,8 @@ class AuthManager:
             
         except Exception as e:
             session.rollback()
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Operation failed: {e}", exc_info=True)
+            return {'success': False, 'error': 'An internal error occurred'}
         finally:
             session.close()
     
@@ -1901,15 +1952,26 @@ class AuthManager:
                 EmailAccount.is_active == True
             ).all()
             
+            from security import decrypt_value
             import base64
             result = []
             for acc in accounts:
+                password = None
+                if acc.password_encrypted:
+                    try:
+                        password = decrypt_value(acc.password_encrypted)
+                    except Exception:
+                        # Fallback for legacy base64 data
+                        try:
+                            password = base64.b64decode(acc.password_encrypted.encode()).decode()
+                        except Exception:
+                            password = None
                 result.append({
                     'id': acc.id,
                     'email': acc.email,
                     'host': acc.host,
                     'port': acc.port,
-                    'password': base64.b64decode(acc.password_encrypted.encode()).decode() if acc.password_encrypted else None,
+                    'password': password,
                     'label': acc.label
                 })
             return result

@@ -10,18 +10,19 @@ services:
     container_name: securelink-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-securelink}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-securelink}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-securelink} -d ${POSTGRES_DB:-securelink}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-securelink}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - securelink-network
+      - securelink-internal
+    # Database should NOT be exposed to the host — only accessible via internal network
 
   # SecureLinkApp Web Application
   web:
@@ -31,16 +32,18 @@ services:
     container_name: securelink-web
     restart: unless-stopped
     ports:
-      - "${PORT:-5000}:5000"
+      - "127.0.0.1:${PORT:-5000}:5000"   # Bind to localhost only
     environment:
       # Required
       SECRET_KEY: ${SECRET_KEY}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-securelink}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-securelink}
-      APP_URL: ${APP_URL:-http://localhost:5000}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-securelink}
+      APP_URL: ${APP_URL:-https://securelinkapp.com}
+      ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY}
+      FERNET_ENCRYPTION_KEY: ${FERNET_ENCRYPTION_KEY}
       
       # Flask
       FLASK_ENV: ${FLASK_ENV:-production}
-      DEBUG: ${DEBUG:-false}
+      DEBUG: "false"
       
       # Stripe (required for payments)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
@@ -54,17 +57,21 @@ services:
       # API Keys (optional - for enhanced scanning)
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
       GOOGLE_SAFE_BROWSING_API_KEY: ${GOOGLE_SAFE_BROWSING_API_KEY:-}
+      HIBP_API_KEY: ${HIBP_API_KEY:-}
       
       # SMTP for emails (optional)
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      
+      # Firewall (optional — comma-separated blocked IPs)
+      BLOCKED_IPS: ${BLOCKED_IPS:-}
     depends_on:
       db:
         condition: service_healthy
     networks:
-      - securelink-network
+      - securelink-internal
 
   # Optional: Nginx reverse proxy for production
   # Uncomment if you want to use Nginx
@@ -81,12 +88,13 @@ services:
   #   depends_on:
   #     - web
   #   networks:
-  #     - securelink-network
+  #     - securelink-internal
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  securelink-network:
+  securelink-internal:
     driver: bridge
+    internal: false  # Set to true if running behind nginx proxy

@@ -17,8 +17,11 @@ class Config:
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY environment variable is required")
     
-    DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-    FLASK_ENV = os.getenv('FLASK_ENV', 'production')
+    # Debug mode — ONLY enable in development. Never in production.
+    # The FLASK_ENV must also be 'development' for DEBUG to activate.
+    _flask_env = os.getenv('FLASK_ENV', 'production')
+    DEBUG = _flask_env == 'development' and os.getenv('DEBUG', 'False').lower() == 'true'
+    FLASK_ENV = _flask_env
     APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
     
     # Database
@@ -106,6 +109,10 @@ class Config:
     
     # Have I Been Pwned API Key (for Dark Web Monitoring)
     HIBP_API_KEY = os.getenv('HIBP_API_KEY', '')
+    
+    # Admin Emergency Secret Key (used for password resets and admin operations)
+    # MUST be set in production — never use a default value
+    ADMIN_SECRET_KEY = os.getenv('ADMIN_SECRET_KEY', '')
 
 
 class DevelopmentConfig(Config):
