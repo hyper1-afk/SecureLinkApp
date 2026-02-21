@@ -556,6 +556,238 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-muted);
         }
+
+        /* ===== Dashboard Hero ===== */
+        .profile-hero {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(139, 92, 246, 0.2) 50%, rgba(14, 165, 233, 0.1) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 40px 0 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+
+        .hero-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 38px;
+            color: white;
+            box-shadow: 0 8px 32px rgba(14, 165, 233, 0.3);
+            flex-shrink: 0;
+        }
+
+        .hero-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .hero-info h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 2px;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-info p {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 32px;
+            flex-shrink: 0;
+        }
+
+        .meta-item {
+            text-align: center;
+        }
+
+        .meta-value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .meta-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ===== Dashboard Cards ===== */
+        .dash-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .dash-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 18px;
+            height: 100%;
+        }
+
+        .dash-card:hover {
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .dash-card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .dash-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dash-card-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .dash-card-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-top: 2px;
+        }
+
+        .dash-card-sub {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .mini-progress {
+            height: 6px;
+            background: rgba(148, 163, 184, 0.15);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .mini-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+            transition: width 0.5s ease;
+        }
+
+        .mini-progress-fill.warning { background: linear-gradient(90deg, var(--warning-color), #fbbf24); }
+        .mini-progress-fill.danger { background: linear-gradient(90deg, var(--danger-color), #f87171); }
+
+        .dash-card-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .dash-card-actions .btn {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        /* ===== Section Header ===== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-header h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .section-header .section-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 992px) {
+            .dash-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .hero-content {
+                flex-direction: column;
+                text-align: center;
+                align-items: center;
+            }
+            .hero-meta {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .dash-grid {
+                grid-template-columns: 1fr;
+            }
+            .profile-hero {
+                padding: 28px 0 20px;
+            }
+            .hero-avatar {
+                width: 72px;
+                height: 72px;
+                font-size: 30px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -569,47 +801,159 @@
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/home"><i class="bi bi-house me-1"></i>Home</a>
-                <a class="nav-link" href="/dark-web-monitor"><i class="bi bi-shield-exclamation me-1"></i>Dark Web</a>
+                <a class="nav-link" href="/features"><i class="bi bi-grid me-1"></i>Features</a>
                 <a class="nav-link active" href="/profile"><i class="bi bi-person me-1"></i>Profile</a>
                 <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
             </div>
         </div>
     </nav>
 
-    <div class="container py-5">
+    <!-- Hero Banner -->
+    <div class="profile-hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-avatar">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="hero-info">
+                    <h1 id="profileName">User</h1>
+                    <p id="profileEmail">user@example.com</p>
+                    <span class="subscription-badge badge-free" id="subscriptionBadge">FREE</span>
+                </div>
+                <div class="hero-meta">
+                    <div class="meta-item">
+                        <span class="meta-value" id="memberSince">-</span>
+                        <span class="meta-label">Member Since</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-value" id="lastLoginDisplay">-</span>
+                        <span class="meta-label">Last Login</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Overview -->
+    <div class="container py-4">
+        <div class="section-header">
+            <h3><i class="bi bi-speedometer2 me-2"></i>Dashboard</h3>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="dash-grid mb-4">
+            <!-- Scans Today -->
+            <div class="dash-card">
+                <div class="dash-card-icon" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                    <i class="bi bi-search"></i>
+                </div>
+                <div class="dash-card-content">
+                    <div class="dash-card-value" id="dashScans">0</div>
+                    <div class="dash-card-label">Scans Today</div>
+                    <div class="dash-card-sub">
+                        <div class="mini-progress">
+                            <div class="mini-progress-fill" id="dashScansBar" style="width: 0%"></div>
+                        </div>
+                        <span id="dashScansLimit">of 25 daily limit</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Threat Level -->
+            <div class="dash-card">
+                <div class="dash-card-icon" id="dashThreatIcon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="dash-card-content">
+                    <div class="dash-card-value" id="dashThreatLevel">Safe</div>
+                    <div class="dash-card-label">Threat Level</div>
+                    <div class="dash-card-sub" id="dashThreatDesc">No threats detected this week</div>
+                </div>
+            </div>
+
+            <!-- Subscription Status -->
+            <div class="dash-card">
+                <div class="dash-card-icon" id="dashSubIcon" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
+                    <i class="bi bi-credit-card"></i>
+                </div>
+                <div class="dash-card-content">
+                    <div class="dash-card-value" id="dashPlan">Free</div>
+                    <div class="dash-card-label">Current Plan</div>
+                    <div class="dash-card-sub" id="dashPlanExpiry">No expiration</div>
+                </div>
+            </div>
+
+            <!-- Dark Web Alerts -->
+            <div class="dash-card">
+                <div class="dash-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                    <i class="bi bi-shield-exclamation"></i>
+                </div>
+                <div class="dash-card-content">
+                    <div class="dash-card-value" id="dashDarkWebAlerts">-</div>
+                    <div class="dash-card-label">Dark Web Alerts</div>
+                    <div class="dash-card-sub" id="dashDarkWebStatus">Not configured</div>
+                </div>
+            </div>
+
+            <!-- Weekly Activity -->
+            <div class="dash-card">
+                <div class="dash-card-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <div class="dash-card-content">
+                    <div class="dash-card-value" id="dashWeeklyScans">0</div>
+                    <div class="dash-card-label">Scans This Week</div>
+                    <div class="dash-card-sub" id="dashWeeklySafe">0 safe, 0 threats</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="dash-card dash-card-actions">
+                <h6 style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;">Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="switchTab('subscription-tab')">
+                        <i class="bi bi-lightning me-2"></i>Manage Plan
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="switchTab('security-tab')">
+                        <i class="bi bi-key me-2"></i>Change Password
+                    </button>
+                    <a href="/features" class="btn btn-outline-primary">
+                        <i class="bi bi-grid me-2"></i>Explore Features
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h3><i class="bi bi-gear me-2"></i>Account Settings</h3>
+            <div class="section-line"></div>
+        </div>
+    </div>
+
+    <div class="container pb-5">
         <div class="row">
             <!-- Sidebar -->
             <div class="col-lg-3 mb-4">
-                <div class="card">
-                    <div class="profile-header">
-                        <div class="profile-avatar">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <div class="profile-name" id="profileName">User</div>
-                        <div class="profile-email" id="profileEmail">user@example.com</div>
-                        <span class="subscription-badge badge-free" id="subscriptionBadge">FREE</span>
-                    </div>
-                    <div class="p-3">
-                        <nav class="nav nav-pills flex-column">
-                            <a class="nav-link active" data-bs-toggle="pill" href="#profile-tab">
-                                <i class="bi bi-person"></i>Profile
-                            </a>
-                            <a class="nav-link" data-bs-toggle="pill" href="#subscription-tab">
-                                <i class="bi bi-credit-card"></i>Subscription
-                            </a>
-                            <a class="nav-link" data-bs-toggle="pill" href="#security-tab">
-                                <i class="bi bi-shield-lock"></i>Security
-                            </a>
-                            <a class="nav-link" data-bs-toggle="pill" href="#sessions-tab">
-                                <i class="bi bi-laptop"></i>Active Sessions
-                            </a>
-                        </nav>
-                    </div>
+                <div class="card p-3">
+                    <nav class="nav nav-pills flex-column">
+                        <a class="nav-link active" data-bs-toggle="pill" href="#profile-tab">
+                            <i class="bi bi-person"></i>Profile
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#subscription-tab">
+                            <i class="bi bi-credit-card"></i>Subscription
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#security-tab">
+                            <i class="bi bi-shield-lock"></i>Security
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#sessions-tab">
+                            <i class="bi bi-laptop"></i>Active Sessions
+                        </a>
+                    </nav>
                 </div>
                 
                 <!-- Usage Stats -->
-                <div class="card mt-4 p-4">
-                    <h6 class="mb-3">Today's Usage</h6>
+                <div class="card mt-3 p-4">
+                    <h6 class="mb-3"><i class="bi bi-bar-chart me-2"></i>Today's Usage</h6>
                     <div class="mb-2 d-flex justify-content-between">
                         <span class="text-secondary">Link Scans</span>
                         <span id="usageText">0 / 50</span>
@@ -872,6 +1216,7 @@
             loadUsageStats();
             updateSubscriptionUI();
             loadWeeklyStats();
+            loadDashboard();
             
             // Check for payment callback
             checkPaymentCallback();
@@ -879,6 +1224,140 @@
             // Check for pending upgrade from registration
             checkPendingUpgrade();
         });
+
+        // Switch to a specific settings tab from dashboard quick actions
+        function switchTab(tabId) {
+            const tabLink = document.querySelector(`[href="#${tabId}"]`);
+            if (tabLink) {
+                const tab = new bootstrap.Tab(tabLink);
+                tab.show();
+                // Scroll to settings section
+                document.querySelector('.container.pb-5').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Populate dashboard cards
+        async function loadDashboard() {
+            // Populate member since & last login from currentUser
+            updateHeroMeta();
+
+            // Load usage for dashboard scan card
+            try {
+                const usageRes = await fetch('/api/usage', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const usage = await usageRes.json();
+                
+                document.getElementById('dashScans').textContent = usage.used || 0;
+                const limit = usage.limit === -1 ? '∞' : usage.limit;
+                document.getElementById('dashScansLimit').textContent = `of ${limit} daily limit`;
+                
+                if (usage.limit !== -1) {
+                    const pct = Math.min((usage.used / usage.limit) * 100, 100);
+                    const bar = document.getElementById('dashScansBar');
+                    bar.style.width = `${pct}%`;
+                    if (pct >= 90) bar.classList.add('danger');
+                    else if (pct >= 70) bar.classList.add('warning');
+                } else {
+                    document.getElementById('dashScansBar').style.width = '15%';
+                }
+            } catch (e) {
+                console.error('Dashboard usage error:', e);
+            }
+
+            // Load weekly stats for threat level + weekly scans
+            try {
+                const statsRes = await fetch('/api/reports/weekly-stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await statsRes.json();
+                
+                // Weekly scans card
+                document.getElementById('dashWeeklyScans').textContent = stats.summary?.total_scans || 0;
+                const safe = stats.summary?.safe_count || 0;
+                const threats = stats.summary?.unsafe_count || 0;
+                document.getElementById('dashWeeklySafe').textContent = `${safe} safe, ${threats} threats`;
+
+                // Threat level card
+                const riskLevel = stats.overall_risk?.level || 'safe';
+                const riskColors = {
+                    'critical': '#ef4444', 'high': '#f59e0b', 'medium': '#eab308',
+                    'low': '#22c55e', 'safe': '#10b981', 'unknown': '#64748b'
+                };
+                const riskIcons = {
+                    'critical': 'bi-shield-x', 'high': 'bi-shield-exclamation', 'medium': 'bi-shield-minus',
+                    'low': 'bi-shield-check', 'safe': 'bi-shield-check', 'unknown': 'bi-shield'
+                };
+                const color = riskColors[riskLevel] || '#64748b';
+                
+                document.getElementById('dashThreatLevel').textContent = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1);
+                document.getElementById('dashThreatLevel').style.color = color;
+                document.getElementById('dashThreatDesc').textContent = stats.overall_risk?.description || 'No data yet';
+                
+                const threatIcon = document.getElementById('dashThreatIcon');
+                threatIcon.style.background = `${color}22`;
+                threatIcon.style.color = color;
+                threatIcon.querySelector('i').className = `bi ${riskIcons[riskLevel] || 'bi-shield'}`;
+            } catch (e) {
+                console.error('Dashboard stats error:', e);
+            }
+
+            // Dark web status
+            updateDashDarkWeb();
+        }
+
+        function updateHeroMeta() {
+            if (currentUser.created_at) {
+                const d = new Date(currentUser.created_at);
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                document.getElementById('memberSince').textContent = `${months[d.getMonth()]} ${d.getFullYear()}`;
+            }
+            if (currentUser.last_login) {
+                const d = new Date(currentUser.last_login);
+                const now = new Date();
+                const diff = Math.floor((now - d) / 60000);
+                if (diff < 1) document.getElementById('lastLoginDisplay').textContent = 'Just now';
+                else if (diff < 60) document.getElementById('lastLoginDisplay').textContent = `${diff}m ago`;
+                else if (diff < 1440) document.getElementById('lastLoginDisplay').textContent = `${Math.floor(diff/60)}h ago`;
+                else document.getElementById('lastLoginDisplay').textContent = `${Math.floor(diff/1440)}d ago`;
+            }
+        }
+
+        function updateDashSubscription() {
+            const tier = currentUser.subscription_tier || 'free';
+            const planName = tier.charAt(0).toUpperCase() + tier.slice(1);
+            document.getElementById('dashPlan').textContent = planName;
+            
+            if (currentUser.subscription_expires) {
+                const exp = new Date(currentUser.subscription_expires);
+                document.getElementById('dashPlanExpiry').textContent = `Renews ${exp.toLocaleDateString()}`;
+            } else if (tier === 'free') {
+                document.getElementById('dashPlanExpiry').textContent = 'No expiration';
+            } else {
+                document.getElementById('dashPlanExpiry').textContent = 'Active subscription';
+            }
+
+            const subColors = { 'free': '#64748b', 'pro': '#f59e0b', 'enterprise': '#8b5cf6' };
+            const c = subColors[tier] || '#64748b';
+            const icon = document.getElementById('dashSubIcon');
+            icon.style.background = `${c}22`;
+            icon.style.color = c;
+        }
+
+        function updateDashDarkWeb() {
+            const tier = currentUser.subscription_tier || 'free';
+            if (tier === 'free') {
+                document.getElementById('dashDarkWebAlerts').textContent = '-';
+                document.getElementById('dashDarkWebStatus').textContent = 'Requires Pro or Enterprise';
+            } else if (currentUser.dark_web_monitoring_enabled) {
+                document.getElementById('dashDarkWebAlerts').textContent = '0';
+                document.getElementById('dashDarkWebStatus').textContent = 'Monitoring active';
+                document.getElementById('dashDarkWebStatus').style.color = '#10b981';
+            } else {
+                document.getElementById('dashDarkWebAlerts').textContent = '-';
+                document.getElementById('dashDarkWebStatus').textContent = 'Not configured';
+            }
+        }
         
         function checkPendingUpgrade() {
             // Check URL for upgrade parameter (e.g., /profile?upgrade=pro#subscription-tab)
@@ -1003,6 +1482,9 @@
                     document.getElementById('emailNotifications').checked = currentUser.email_notifications;
                     
                     updateSubscriptionUI();
+                    updateHeroMeta();
+                    updateDashSubscription();
+                    updateDashDarkWeb();
                 }
             } catch (error) {
                 console.error('Error loading profile:', error);
