@@ -3,75 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>Warning - SecureLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .warning-glow {
             animation: warning-pulse 2s infinite;
         }
         @keyframes warning-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 187, 51, 0.4); }
-            50% { box-shadow: 0 0 30px 10px rgba(255, 187, 51, 0.2); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.2); }
+        }
+        .warning-icon-wrap {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(245, 158, 11, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+        .warning-icon-wrap i { font-size: 3rem; color: var(--warning-color); }
+        .risk-badge { font-size: 1.75rem; font-weight: 800; color: var(--warning-color); }
+        .url-display {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #fca5a5;
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white flex items-center justify-center">
-    <div class="max-w-lg mx-auto p-6">
-        <div class="text-center">
-            <!-- Warning Icon -->
-            <div class="inline-block p-6 rounded-full bg-yellow-500 bg-opacity-20 mb-6 warning-glow">
-                <i class="fas fa-exclamation-triangle text-6xl text-yellow-400"></i>
-            </div>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
 
-            <h1 class="text-3xl font-bold mb-4">Security Warning</h1>
-            
-            <p class="text-gray-300 text-lg mb-6">
+    <div style="max-width: 520px; width: 100%; padding: 24px;">
+        <div class="sl-card sl-card-elevated text-center">
+            <div class="warning-icon-wrap warning-glow">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 12px;">Security Warning</h1>
+            <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 28px;">
                 The link you're about to visit has been flagged as potentially risky.
             </p>
-
-            <!-- Risk Info -->
-            <div class="bg-gray-800 rounded-xl p-6 mb-6 text-left">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-gray-400">Risk Score</span>
-                    <span class="text-2xl font-bold text-yellow-400">{{ risk_score }}/100</span>
+            <div style="background: rgba(15, 23, 42, 0.6); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 28px; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span style="color: var(--text-muted); font-weight: 600;">Risk Score</span>
+                    <span class="risk-badge">{{ risk_score }}/100</span>
                 </div>
-                
-                <div class="mb-4">
-                    <span class="text-gray-400 block mb-2">Destination URL</span>
-                    <code class="block p-3 bg-gray-900 rounded-lg text-sm text-red-400 break-all">
-                        {{ short_link.original_url }}
-                    </code>
+                <div style="margin-bottom: 16px;">
+                    <span style="color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 8px;">Destination URL</span>
+                    <div class="url-display">{{ short_link.original_url }}</div>
                 </div>
-
-                <div class="p-4 bg-yellow-500 bg-opacity-10 border border-yellow-500 border-opacity-30 rounded-lg">
-                    <p class="text-sm text-yellow-300">
-                        <i class="fas fa-info-circle mr-2"></i>
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-sm); padding: 14px;">
+                    <p style="font-size: 0.85rem; color: #fbbf24; margin: 0;">
+                        <i class="bi bi-info-circle me-2"></i>
                         This link may contain phishing content, malware, or other security risks. 
                         Proceed only if you trust the source.
                     </p>
                 </div>
             </div>
-
-            <!-- Actions -->
-            <div class="flex flex-col sm:flex-row gap-4">
-                <a href="/home" 
-                   class="flex-1 py-3 px-6 bg-green-500 rounded-lg font-semibold hover:bg-green-600 transition text-center">
-                    <i class="fas fa-arrow-left mr-2"></i>Go Back to Safety
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="/home" class="sl-btn sl-btn-primary" style="flex: 1; min-width: 180px;">
+                    <i class="bi bi-arrow-left"></i>Go Back to Safety
                 </a>
                 <a href="{{ short_link.original_url }}" 
-                   class="flex-1 py-3 px-6 bg-gray-700 border border-red-500 rounded-lg font-semibold hover:bg-gray-600 transition text-center text-red-400">
-                    <i class="fas fa-external-link-alt mr-2"></i>Continue Anyway
+                   class="sl-btn sl-btn-outline" style="flex: 1; min-width: 180px; border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">
+                    <i class="bi bi-box-arrow-up-right"></i>Continue Anyway
                 </a>
             </div>
-
-            <!-- SecureLink Branding -->
-            <div class="mt-8 text-gray-500 text-sm">
-                <i class="fas fa-shield-alt mr-1"></i>
-                Protected by <a href="/home" class="text-blue-400 hover:underline">SecureLink</a>
+            <div style="margin-top: 28px; color: var(--text-muted); font-size: 0.85rem;">
+                <i class="bi bi-shield-lock-fill me-1"></i>
+                Protected by <a href="/home" style="color: var(--primary-color); text-decoration: none;">SecureLink</a>
             </div>
         </div>
     </div>

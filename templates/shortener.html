@@ -3,117 +3,487 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safe Link Reducer - SecureLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Safe Link Shortener - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        /* Page-specific styles */
+        .shortener-hero-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.15);
+            margin-bottom: 1rem;
         }
-        .card-glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .shortener-hero-icon i {
+            font-size: 2.5rem;
+            color: var(--success-color);
         }
-        .short-url {
+        .shortener-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+        .shortener-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .shortener-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .shortener-card h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+        .shortener-card h2 i {
+            color: var(--accent-color);
+            margin-right: 0.5rem;
+        }
+        .shortener-input {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .shortener-input:focus {
+            outline: none;
+            background: rgba(15, 23, 42, 0.95);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+        }
+        .shortener-input::placeholder {
+            color: var(--text-muted);
+        }
+        .shortener-label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .shortener-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .shortener-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139, 92, 246, 0.35);
+        }
+        .benefit-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .benefit-card:hover {
+            border-color: rgba(14, 165, 233, 0.2);
+            transform: translateY(-2px);
+        }
+        .benefit-card i {
+            font-size: 2.25rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .benefit-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .benefit-card p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .links-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .links-header h2 i {
+            color: var(--primary-color);
+            margin-right: 0.5rem;
+        }
+        .links-header .total-clicks {
+            color: var(--text-secondary);
+        }
+        .links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .link-item {
+            background: var(--bg-card-hover);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+        }
+        .link-item-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        @media (min-width: 768px) {
+            .link-item-inner {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+        .link-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .link-safety {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .link-safety a {
+            color: var(--primary-color);
+            text-decoration: none;
             font-family: monospace;
-            background: rgba(0, 200, 81, 0.1);
-            border: 1px solid rgba(0, 200, 81, 0.3);
+            word-break: break-all;
+        }
+        .link-safety a:hover {
+            text-decoration: underline;
+        }
+        .link-original {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .link-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .click-count {
+            text-align: center;
+        }
+        .click-count .count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .click-count .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .copy-btn {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background: var(--bg-card-hover);
+        }
+        /* Result area styles */
+        .result-box {
+            background: var(--bg-card-hover);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+        }
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .result-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .safety-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .safety-badge.safe {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .safety-badge.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .short-url-box {
+            font-family: monospace;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .short-url-box span {
+            color: var(--success-color);
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+        .short-url-copy-btn {
+            padding: 0.5rem 1rem;
+            background: var(--success-color);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .short-url-copy-btn:hover {
+            background: #059669;
+        }
+        .result-meta {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .result-meta p {
+            margin: 0.25rem 0;
+        }
+        .result-meta strong {
+            color: var(--text-primary);
+        }
+        .result-meta .break-all {
+            word-break: break-all;
+        }
+        .result-warning {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            color: var(--warning-color);
+        }
+        .result-error {
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-sm);
+            color: var(--danger-color);
+        }
+        .loading-state {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-secondary);
+        }
+        .toast-notification {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--success-color);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-weight: 500;
+            z-index: 9999;
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <!-- Navigation -->
-    <nav class="p-4 border-b border-gray-700">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <a href="/home" class="text-2xl font-bold">
-                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
             </a>
-            <div class="flex items-center space-x-4">
-                <a href="/home" class="hover:text-blue-400 transition">Home</a>
-                <a href="/attack-surface" class="hover:text-blue-400 transition">Attack Surface</a>
-                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
-                <a href="/community" class="hover:text-blue-400 transition">Community</a>
-                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/dark-web-monitor" class="sl-nav-link">Dark Web</a>
+                <a href="/community" class="sl-nav-link">Community</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-6">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <div class="inline-block p-4 rounded-full bg-green-500 bg-opacity-20 mb-4">
-                <i class="fas fa-link text-5xl text-green-400"></i>
-            </div>
-            <h1 class="text-4xl font-bold mb-4">Safe Link Reducer</h1>
-            <p class="text-gray-400 text-lg max-w-2xl mx-auto">
-                Create reduced, shareable links that are pre-verified for safety. 
-                Recipients can trust links from SecureLink.
-            </p>
-        </div>
-
-        <!-- Shorten Link Card -->
-        <div class="card-glass rounded-2xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6">
-                <i class="fas fa-magic text-purple-400 mr-2"></i>Reduce & Verify
-            </h2>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Enter URL to reduce</label>
-                    <input type="url" id="urlInput" 
-                           class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
-                           placeholder="https://example.com/long-url-here">
+    <div class="sl-page sl-bg-gradient">
+        <main style="max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem;">
+            <!-- Header -->
+            <div class="shortener-header text-center mb-5">
+                <div class="shortener-hero-icon">
+                    <i class="bi bi-link-45deg"></i>
                 </div>
-                
-                <button onclick="shortenUrl()" 
-                        class="w-full py-4 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
-                    <i class="fas fa-compress-alt mr-2"></i>Reduce & Verify Link
-                </button>
+                <h1>Safe Link Shortener</h1>
+                <p>
+                    Create shortened, shareable links that are pre-verified for safety.
+                    Recipients can trust links from SecureLink.
+                </p>
             </div>
 
-            <!-- Result Area -->
-            <div id="shortenResult" class="mt-6 hidden">
-                <!-- Results will be inserted here -->
-            </div>
-        </div>
-
-        <!-- Benefits -->
-        <div class="grid md:grid-cols-3 gap-6 mb-8">
-            <div class="card-glass rounded-xl p-6 text-center">
-                <i class="fas fa-shield-alt text-4xl text-green-400 mb-4"></i>
-                <h3 class="text-lg font-semibold mb-2">Pre-Verified</h3>
-                <p class="text-gray-400 text-sm">Every link is scanned before shortening</p>
-            </div>
-            <div class="card-glass rounded-xl p-6 text-center">
-                <i class="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
-                <h3 class="text-lg font-semibold mb-2">Warning Pages</h3>
-                <p class="text-gray-400 text-sm">Risky links show a warning before redirecting</p>
-            </div>
-            <div class="card-glass rounded-xl p-6 text-center">
-                <i class="fas fa-chart-bar text-4xl text-blue-400 mb-4"></i>
-                <h3 class="text-lg font-semibold mb-2">Click Tracking</h3>
-                <p class="text-gray-400 text-sm">See how many times your links are clicked</p>
-            </div>
-        </div>
-
-        <!-- My Links -->
-        <div class="card-glass rounded-2xl p-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold">
-                    <i class="fas fa-list text-blue-400 mr-2"></i>My Reduced Links
+            <!-- Shorten Link Card -->
+            <div class="shortener-card">
+                <h2>
+                    <i class="bi bi-stars"></i>Shorten &amp; Verify
                 </h2>
-                <div class="text-gray-400">
-                    <span id="totalClicks">0</span> total clicks
+
+                <div class="d-flex flex-column gap-3">
+                    <div>
+                        <label class="shortener-label">Enter URL to shorten</label>
+                        <input type="url" id="urlInput" class="shortener-input"
+                               placeholder="https://example.com/long-url-here">
+                    </div>
+
+                    <button onclick="shortenUrl()" class="shortener-btn">
+                        <i class="bi bi-arrows-collapse me-2"></i>Shorten &amp; Verify Link
+                    </button>
+                </div>
+
+                <!-- Result Area -->
+                <div id="shortenResult" class="mt-4 d-none">
+                    <!-- Results will be inserted here -->
                 </div>
             </div>
-            
-            <div id="linksList" class="space-y-4">
-                <p class="text-gray-400 text-center py-8">Loading your links...</p>
-            </div>
-        </div>
-    </main>
 
+            <!-- Benefits -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="benefit-card">
+                        <i class="bi bi-shield-lock-fill" style="color: var(--success-color);"></i>
+                        <h3>Pre-Verified</h3>
+                        <p>Every link is scanned before shortening</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="benefit-card">
+                        <i class="bi bi-exclamation-triangle-fill" style="color: var(--warning-color);"></i>
+                        <h3>Warning Pages</h3>
+                        <p>Risky links show a warning before redirecting</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="benefit-card">
+                        <i class="bi bi-bar-chart" style="color: var(--primary-color);"></i>
+                        <h3>Click Tracking</h3>
+                        <p>See how many times your links are clicked</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Links -->
+            <div class="shortener-card">
+                <div class="links-header">
+                    <h2>
+                        <i class="bi bi-list-ul"></i>My Shortened Links
+                    </h2>
+                    <div class="total-clicks">
+                        <span id="totalClicks">0</span> total clicks
+                    </div>
+                </div>
+
+                <div id="linksList" class="links-list">
+                    <p class="empty-state">Loading your links...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="sl-footer">
+            <div class="sl-footer-inner">
+                <div class="sl-footer-brand">
+                    <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                        <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                        <span class="sl-brand-text">SecureLink</span>
+                    </a>
+                    <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Product</h4>
+                    <a href="/features">Features</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/dark-web-monitor">Dark Web Monitor</a>
+                    <a href="/extension">Browser Extension</a>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Resources</h4>
+                    <a href="/guide">User Guide</a>
+                    <a href="/security-news">Security News</a>
+                    <a href="/community">Community</a>
+                    <a href="mailto:support@securelinkapp.com">Support</a>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Legal</h4>
+                    <a href="/privacy">Privacy Policy</a>
+                    <a href="/terms">Terms of Service</a>
+                </div>
+            </div>
+            <div class="sl-footer-bottom">
+                <p>&copy; 2026 SecureLink. All rights reserved.</p>
+                <div class="sl-footer-bottom-links">
+                    <a href="/privacy">Privacy</a>
+                    <a href="/terms">Terms</a>
+                    <a href="mailto:support@securelinkapp.com">Contact</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const token = localStorage.getItem('auth_token');
 
@@ -151,8 +521,8 @@
             }
 
             const resultDiv = document.getElementById('shortenResult');
-            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-purple-400"></i><p class="mt-2">Verifying and shortening...</p></div>';
-            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<div class="loading-state"><span class="spinner-border spinner-border-sm me-2" style="color: var(--accent-color);"></span>Verifying and shortening...</div>';
+            resultDiv.classList.remove('d-none');
 
             try {
                 const response = await fetch('/api/shorten', {
@@ -167,35 +537,34 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    const safetyClass = data.is_safe ? 'bg-green-500' : 'bg-yellow-500';
+                    const safetyBadgeClass = data.is_safe ? 'safe' : 'warning';
                     const safetyText = data.is_safe ? 'Safe' : 'Warning';
-                    const safetyIcon = data.is_safe ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                    const safetyIcon = data.is_safe ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
 
                     resultDiv.innerHTML = `
-                        <div class="p-6 bg-gray-800 rounded-lg">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-semibold">Your Reduced Link</h3>
-                                <span class="px-3 py-1 rounded-full text-sm ${safetyClass} bg-opacity-20 border border-current">
-                                    <i class="fas ${safetyIcon} mr-1"></i>${safetyText}
+                        <div class="result-box">
+                            <div class="result-header">
+                                <h3>Your Shortened Link</h3>
+                                <span class="safety-badge ${safetyBadgeClass}">
+                                    <i class="bi ${safetyIcon}"></i>${safetyText}
                                 </span>
                             </div>
-                            
-                            <div class="short-url p-4 rounded-lg mb-4 flex items-center justify-between">
-                                <span class="text-green-400 text-lg break-all">${data.short_url}</span>
-                                <button onclick="copyToClipboard('${data.short_url}')" 
-                                        class="ml-4 px-4 py-2 bg-green-500 rounded-lg hover:bg-green-600 transition flex-shrink-0">
-                                    <i class="fas fa-copy mr-2"></i>Copy
+
+                            <div class="short-url-box">
+                                <span>${data.short_url}</span>
+                                <button onclick="copyToClipboard('${data.short_url}')" class="short-url-copy-btn">
+                                    <i class="bi bi-clipboard me-1"></i>Copy
                                 </button>
                             </div>
-                            
-                            <div class="text-sm text-gray-400">
+
+                            <div class="result-meta">
                                 <p><strong>Original:</strong> <span class="break-all">${data.original_url}</span></p>
-                                <p class="mt-1"><strong>Risk Score:</strong> ${data.risk_score}/100</p>
+                                <p><strong>Risk Score:</strong> ${data.risk_score}/100</p>
                             </div>
-                            
+
                             ${!data.is_safe ? `
-                                <div class="mt-4 p-3 bg-yellow-500 bg-opacity-10 border border-yellow-500 rounded-lg text-sm">
-                                    <i class="fas fa-info-circle mr-2"></i>
+                                <div class="result-warning">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
                                     This link has some risk indicators. Recipients will see a warning page before being redirected.
                                 </div>
                             ` : ''}
@@ -207,16 +576,16 @@
                     document.getElementById('urlInput').value = '';
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
-                            <i class="fas fa-exclamation-circle mr-2"></i>
+                        <div class="result-error">
+                            <i class="bi bi-exclamation-circle-fill me-2"></i>
                             ${data.error || 'Failed to shorten link'}
                         </div>
                     `;
                 }
             } catch (error) {
                 resultDiv.innerHTML = `
-                    <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    <div class="result-error">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
                         Error shortening link. Please try again.
                     </div>
                 `;
@@ -225,7 +594,7 @@
 
         async function loadMyLinks() {
             if (!token) {
-                document.getElementById('linksList').innerHTML = '<p class="text-gray-400 text-center py-8">Log in to see your links</p>';
+                document.getElementById('linksList').innerHTML = '<p class="empty-state">Log in to see your links</p>';
                 return;
             }
 
@@ -241,35 +610,34 @@
                 const links = data.links || [];
 
                 if (links.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 text-center py-8">No reduced links yet. Create your first one above!</p>';
+                    container.innerHTML = '<p class="empty-state">No shortened links yet. Create your first one above!</p>';
                     return;
                 }
 
                 container.innerHTML = links.map(link => {
-                    const safetyClass = link.is_safe ? 'text-green-400' : 'text-yellow-400';
-                    const safetyIcon = link.is_safe ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                    const safetyColor = link.is_safe ? 'var(--success-color)' : 'var(--warning-color)';
+                    const safetyIcon = link.is_safe ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
                     const shortUrl = `${window.location.origin}/s/${link.short_code}`;
 
                     return `
-                        <div class="p-4 bg-gray-800 rounded-lg">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <i class="fas ${safetyIcon} ${safetyClass}"></i>
-                                        <a href="${shortUrl}" target="_blank" class="text-blue-400 hover:underline font-mono">
+                        <div class="link-item">
+                            <div class="link-item-inner">
+                                <div class="link-info">
+                                    <div class="link-safety">
+                                        <i class="bi ${safetyIcon}" style="color: ${safetyColor}"></i>
+                                        <a href="${shortUrl}" target="_blank">
                                             ${shortUrl}
                                         </a>
                                     </div>
-                                    <p class="text-sm text-gray-400 truncate">${link.original_url}</p>
+                                    <p class="link-original">${link.original_url}</p>
                                 </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="text-center">
-                                        <p class="text-2xl font-bold">${link.click_count || 0}</p>
-                                        <p class="text-xs text-gray-400">clicks</p>
+                                <div class="link-actions">
+                                    <div class="click-count">
+                                        <div class="count">${link.click_count || 0}</div>
+                                        <div class="label">clicks</div>
                                     </div>
-                                    <button onclick="copyToClipboard('${shortUrl}')" 
-                                            class="px-3 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
-                                        <i class="fas fa-copy"></i>
+                                    <button onclick="copyToClipboard('${shortUrl}')" class="copy-btn">
+                                        <i class="bi bi-clipboard"></i>
                                     </button>
                                 </div>
                             </div>
@@ -286,7 +654,7 @@
             navigator.clipboard.writeText(text).then(() => {
                 // Show brief toast
                 const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 px-4 py-2 bg-green-500 rounded-lg text-white';
+                toast.className = 'toast-notification';
                 toast.textContent = 'Copied to clipboard!';
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 2000);
@@ -295,6 +663,13 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', loadMyLinks);
+    </script>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>

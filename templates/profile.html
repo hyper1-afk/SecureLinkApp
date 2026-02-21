@@ -8,7 +8,8 @@
     <title>Profile - SecureLink</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
         /* Dark Reader compatibility - site is already dark themed */
         html[data-darkreader-mode] body,
@@ -40,10 +41,10 @@
             --bg-dark: #0f172a;
             --bg-card: #1e293b;
             --bg-card-hover: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.25);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(148, 163, 184, 0.12);
         }
         
         * {
@@ -558,6 +559,9 @@
     </style>
 </head>
 <body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/home">
@@ -565,6 +569,7 @@
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/home"><i class="bi bi-house me-1"></i>Home</a>
+                <a class="nav-link" href="/dark-web-monitor"><i class="bi bi-shield-exclamation me-1"></i>Dark Web</a>
                 <a class="nav-link active" href="/profile"><i class="bi bi-person me-1"></i>Profile</a>
                 <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
             </div>
@@ -588,9 +593,6 @@
                         <nav class="nav nav-pills flex-column">
                             <a class="nav-link active" data-bs-toggle="pill" href="#profile-tab">
                                 <i class="bi bi-person"></i>Profile
-                            </a>
-                            <a class="nav-link" data-bs-toggle="pill" href="#email-tab">
-                                <i class="bi bi-envelope"></i>Email Settings
                             </a>
                             <a class="nav-link" data-bs-toggle="pill" href="#subscription-tab">
                                 <i class="bi bi-credit-card"></i>Subscription
@@ -675,187 +677,6 @@
                         </div>
                     </div>
                     
-                    <!-- Email Settings Tab -->
-                    <div class="tab-pane fade" id="email-tab">
-                        <div class="card p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h4 class="mb-0"><i class="bi bi-envelope me-2"></i>Email Monitoring</h4>
-                                <span class="badge bg-secondary" id="emailAccountCount">0 / 0 accounts</span>
-                            </div>
-                            
-                            <div class="alert alert-info" id="emailProAlert">
-                                <i class="bi bi-info-circle me-2"></i>
-                                Email monitoring is a <strong>Pro</strong> feature. 
-                                <a href="#subscription-tab" class="alert-link" onclick="$('[href=\'#subscription-tab\']').tab('show')">Upgrade now</a> to connect your email.
-                            </div>
-                            
-                            <div id="emailAccountsSection" style="display: none;">
-                                <div id="emailAlert" style="display: none;"></div>
-                                
-                                <!-- Important App Password Notice - Tabbed by Provider -->
-                                <div class="alert alert-warning mb-4">
-                                    <h6 class="alert-heading"><i class="bi bi-shield-lock me-2"></i>Important: App Password Required</h6>
-                                    <p class="mb-3">Most email providers require an <strong>App Password</strong> instead of your regular password. Select your email provider below:</p>
-                                    
-                                    <!-- Provider Tabs -->
-                                    <ul class="nav nav-pills nav-fill mb-3" id="providerTabs" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" id="gmail-tab" data-bs-toggle="pill" data-bs-target="#gmail-instructions" type="button" role="tab" style="background: rgba(0,0,0,0.2); color: #856404;">
-                                                <i class="bi bi-google me-1"></i>Gmail
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="outlook-tab" data-bs-toggle="pill" data-bs-target="#outlook-instructions" type="button" role="tab" style="background: rgba(0,0,0,0.1); color: #856404;">
-                                                <i class="bi bi-microsoft me-1"></i>Outlook
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="yahoo-tab" data-bs-toggle="pill" data-bs-target="#yahoo-instructions" type="button" role="tab" style="background: rgba(0,0,0,0.1); color: #856404;">
-                                                <i class="bi bi-envelope me-1"></i>Yahoo
-                                            </button>
-                                        </li>
-                                    </ul>
-                                    
-                                    <!-- Tab Content -->
-                                    <div class="tab-content" id="providerTabContent">
-                                        <!-- Gmail Instructions -->
-                                        <div class="tab-pane fade show active" id="gmail-instructions" role="tabpanel">
-                                            <p class="mb-1"><strong>For Gmail (@gmail.com):</strong></p>
-                                            <ol class="mb-2 small">
-                                                <li>Go to your <a href="https://myaccount.google.com/security" target="_blank" class="alert-link">Google Account Security</a></li>
-                                                <li>Enable <strong>2-Step Verification</strong> (required)</li>
-                                                <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" class="alert-link">App Passwords</a></li>
-                                                <li>Select "Mail" and "Windows Computer", then click Generate</li>
-                                                <li>Copy the 16-character password and use it below</li>
-                                            </ol>
-                                            <p class="mb-0 small"><strong>IMAP Server:</strong> imap.gmail.com | <strong>Port:</strong> 993</p>
-                                        </div>
-                                        
-                                        <!-- Outlook Instructions -->
-                                        <div class="tab-pane fade" id="outlook-instructions" role="tabpanel">
-                                            <p class="mb-1"><strong>For Outlook/Hotmail (@outlook.com, @hotmail.com, @live.com):</strong></p>
-                                            <ol class="mb-2 small">
-                                                <li>Go to <a href="https://account.microsoft.com/security" target="_blank" class="alert-link">Microsoft Account Security</a></li>
-                                                <li>Click "Advanced security options"</li>
-                                                <li>Enable <strong>Two-step verification</strong> (required)</li>
-                                                <li>Under "App passwords", click "Create a new app password"</li>
-                                                <li>Copy the generated password and use it below</li>
-                                            </ol>
-                                            <p class="mb-0 small"><strong>IMAP Server:</strong> outlook.office365.com | <strong>Port:</strong> 993</p>
-                                            <a href="https://support.microsoft.com/en-us/account-billing/using-app-passwords-with-apps-that-don-t-support-two-step-verification-5896ed9b-4263-e681-128a-a6f2979a7944" target="_blank" class="alert-link small">Microsoft Help Guide →</a>
-                                        </div>
-                                        
-                                        <!-- Yahoo Instructions -->
-                                        <div class="tab-pane fade" id="yahoo-instructions" role="tabpanel">
-                                            <p class="mb-1"><strong>For Yahoo (@yahoo.com):</strong></p>
-                                            <ol class="mb-2 small">
-                                                <li>Go to <a href="https://login.yahoo.com/myaccount/security" target="_blank" class="alert-link">Yahoo Account Security</a></li>
-                                                <li>Enable <strong>Two-step verification</strong> (required)</li>
-                                                <li>Click "Generate app password"</li>
-                                                <li>Select "Other App" and enter "SecureLink"</li>
-                                                <li>Copy the generated password and use it below</li>
-                                            </ol>
-                                            <p class="mb-0 small"><strong>IMAP Server:</strong> imap.mail.yahoo.com | <strong>Port:</strong> 993</p>
-                                            <a href="https://help.yahoo.com/kb/SLN15241.html" target="_blank" class="alert-link small">Yahoo Help Guide →</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <p class="text-secondary mb-4">
-                                    <i class="bi bi-lightning-charge me-2"></i>
-                                    <strong>Automatic Monitoring:</strong> Connected email accounts are automatically monitored for suspicious links.
-                                    Pro users can monitor up to 5 emails, Enterprise up to 25. Use the toggle switch below to enable/disable monitoring per account.
-                                </p>
-                                
-                                <!-- Email Accounts List -->
-                                <div id="emailAccountsList" class="mb-4">
-                                    <!-- Accounts will be dynamically inserted here -->
-                                </div>
-                                
-                                <!-- Add New Account Button -->
-                                <button class="btn btn-outline-primary mb-4" id="addEmailAccountBtn" onclick="showAddEmailModal()">
-                                    <i class="bi bi-plus-circle me-2"></i>Add Email Account
-                                </button>
-                                
-                                <!-- No Accounts Message -->
-                                <div id="noAccountsMessage" class="text-center py-5" style="display: none;">
-                                    <i class="bi bi-envelope-x display-4 text-secondary mb-3"></i>
-                                    <h5 class="text-secondary">No email accounts connected</h5>
-                                    <p class="text-secondary mb-3">Add your first email account to start monitoring for suspicious links.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Add/Edit Email Account Modal -->
-                    <div class="modal fade" id="emailAccountModal" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content bg-dark">
-                                <div class="modal-header border-secondary">
-                                    <h5 class="modal-title" id="emailModalTitle">Add Email Account</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <form id="emailAccountForm">
-                                        <input type="hidden" id="editAccountId">
-                                        
-                                        <div id="emailFormAlert" style="display: none;"></div>
-                                        
-                                        <div class="mb-3">
-                                            <label class="form-label">Label (optional)</label>
-                                            <input type="text" class="form-control" id="accountLabel" placeholder="e.g., Work Email, Personal">
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <label class="form-label">Email Address *</label>
-                                            <input type="email" class="form-control" id="accountEmail" placeholder="your-email@gmail.com" required>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <label class="form-label">Email Provider</label>
-                                            <select class="form-select" id="accountProvider" onchange="updateAccountHost()">
-                                                <option value="gmail">Gmail</option>
-                                                <option value="outlook">Outlook / Hotmail</option>
-                                                <option value="yahoo">Yahoo</option>
-                                                <option value="custom">Custom IMAP</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="row" id="customHostGroup" style="display: none;">
-                                            <div class="col-8 mb-3">
-                                                <label class="form-label">IMAP Host</label>
-                                                <input type="text" class="form-control" id="accountHost" value="imap.gmail.com">
-                                            </div>
-                                            <div class="col-4 mb-3">
-                                                <label class="form-label">Port</label>
-                                                <input type="number" class="form-control" id="accountPort" value="993">
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mb-3">
-                                            <label class="form-label">App Password *</label>
-                                            <input type="password" class="form-control" id="accountPassword" placeholder="Enter app password">
-                                            <small class="text-secondary">
-                                                <i class="bi bi-info-circle me-1"></i>
-                                                For Gmail, use an <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="text-primary">App Password</a>
-                                            </small>
-                                        </div>
-                                        
-                                        <div id="emailTestStatus" style="display: none;"></div>
-                                    </form>
-                                </div>
-                                <div class="modal-footer border-secondary">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="testNewEmailAccount()">
-                                        <i class="bi bi-plug me-2"></i>Test Connection
-                                    </button>
-                                    <button type="button" class="btn btn-primary" onclick="saveEmailAccount()">
-                                        <i class="bi bi-save me-2"></i>Save Account
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <!-- Subscription Tab -->
                     <div class="tab-pane fade" id="subscription-tab">
                         <div class="card p-4">
@@ -882,7 +703,7 @@
                                             <li><i class="bi bi-check-circle-fill"></i>Basic threat detection</li>
                                             <li><i class="bi bi-check-circle-fill"></i>7-day history</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Desktop notifications</li>
-                                            <li><i class="bi bi-x-circle-fill"></i>Email monitoring</li>
+                                            <li><i class="bi bi-x-circle-fill"></i>Dark web monitoring</li>
                                             <li><i class="bi bi-x-circle-fill"></i>API access</li>
                                         </ul>
                                         
@@ -903,7 +724,7 @@
                                             <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Advanced threat detection</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Full history</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Monitor 3 email accounts</strong></li>
+                                            <li><i class="bi bi-check-circle-fill"></i><strong>Dark web monitoring</strong></li>
                                             <li><i class="bi bi-check-circle-fill"></i>API access</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Whitelist/Blacklist</li>
                                         </ul>
@@ -925,7 +746,7 @@
                                         <ul class="plan-features">
                                             <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Everything in Pro</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Unlimited email monitoring</strong></li>
+                                            <li><i class="bi bi-check-circle-fill"></i><strong>Unlimited dark web monitoring</strong></li>
                                             <li><i class="bi bi-check-circle-fill"></i>Attack Surface Monitoring</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Team management</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Priority support</li>
@@ -1314,349 +1135,6 @@
             
             console.log('Buttons updated - Free:', freeBtn.textContent, 'Pro:', proBtn.textContent, 'Enterprise:', enterpriseBtn.textContent);
             
-            // Show/hide email settings
-            if (planLimits.email_monitoring) {
-                document.getElementById('emailProAlert').style.display = 'none';
-                document.getElementById('emailAccountsSection').style.display = 'block';
-                loadEmailAccounts();
-            } else {
-                document.getElementById('emailProAlert').style.display = 'block';
-                document.getElementById('emailAccountsSection').style.display = 'none';
-            }
-        }
-        
-        // ============== Email Accounts Management ==============
-        
-        let emailAccountModal = null;
-        let emailAccounts = [];
-        
-        async function loadEmailAccounts() {
-            if (!planLimits.email_monitoring) return;
-            
-            try {
-                const response = await fetch('/api/email-accounts', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                
-                emailAccounts = data.accounts || [];
-                const countInfo = data.count || { current: 0, max: 0 };
-                
-                // Update count display
-                document.getElementById('emailAccountCount').textContent = 
-                    `${countInfo.current} / ${countInfo.max} accounts`;
-                
-                // Update add button state
-                const addBtn = document.getElementById('addEmailAccountBtn');
-                if (!countInfo.can_add) {
-                    addBtn.disabled = true;
-                    addBtn.innerHTML = '<i class="bi bi-lock me-2"></i>Max Accounts Reached';
-                } else {
-                    addBtn.disabled = false;
-                    addBtn.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Add Email Account';
-                }
-                
-                renderEmailAccounts();
-            } catch (error) {
-                console.error('Error loading email accounts:', error);
-            }
-        }
-        
-        function renderEmailAccounts() {
-            const container = document.getElementById('emailAccountsList');
-            const noAccountsMsg = document.getElementById('noAccountsMessage');
-            
-            if (emailAccounts.length === 0) {
-                container.innerHTML = '';
-                noAccountsMsg.style.display = 'block';
-                return;
-            }
-            
-            noAccountsMsg.style.display = 'none';
-            
-            container.innerHTML = emailAccounts.map(account => {
-                const providerIcon = getProviderIcon(account.host);
-                const statusBadge = account.is_active 
-                    ? (account.is_verified ? 'active' : 'unverified')
-                    : 'inactive';
-                const statusText = account.is_active 
-                    ? (account.is_verified ? 'Monitoring' : 'Not Verified')
-                    : 'Disabled';
-                
-                const lastChecked = account.last_checked 
-                    ? new Date(account.last_checked).toLocaleString()
-                    : 'Never';
-                
-                return `
-                    <div class="email-account-card" data-id="${account.id}">
-                        <div class="account-header">
-                            <div class="d-flex align-items-center">
-                                <div class="account-icon ${providerIcon.class}">
-                                    <i class="bi ${providerIcon.icon}"></i>
-                                </div>
-                                <div>
-                                    <div class="account-label">${account.label || account.email}</div>
-                                    <div class="account-email">${account.email}</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="status-badge ${statusBadge} me-3">${statusText}</span>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" 
-                                           id="monitor-${account.id}" ${account.is_active ? 'checked' : ''}
-                                           onchange="toggleEmailAccount(${account.id}, this.checked)"
-                                           title="${account.is_active ? 'Click to disable monitoring' : 'Click to enable monitoring'}">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="account-meta">
-                                <i class="bi bi-clock me-1"></i>Last checked: ${lastChecked}
-                                ${account.last_error ? `<br><i class="bi bi-exclamation-triangle text-warning me-1"></i><small class="text-warning">${account.last_error}</small>` : ''}
-                            </div>
-                            <div class="account-actions">
-                                <button class="btn btn-sm btn-outline-light" onclick="editEmailAccount(${account.id})" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteEmailAccount(${account.id})" title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function getProviderIcon(host) {
-            if (host.includes('gmail')) return { class: 'gmail', icon: 'bi-google' };
-            if (host.includes('outlook') || host.includes('office365')) return { class: 'outlook', icon: 'bi-microsoft' };
-            if (host.includes('yahoo')) return { class: 'yahoo', icon: 'bi-envelope' };
-            return { class: 'custom', icon: 'bi-envelope-at' };
-        }
-        
-        function showAddEmailModal() {
-            document.getElementById('emailModalTitle').textContent = 'Add Email Account';
-            document.getElementById('editAccountId').value = '';
-            document.getElementById('accountLabel').value = '';
-            document.getElementById('accountEmail').value = '';
-            document.getElementById('accountProvider').value = 'gmail';
-            document.getElementById('accountHost').value = 'imap.gmail.com';
-            document.getElementById('accountPort').value = '993';
-            document.getElementById('accountPassword').value = '';
-            document.getElementById('customHostGroup').style.display = 'none';
-            document.getElementById('emailTestStatus').style.display = 'none';
-            document.getElementById('emailFormAlert').style.display = 'none';
-            
-            if (!emailAccountModal) {
-                emailAccountModal = new bootstrap.Modal(document.getElementById('emailAccountModal'));
-            }
-            emailAccountModal.show();
-        }
-        
-        function editEmailAccount(accountId) {
-            const account = emailAccounts.find(a => a.id === accountId);
-            if (!account) return;
-            
-            document.getElementById('emailModalTitle').textContent = 'Edit Email Account';
-            document.getElementById('editAccountId').value = accountId;
-            document.getElementById('accountLabel').value = account.label || '';
-            document.getElementById('accountEmail').value = account.email;
-            document.getElementById('accountHost').value = account.host;
-            document.getElementById('accountPort').value = account.port;
-            document.getElementById('accountPassword').value = '';
-            document.getElementById('emailTestStatus').style.display = 'none';
-            document.getElementById('emailFormAlert').style.display = 'none';
-            
-            // Determine provider
-            if (account.host.includes('gmail')) {
-                document.getElementById('accountProvider').value = 'gmail';
-                document.getElementById('customHostGroup').style.display = 'none';
-            } else if (account.host.includes('outlook') || account.host.includes('office365')) {
-                document.getElementById('accountProvider').value = 'outlook';
-                document.getElementById('customHostGroup').style.display = 'none';
-            } else if (account.host.includes('yahoo')) {
-                document.getElementById('accountProvider').value = 'yahoo';
-                document.getElementById('customHostGroup').style.display = 'none';
-            } else {
-                document.getElementById('accountProvider').value = 'custom';
-                document.getElementById('customHostGroup').style.display = 'flex';
-            }
-            
-            if (!emailAccountModal) {
-                emailAccountModal = new bootstrap.Modal(document.getElementById('emailAccountModal'));
-            }
-            emailAccountModal.show();
-        }
-        
-        function updateAccountHost() {
-            const provider = document.getElementById('accountProvider').value;
-            const customGroup = document.getElementById('customHostGroup');
-            
-            const hosts = {
-                'gmail': { host: 'imap.gmail.com', port: 993 },
-                'outlook': { host: 'outlook.office365.com', port: 993 },
-                'yahoo': { host: 'imap.mail.yahoo.com', port: 993 },
-                'custom': { host: '', port: 993 }
-            };
-            
-            document.getElementById('accountHost').value = hosts[provider].host;
-            document.getElementById('accountPort').value = hosts[provider].port;
-            customGroup.style.display = provider === 'custom' ? 'flex' : 'none';
-        }
-        
-        async function testNewEmailAccount() {
-            const statusEl = document.getElementById('emailTestStatus');
-            const accountId = document.getElementById('editAccountId').value;
-            const isEdit = !!accountId;
-            
-            statusEl.style.display = 'block';
-            statusEl.className = 'email-test-status';
-            statusEl.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Testing connection...';
-            
-            const accountData = {
-                email: document.getElementById('accountEmail').value,
-                host: document.getElementById('accountHost').value,
-                port: parseInt(document.getElementById('accountPort').value),
-                password: document.getElementById('accountPassword').value
-            };
-            
-            try {
-                // Use different endpoint for existing vs new accounts
-                const url = isEdit 
-                    ? `/api/email-accounts/${accountId}/test`
-                    : '/api/email-accounts/test-new';
-                    
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(accountData)
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    statusEl.classList.add('success');
-                    statusEl.innerHTML = '<i class="bi bi-check-circle me-2"></i>Connection successful!';
-                } else {
-                    statusEl.classList.add('error');
-                    let errorMsg = data.error;
-                    const provider = document.getElementById('accountProvider').value;
-                    if (errorMsg.includes('AUTHENTICATIONFAILED') || errorMsg.includes('Invalid credentials')) {
-                        if (provider === 'outlook') {
-                            errorMsg = 'Authentication failed. For Outlook, you need an App Password. <a href="https://account.microsoft.com/security" target="_blank">Go to Microsoft Security Settings</a>';
-                        } else if (provider === 'yahoo') {
-                            errorMsg = 'Authentication failed. For Yahoo, you need an App Password. <a href="https://login.yahoo.com/myaccount/security" target="_blank">Go to Yahoo Security Settings</a>';
-                        } else {
-                            errorMsg = 'Authentication failed. You need an App Password. <a href="https://myaccount.google.com/apppasswords" target="_blank">For Gmail: Create App Password</a>';
-                        }
-                    }
-                    statusEl.innerHTML = `<i class="bi bi-x-circle me-2"></i>${errorMsg}`;
-                }
-            } catch (error) {
-                statusEl.classList.add('error');
-                statusEl.innerHTML = '<i class="bi bi-x-circle me-2"></i>Connection failed';
-            }
-            
-            // Reload accounts to update verification status
-            loadEmailAccounts();
-        }
-        
-        async function saveEmailAccount() {
-            const accountId = document.getElementById('editAccountId').value;
-            const isEdit = !!accountId;
-            
-            const email = document.getElementById('accountEmail').value;
-            const password = document.getElementById('accountPassword').value;
-            
-            if (!email) {
-                showFormAlert('emailFormAlert', 'Email address is required', 'danger');
-                return;
-            }
-            
-            if (!isEdit && !password) {
-                showFormAlert('emailFormAlert', 'Password is required for new accounts', 'danger');
-                return;
-            }
-            
-            const payload = {
-                email: email,
-                host: document.getElementById('accountHost').value,
-                port: parseInt(document.getElementById('accountPort').value),
-                label: document.getElementById('accountLabel').value || email
-            };
-            
-            if (password) {
-                payload.password = password;
-            }
-            
-            try {
-                const url = isEdit ? `/api/email-accounts/${accountId}` : '/api/email-accounts';
-                const method = isEdit ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    emailAccountModal.hide();
-                    loadEmailAccounts();
-                    showAlert('emailAlert', isEdit ? 'Account updated!' : 'Account added!', 'success');
-                } else {
-                    showFormAlert('emailFormAlert', data.error, 'danger');
-                }
-            } catch (error) {
-                showFormAlert('emailFormAlert', 'Error saving account', 'danger');
-            }
-        }
-        
-        async function toggleEmailAccount(accountId, isActive) {
-            try {
-                const response = await fetch(`/api/email-accounts/${accountId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ is_active: isActive })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    loadEmailAccounts();
-                }
-            } catch (error) {
-                console.error('Error toggling account:', error);
-            }
-        }
-        
-        async function deleteEmailAccount(accountId) {
-            if (!confirm('Are you sure you want to delete this email account?')) return;
-            
-            try {
-                const response = await fetch(`/api/email-accounts/${accountId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    loadEmailAccounts();
-                    showAlert('emailAlert', 'Account deleted', 'success');
-                }
-            } catch (error) {
-                console.error('Error deleting account:', error);
-            }
         }
         
         function showFormAlert(elementId, message, type) {
@@ -1847,7 +1325,7 @@
             let message = `Are you sure you want to downgrade to ${planName}?`;
             message += '\n\nWarning: You may lose access to some features.';
             if (plan === 'free') {
-                message += '\n• Email monitoring will be disabled\n• API access will be removed';
+                message += '\n• Dark web monitoring will be disabled\n• API access will be removed';
             }
             
             if (!confirm(message)) return;
@@ -2183,6 +1661,53 @@
                 btn.disabled = false;
             }
         }
+    </script>
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>

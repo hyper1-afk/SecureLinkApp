@@ -3,17 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>Password Breach Checker - SecureLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        .sl-bg-gradient {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #16213e 50%, #0f3460 100%);
         }
         .card-glass {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
         }
         .breach-danger {
             background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
@@ -28,136 +35,275 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
             50% { box-shadow: 0 0 0 20px rgba(255, 68, 68, 0); }
         }
+        .breach-form-control {
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+        .breach-form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--glow-primary);
+        }
+        .breach-form-control.accent-focus:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--glow-accent);
+        }
+        .breach-form-control::placeholder {
+            color: var(--text-muted);
+        }
+        .btn-breach-primary {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-breach-primary:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
+        .btn-breach-accent {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent-color), #ec4899);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-breach-accent:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+        }
+        .password-toggle:hover {
+            color: var(--text-primary);
+        }
+        .info-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(14, 165, 233, 0.1);
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }
+        .info-box p {
+            font-size: 0.875rem;
+            color: #7dd3fc;
+            margin: 0;
+        }
+        .pro-badge {
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, var(--accent-color), #ec4899);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .tip-card {
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+        }
+        .tip-card p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0;
+        }
+        .error-box {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger-color);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+        .upgrade-box {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+        .breach-list-item {
+            padding: 0.75rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+        }
+        .breach-list-item + .breach-list-item {
+            margin-top: 0.5rem;
+        }
+        .breach-list-scroll {
+            max-height: 12rem;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <!-- Navigation -->
-    <nav class="p-4 border-b border-gray-700">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <a href="/home" class="text-2xl font-bold">
-                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
             </a>
-            <div class="flex items-center space-x-4">
-                <a href="/home" class="hover:text-blue-400 transition">Home</a>
-                <a href="/attack-surface" class="hover:text-blue-400 transition">Attack Surface</a>
-                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
-                <a href="/community" class="hover:text-blue-400 transition">Community</a>
-                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/dark-web-monitor" class="sl-nav-link">Dark Web</a>
+                <a href="/community" class="sl-nav-link">Community</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-6">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <div class="inline-block p-4 rounded-full bg-red-500 bg-opacity-20 mb-4">
-                <i class="fas fa-user-secret text-5xl text-red-400"></i>
-            </div>
-            <h1 class="text-4xl font-bold mb-4">Password Breach Checker</h1>
-            <p class="text-gray-400 text-lg max-w-2xl mx-auto">
-                Check if your password has been exposed in known data breaches. 
-                We use secure k-Anonymity to check without ever sending your actual password.
-            </p>
-        </div>
-
-        <!-- Password Check Card -->
-        <div class="card-glass rounded-2xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6">
-                <i class="fas fa-key text-yellow-400 mr-2"></i>Check Your Password
-            </h2>
-            
-            <div class="space-y-4">
-                <div class="relative">
-                    <input type="password" id="passwordInput" 
-                           class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
-                           placeholder="Enter password to check...">
-                    <button onclick="togglePassword()" 
-                            class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                        <i class="fas fa-eye" id="toggleIcon"></i>
-                    </button>
+    <div class="sl-page sl-bg-gradient">
+        <main class="container" style="max-width: 56rem;">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <div class="d-inline-block p-3 rounded-circle mb-3" style="background: rgba(239, 68, 68, 0.15);">
+                    <i class="bi bi-shield-exclamation" style="font-size: 3rem; color: #fca5a5;"></i>
                 </div>
-                
-                <button onclick="checkPassword()" 
-                        class="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
-                    <i class="fas fa-search mr-2"></i>Check for Breaches
-                </button>
-            </div>
-
-            <!-- Result Area -->
-            <div id="passwordResult" class="mt-6 hidden">
-                <!-- Results will be inserted here -->
-            </div>
-
-            <!-- Security Note -->
-            <div class="mt-6 p-4 bg-blue-500 bg-opacity-10 rounded-lg border border-blue-500 border-opacity-30">
-                <p class="text-sm text-blue-300">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <strong>Your privacy is protected:</strong> We never send your actual password. 
-                    We use a technique called k-Anonymity where only the first 5 characters of a hash are sent 
-                    to check against the database.
+                <h1 class="fw-bold mb-3" style="font-size: 2.25rem;">Password Breach Checker</h1>
+                <p style="color: var(--text-muted); font-size: 1.125rem; max-width: 42rem; margin: 0 auto;">
+                    Check if your password has been exposed in known data breaches.
+                    We use secure k-Anonymity to check without ever sending your actual password.
                 </p>
             </div>
-        </div>
 
-        <!-- Email Check Card (Pro Feature) -->
-        <div class="card-glass rounded-2xl p-8 mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-semibold">
-                    <i class="fas fa-envelope text-purple-400 mr-2"></i>Email Breach Check
+            <!-- Password Check Card -->
+            <div class="card-glass">
+                <h2 class="fw-semibold mb-4" style="font-size: 1.5rem;">
+                    <i class="bi bi-key-fill me-2" style="color: var(--warning-color);"></i>Check Your Password
                 </h2>
-                <span class="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-sm font-semibold">
-                    PRO
-                </span>
-            </div>
-            
-            <div class="space-y-4">
-                <input type="email" id="emailInput" 
-                       class="w-full px-4 py-4 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
-                       placeholder="Enter email to check...">
-                
-                <button onclick="checkEmail()" 
-                        class="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-semibold text-lg hover:opacity-90 transition">
-                    <i class="fas fa-search mr-2"></i>Check Email Breaches
+
+                <div class="mb-3 password-wrapper">
+                    <input type="password" id="passwordInput"
+                           class="breach-form-control"
+                           placeholder="Enter password to check...">
+                    <button onclick="togglePassword()" class="password-toggle">
+                        <i class="bi bi-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+
+                <button onclick="checkPassword()" class="btn-breach-primary">
+                    <i class="bi bi-search me-2"></i>Check for Breaches
                 </button>
+
+                <!-- Result Area -->
+                <div id="passwordResult" class="mt-4 hidden">
+                    <!-- Results will be inserted here -->
+                </div>
+
+                <!-- Security Note -->
+                <div class="info-box">
+                    <p>
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Your privacy is protected:</strong> We never send your actual password.
+                        We use a technique called k-Anonymity where only the first 5 characters of a hash are sent
+                        to check against the database.
+                    </p>
+                </div>
             </div>
 
-            <!-- Email Result Area -->
-            <div id="emailResult" class="mt-6 hidden">
-                <!-- Results will be inserted here -->
-            </div>
-        </div>
+            <!-- Email Check Card (Pro Feature) -->
+            <div class="card-glass">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h2 class="fw-semibold mb-0" style="font-size: 1.5rem;">
+                        <i class="bi bi-envelope-fill me-2" style="color: var(--accent-color);"></i>Email Breach Check
+                    </h2>
+                    <span class="pro-badge">PRO</span>
+                </div>
 
-        <!-- Tips Section -->
-        <div class="card-glass rounded-2xl p-8">
-            <h2 class="text-2xl font-semibold mb-6">
-                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Password Security Tips
-            </h2>
-            
-            <div class="grid md:grid-cols-2 gap-4">
-                <div class="p-4 bg-gray-800 rounded-lg">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                    <strong>Use a password manager</strong>
-                    <p class="text-gray-400 text-sm mt-1">Let it generate and store unique passwords for each site.</p>
+                <div class="mb-3">
+                    <input type="email" id="emailInput"
+                           class="breach-form-control accent-focus"
+                           placeholder="Enter email to check...">
                 </div>
-                <div class="p-4 bg-gray-800 rounded-lg">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                    <strong>Enable 2FA everywhere</strong>
-                    <p class="text-gray-400 text-sm mt-1">Two-factor authentication adds an extra layer of security.</p>
-                </div>
-                <div class="p-4 bg-gray-800 rounded-lg">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                    <strong>Never reuse passwords</strong>
-                    <p class="text-gray-400 text-sm mt-1">One breach can compromise all your accounts.</p>
-                </div>
-                <div class="p-4 bg-gray-800 rounded-lg">
-                    <i class="fas fa-check-circle text-green-400 mr-2"></i>
-                    <strong>Use passphrases</strong>
-                    <p class="text-gray-400 text-sm mt-1">Long phrases are easier to remember and harder to crack.</p>
+
+                <button onclick="checkEmail()" class="btn-breach-accent">
+                    <i class="bi bi-search me-2"></i>Check Email Breaches
+                </button>
+
+                <!-- Email Result Area -->
+                <div id="emailResult" class="mt-4 hidden">
+                    <!-- Results will be inserted here -->
                 </div>
             </div>
-        </div>
-    </main>
 
+            <!-- Tips Section -->
+            <div class="card-glass">
+                <h2 class="fw-semibold mb-4" style="font-size: 1.5rem;">
+                    <i class="bi bi-lightbulb-fill me-2" style="color: var(--warning-color);"></i>Password Security Tips
+                </h2>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="tip-card">
+                            <i class="bi bi-check-circle-fill me-2" style="color: var(--success-color);"></i>
+                            <strong>Use a password manager</strong>
+                            <p>Let it generate and store unique passwords for each site.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="tip-card">
+                            <i class="bi bi-check-circle-fill me-2" style="color: var(--success-color);"></i>
+                            <strong>Enable 2FA everywhere</strong>
+                            <p>Two-factor authentication adds an extra layer of security.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="tip-card">
+                            <i class="bi bi-check-circle-fill me-2" style="color: var(--success-color);"></i>
+                            <strong>Never reuse passwords</strong>
+                            <p>One breach can compromise all your accounts.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="tip-card">
+                            <i class="bi bi-check-circle-fill me-2" style="color: var(--success-color);"></i>
+                            <strong>Use passphrases</strong>
+                            <p>Long phrases are easier to remember and harder to crack.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const token = localStorage.getItem('auth_token');
 
@@ -186,12 +332,12 @@
             const icon = document.getElementById('toggleIcon');
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
             } else {
                 input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
             }
         }
 
@@ -203,7 +349,7 @@
             }
 
             const resultDiv = document.getElementById('passwordResult');
-            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-blue-400"></i><p class="mt-2">Checking securely...</p></div>';
+            resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--primary-color);" role="status"></span><p class="mt-2">Checking securely...</p></div>';
             resultDiv.classList.remove('hidden');
 
             try {
@@ -217,32 +363,32 @@
 
                 if (data.breached) {
                     resultDiv.innerHTML = `
-                        <div class="breach-danger rounded-lg p-6 pulse-danger">
-                            <div class="flex items-center">
-                                <i class="fas fa-exclamation-triangle text-4xl mr-4"></i>
+                        <div class="breach-danger rounded-3 p-4 pulse-danger">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
-                                    <h3 class="text-xl font-bold">Password Compromised!</h3>
-                                    <p class="text-lg">Found in <strong>${data.count.toLocaleString()}</strong> data breaches</p>
+                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Password Compromised!</h3>
+                                    <p class="mb-0" style="font-size:1.1rem;">Found in <strong>${data.count.toLocaleString()}</strong> data breaches</p>
                                 </div>
                             </div>
-                            <p class="mt-4">
-                                <i class="fas fa-arrow-right mr-2"></i>
+                            <p class="mt-3 mb-0">
+                                <i class="bi bi-arrow-right me-2"></i>
                                 You should change this password immediately on all sites where you use it.
                             </p>
                         </div>
                     `;
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="breach-safe rounded-lg p-6">
-                            <div class="flex items-center">
-                                <i class="fas fa-check-circle text-4xl mr-4"></i>
+                        <div class="breach-safe rounded-3 p-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
-                                    <h3 class="text-xl font-bold">Password Not Found</h3>
-                                    <p>This password hasn't appeared in any known data breaches.</p>
+                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Password Not Found</h3>
+                                    <p class="mb-0">This password hasn't appeared in any known data breaches.</p>
                                 </div>
                             </div>
-                            <p class="mt-4 text-sm opacity-80">
-                                <i class="fas fa-info-circle mr-2"></i>
+                            <p class="mt-3 mb-0" style="font-size:0.875rem;opacity:0.8;">
+                                <i class="bi bi-info-circle me-2"></i>
                                 This doesn't guarantee it's a strong password - just that it hasn't been leaked yet.
                             </p>
                         </div>
@@ -250,8 +396,8 @@
                 }
             } catch (error) {
                 resultDiv.innerHTML = `
-                    <div class="bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-4">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    <div class="error-box">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
                         Error checking password. Please try again.
                     </div>
                 `;
@@ -272,7 +418,7 @@
             }
 
             const resultDiv = document.getElementById('emailResult');
-            resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-purple-400"></i><p class="mt-2">Checking breaches...</p></div>';
+            resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--accent-color);" role="status"></span><p class="mt-2">Checking breaches...</p></div>';
             resultDiv.classList.remove('hidden');
 
             try {
@@ -289,10 +435,10 @@
 
                 if (response.status === 403) {
                     resultDiv.innerHTML = `
-                        <div class="bg-purple-500 bg-opacity-20 border border-purple-500 rounded-lg p-4">
-                            <i class="fas fa-crown mr-2"></i>
-                            This feature requires a Pro subscription. 
-                            <a href="/profile" class="underline">Upgrade now</a>
+                        <div class="upgrade-box">
+                            <i class="bi bi-gem me-2"></i>
+                            This feature requires a Pro subscription.
+                            <a href="/profile" style="color:var(--accent-light);text-decoration:underline;">Upgrade now</a>
                         </div>
                     `;
                     return;
@@ -300,34 +446,34 @@
 
                 if (data.breaches && data.breaches.length > 0) {
                     let breachList = data.breaches.map(b => `
-                        <div class="p-3 bg-gray-800 rounded-lg">
+                        <div class="breach-list-item">
                             <strong>${b.Name}</strong>
-                            <span class="text-gray-400 text-sm ml-2">${b.BreachDate || 'Unknown date'}</span>
+                            <span style="color:var(--text-muted);font-size:0.875rem;" class="ms-2">${b.BreachDate || 'Unknown date'}</span>
                         </div>
                     `).join('');
 
                     resultDiv.innerHTML = `
-                        <div class="breach-danger rounded-lg p-6">
-                            <div class="flex items-center mb-4">
-                                <i class="fas fa-exclamation-triangle text-4xl mr-4"></i>
+                        <div class="breach-danger rounded-3 p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
-                                    <h3 class="text-xl font-bold">Email Found in ${data.breaches.length} Breach${data.breaches.length > 1 ? 'es' : ''}</h3>
-                                    <p>Your email has been exposed in data breaches.</p>
+                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Email Found in ${data.breaches.length} Breach${data.breaches.length > 1 ? 'es' : ''}</h3>
+                                    <p class="mb-0">Your email has been exposed in data breaches.</p>
                                 </div>
                             </div>
-                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                            <div class="breach-list-scroll">
                                 ${breachList}
                             </div>
                         </div>
                     `;
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="breach-safe rounded-lg p-6">
-                            <div class="flex items-center">
-                                <i class="fas fa-check-circle text-4xl mr-4"></i>
+                        <div class="breach-safe rounded-3 p-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
-                                    <h3 class="text-xl font-bold">No Breaches Found</h3>
-                                    <p>This email hasn't appeared in any known data breaches.</p>
+                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">No Breaches Found</h3>
+                                    <p class="mb-0">This email hasn't appeared in any known data breaches.</p>
                                 </div>
                             </div>
                         </div>
@@ -335,13 +481,60 @@
                 }
             } catch (error) {
                 resultDiv.innerHTML = `
-                    <div class="bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-4">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
+                    <div class="error-box">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
                         Error checking email. Please try again.
                     </div>
                 `;
             }
         }
+    </script>
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>

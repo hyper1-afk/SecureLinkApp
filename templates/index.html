@@ -8,7 +8,8 @@
     <title>SecureLink</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
         /* Dark Reader compatibility - site is already dark themed */
         html[data-darkreader-mode] body,
@@ -40,10 +41,10 @@
             --bg-dark: #0f172a;
             --bg-card: #1e293b;
             --bg-card-hover: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.25);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(148, 163, 184, 0.12);
         }
         
         * {
@@ -1420,6 +1421,9 @@
     </style>
 </head>
 <body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
@@ -1434,7 +1438,7 @@
             <div class="navbar-nav ms-auto align-items-center gap-3" id="mobileNav">
                 <span class="email-status nav-link" id="emailStatus">
                     <span class="status-dot disconnected"></span>
-                    <span>Email: Disconnected</span>
+                    <span>Dark Web: Disconnected</span>
                 </span>
                 
                 <!-- Features Button -->
@@ -1445,6 +1449,17 @@
                     <div class="user-info">
                         <span class="user-name">Features</span>
                         <span class="user-role">Explore Tools</span>
+                    </div>
+                </a>
+                
+                <!-- Dark Web Monitor Button -->
+                <a href="/dark-web-monitor" class="btn btn-link text-decoration-none user-badge">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">Dark Web</span>
+                        <span class="user-role">Monitor Breaches</span>
                     </div>
                 </a>
                 
@@ -1670,7 +1685,7 @@
                     </li>
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#emailTab">
-                            <i class="bi bi-envelope me-2"></i>Email Monitor
+                            <i class="bi bi-shield-exclamation me-2"></i>Dark Web Monitor
                         </button>
                     </li>
                 </ul>
@@ -1729,14 +1744,14 @@
                         </div>
                     </div>
 
-                    <!-- Email Tab -->
+                    <!-- Dark Web Monitor Tab -->
                     <div class="tab-pane fade" id="emailTab">
                         <div class="card p-4">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="mb-0">Email Monitoring</h5>
-                                <button class="btn btn-outline-primary" id="checkEmailsBtn">
-                                    <i class="bi bi-envelope-open me-2"></i>Check Emails Now
-                                </button>
+                                <h5 class="mb-0">Dark Web Monitoring</h5>
+                                <a href="/dark-web-monitor" class="btn btn-outline-primary" id="checkEmailsBtn">
+                                    <i class="bi bi-shield-exclamation me-2"></i>Open Dark Web Monitor
+                                </a>
                             </div>
                             
                             <!-- Monitoring Active Info -->
@@ -1744,10 +1759,10 @@
                                 <div class="alert alert-success">
                                     <div class="d-flex align-items-center">
                                         <div class="spinner-grow spinner-grow-sm text-success me-2" role="status"></div>
-                                        <span><strong>Automatic Monitoring Active</strong></span>
+                                        <span><strong>Dark Web Monitoring Active</strong></span>
                                     </div>
-                                    <p class="mb-2 mt-2"><span id="connectedAccountsText">Email accounts connected</span> and being monitored for suspicious links.</p>
-                                    <a href="/profile#email" class="alert-link">Manage accounts in Profile Settings</a>
+                                    <p class="mb-2 mt-2"><span id="connectedAccountsText">Dark web monitoring is active</span> and scanning for exposed credentials and data breaches.</p>
+                                    <a href="/dark-web-monitor" class="alert-link">Manage monitoring on the Dark Web Monitor page</a>
                                 </div>
                                 <div id="connectedAccountsList" class="d-flex flex-wrap gap-2 mb-3">
                                     <!-- Filled by JS -->
@@ -1757,21 +1772,20 @@
                             <!-- No Accounts Warning -->
                             <div id="noEmailAccountsWarning" class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>No email accounts connected.</strong><br>
-                                <a href="/profile#email" class="alert-link">Go to Profile > Email Settings</a> to add your email accounts.
-                                Once connected, emails will be automatically monitored for suspicious links.
+                                <strong>Dark web monitoring not configured.</strong><br>
+                                <a href="/dark-web-monitor" class="alert-link">Go to Dark Web Monitor</a> to set up monitoring for your email addresses and credentials.
                             </div>
                             
                             <!-- Pro Required Warning -->
                             <div id="proRequiredWarning" class="alert alert-info" style="display: none;">
                                 <i class="bi bi-info-circle me-2"></i>
-                                Email monitoring requires a <strong>Pro</strong> subscription.
-                                <a href="/profile#subscription" class="alert-link">Upgrade now</a> to automatically monitor your emails for threats.
+                                Dark web monitoring requires a <strong>Pro</strong> subscription.
+                                <a href="/profile#subscription" class="alert-link">Upgrade now</a> to monitor the dark web for your exposed data.
                             </div>
                             
-                            <h6 class="mt-4 mb-3">Recent Email Links</h6>
+                            <h6 class="mt-4 mb-3">Recent Dark Web Alerts</h6>
                             <div id="emailLinksList">
-                                <p class="text-secondary">No email links found yet. Links from monitored emails will appear here.</p>
+                                <p class="text-secondary">No dark web alerts yet. Alerts will appear here when monitoring detects exposed data.</p>
                             </div>
                         </div>
                     </div>
@@ -2019,24 +2033,24 @@
                     </div>
                 </div>
                 
-                <!-- Slide 3: Email Monitoring -->
+                <!-- Slide 3: Dark Web Monitoring -->
                 <div class="tutorial-slide" data-slide="3">
-                    <h3><i class="bi bi-envelope-check"></i> Email Link Monitoring</h3>
-                    <p>Enable automatic scanning of links in your emails for extra protection:</p>
+                    <h3><i class="bi bi-shield-exclamation"></i> Dark Web Monitoring</h3>
+                    <p>Monitor the dark web for your exposed personal information:</p>
                     
                     <div class="tutorial-feature">
-                        <i class="bi bi-envelope-paper"></i>
+                        <i class="bi bi-search"></i>
                         <div>
-                            <h4>Connect Your Email</h4>
-                            <p>Go to your Profile page and connect your Gmail, Outlook, or Yahoo account using an app password.</p>
+                            <h4>Set Up Monitoring</h4>
+                            <p>Go to the Dark Web Monitor page and add your email addresses and other information to watch for breaches.</p>
                         </div>
                     </div>
                     
                     <div class="tutorial-feature">
-                        <i class="bi bi-robot"></i>
+                        <i class="bi bi-bell"></i>
                         <div>
-                            <h4>Automatic Scanning</h4>
-                            <p>SecureLink will automatically check links in new emails and alert you to potential threats.</p>
+                            <h4>Breach Alerts</h4>
+                            <p>SecureLink will alert you when your data is found in dark web leaks or data breaches.</p>
                         </div>
                     </div>
                     
@@ -2044,7 +2058,7 @@
                         <i class="bi bi-file-earmark-text"></i>
                         <div>
                             <h4>Weekly Reports</h4>
-                            <p>Receive weekly summaries of scanned links and security insights.</p>
+                            <p>Receive weekly summaries of dark web findings and security insights.</p>
                         </div>
                     </div>
                 </div>
@@ -2104,7 +2118,7 @@
                         <i class="bi bi-person-badge"></i>
                         <div>
                             <h4>Complete Your Profile</h4>
-                            <p>Visit your profile page to set up email monitoring and customize your settings.</p>
+                            <p>Visit the Dark Web Monitor page to set up monitoring and customize your settings.</p>
                         </div>
                     </div>
                 </div>
@@ -2967,156 +2981,81 @@
             }
         }
 
-        // Check emails button
-        document.getElementById('checkEmailsBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('checkEmailsBtn');
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
-            btn.disabled = true;
+        // Dark web monitor - checkEmailsBtn is now a link, no click handler needed
 
-            try {
-                const response = await fetch('/api/check-emails', { 
-                    method: 'POST',
-                    headers: getAuthHeaders()
-                });
-                const data = await response.json();
-                
-                if (data.error) {
-                    let errorMsg = data.error;
-                    if (errorMsg.includes('AUTHENTICATIONFAILED') || errorMsg.includes('Invalid credentials')) {
-                        errorMsg = 'Email authentication failed. For Gmail, make sure you\'re using an App Password (not your regular password). Go to Profile > Email Settings to update your credentials.';
-                    }
-                    alert('Error: ' + errorMsg);
-                } else {
-                    displayEmailLinks(data.results || []);
-                    loadRecent();
-                    loadHistory();
-                    loadStats();
-                    
-                    // Show summary
-                    if (data.count > 0) {
-                        alert(`Found ${data.count} link(s) in your emails!`);
-                    } else if (data.accounts_checked > 0) {
-                        alert(`Checked ${data.accounts_checked} email account(s). No links found in recent emails.`);
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error checking emails. Make sure your email credentials are configured correctly.');
-            } finally {
-                btn.innerHTML = '<i class="bi bi-envelope-open me-2"></i>Check Emails Now';
-                btn.disabled = false;
-            }
-        });
-
-        // Display email links
+        // Display dark web alerts
         function displayEmailLinks(results) {
             const container = document.getElementById('emailLinksList');
             
             if (results.length === 0) {
-                container.innerHTML = '<p class="text-secondary">No links found in recent emails.</p>';
+                container.innerHTML = '<p class="text-secondary">No dark web alerts yet. Alerts will appear here when monitoring detects exposed data.</p>';
                 return;
             }
 
             container.innerHTML = results.map(item => {
-                const riskClass = item.verification.is_safe ? 'success' : 'danger';
-                const accountLabel = item.account_label || item.email_account || 'Unknown';
+                const riskClass = item.risk_level === 'high' ? 'danger' : (item.risk_level === 'medium' ? 'warning' : 'success');
                 return `
                     <div class="history-item">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="truncate" style="max-width: 60%;">
-                                <i class="bi bi-link-45deg me-2"></i>${item.link.url}
+                                <i class="bi bi-shield-exclamation me-2"></i>${item.description || 'Dark web exposure detected'}
                             </span>
-                            <span class="risk-badge risk-${item.verification.risk_level}">${item.verification.risk_level}</span>
+                            <span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span>
                         </div>
                         <small class="text-secondary">
-                            <span class="badge bg-primary me-2">${accountLabel}</span>
-                            From: ${item.link.email_from} | Subject: ${item.link.email_subject}
+                            ${item.source || 'Dark Web'} | ${item.date || ''}
                         </small>
                     </div>
                 `;
             }).join('');
         }
 
-        // Update email status indicator
+        // Update dark web monitoring status indicator
         async function updateEmailStatus() {
             const status = document.getElementById('emailStatus');
             const token = getAuthToken();
             
-            // UI elements for email tab
+            // UI elements for dark web tab
             const accountsInfo = document.getElementById('emailAccountsInfo');
             const noAccountsWarning = document.getElementById('noEmailAccountsWarning');
             const proRequiredWarning = document.getElementById('proRequiredWarning');
-            const connectedAccountsList = document.getElementById('connectedAccountsList');
             const connectedAccountsText = document.getElementById('connectedAccountsText');
-            const checkEmailsBtn = document.getElementById('checkEmailsBtn');
             
             // If not logged in, show disconnected
             if (!token) {
-                status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not logged in</span>';
+                status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Not logged in</span>';
                 if (accountsInfo) accountsInfo.style.display = 'none';
                 if (noAccountsWarning) noAccountsWarning.style.display = 'block';
                 if (proRequiredWarning) proRequiredWarning.style.display = 'none';
-                if (checkEmailsBtn) checkEmailsBtn.disabled = true;
                 return;
             }
             
             try {
-                const response = await fetch('/api/email-accounts/status', {
+                const validateResponse = await fetch('/api/auth/validate', {
                     headers: getAuthHeaders()
                 });
-                const data = await response.json();
+                const validateData = await validateResponse.json();
                 
-                if (data.connected && data.active_count > 0) {
-                    // User has connected accounts - monitoring is automatic
-                    const accountText = data.active_count === 1 ? '1 account' : `${data.active_count} accounts`;
-                    status.innerHTML = `<span class="status-dot connected"></span><span><i class="bi bi-broadcast me-1"></i>${accountText} monitored</span>`;
-                    
-                    // Update email tab
+                if (validateData.valid && validateData.user.subscription_tier === 'free') {
+                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Pro required</span>';
+                    if (accountsInfo) accountsInfo.style.display = 'none';
+                    if (noAccountsWarning) noAccountsWarning.style.display = 'none';
+                    if (proRequiredWarning) proRequiredWarning.style.display = 'block';
+                } else if (validateData.valid) {
+                    status.innerHTML = '<span class="status-dot connected"></span><span><i class="bi bi-shield-check me-1"></i>Dark Web: Active</span>';
                     if (accountsInfo) accountsInfo.style.display = 'block';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'none';
                     if (proRequiredWarning) proRequiredWarning.style.display = 'none';
-                    if (connectedAccountsText) connectedAccountsText.textContent = `${data.active_count} email account(s)`;
-                    
-                    // Show connected accounts as badges
-                    if (data.accounts && data.accounts.length > 0 && connectedAccountsList) {
-                        connectedAccountsList.innerHTML = data.accounts
-                            .filter(a => a.is_active)
-                            .map(a => `<span class="badge bg-success"><i class="bi bi-broadcast me-1"></i>${a.label || a.email}</span>`)
-                            .join('');
-                    }
-                    
-                    // Enable check button
-                    if (checkEmailsBtn) checkEmailsBtn.disabled = false;
-                    
-                } else if (data.account_count === 0 && data.connected === false) {
-                    // Check if it's a free user (no email monitoring)
-                    const validateResponse = await fetch('/api/auth/validate', {
-                        headers: getAuthHeaders()
-                    });
-                    const validateData = await validateResponse.json();
-                    
-                    if (validateData.valid && validateData.user.subscription_tier === 'free') {
-                        status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Pro required</span>';
-                        if (accountsInfo) accountsInfo.style.display = 'none';
-                        if (noAccountsWarning) noAccountsWarning.style.display = 'none';
-                        if (proRequiredWarning) proRequiredWarning.style.display = 'block';
-                        if (checkEmailsBtn) checkEmailsBtn.disabled = true;
-                    } else {
-                        status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not configured</span>';
-                        if (accountsInfo) accountsInfo.style.display = 'none';
-                        if (noAccountsWarning) noAccountsWarning.style.display = 'block';
-                        if (proRequiredWarning) proRequiredWarning.style.display = 'none';
-                        if (checkEmailsBtn) checkEmailsBtn.disabled = true;
-                    }
+                    if (connectedAccountsText) connectedAccountsText.textContent = 'Dark web monitoring is active';
                 } else {
-                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Not configured</span>';
+                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Not configured</span>';
                     if (accountsInfo) accountsInfo.style.display = 'none';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'block';
                     if (proRequiredWarning) proRequiredWarning.style.display = 'none';
                 }
             } catch (error) {
-                console.error('Error checking email status:', error);
-                status.innerHTML = '<span class="status-dot disconnected"></span><span>Email: Disconnected</span>';
+                console.error('Error checking dark web status:', error);
+                status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Disconnected</span>';
             }
         }
 
@@ -3472,6 +3411,53 @@
                 btn.disabled = false;
             }
         }
+    </script>
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>

@@ -103,6 +103,9 @@ class Config:
     
     # NewsAPI for Security News Feed
     NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')
+    
+    # Have I Been Pwned API Key (for Dark Web Monitoring)
+    HIBP_API_KEY = os.getenv('HIBP_API_KEY', '')
 
 
 class DevelopmentConfig(Config):

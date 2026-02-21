@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Dark Web Monitoring - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: 68px;
+        }
+
+        .dwm-hero {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 2.5rem 0;
+        }
+
+        .dwm-hero h1 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .stat-card .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-card .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .stat-safe { color: var(--success-color); }
+        .stat-warning { color: var(--warning-color); }
+        .stat-danger { color: var(--danger-color); }
+        .stat-info { color: var(--primary-color); }
+
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .section-header h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .asset-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .asset-item:hover {
+            border-color: var(--primary-color);
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .asset-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .asset-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .asset-icon.email { background: rgba(14, 165, 233, 0.15); color: var(--primary-color); }
+        .asset-icon.domain { background: rgba(139, 92, 246, 0.15); color: var(--accent-color); }
+        .asset-icon.username { background: rgba(16, 185, 129, 0.15); color: var(--success-color); }
+        .asset-icon.phone { background: rgba(245, 158, 11, 0.15); color: var(--warning-color); }
+
+        .asset-details h5 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .asset-details .asset-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .asset-stats {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .asset-badge {
+            padding: 0.3rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .risk-safe { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .risk-low { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+        .risk-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .risk-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .risk-critical { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .risk-unknown { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+        .alert-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .alert-item:hover {
+            border-color: var(--accent-color);
+        }
+
+        .alert-item.unread {
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .alert-item.severity-critical {
+            border-left: 3px solid #dc2626;
+        }
+
+        .alert-item.severity-high {
+            border-left: 3px solid #ef4444;
+        }
+
+        .alert-item.severity-medium {
+            border-left: 3px solid #f59e0b;
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .alert-header h5 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+        }
+
+        .alert-body {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .alert-body p { margin-bottom: 0.5rem; }
+
+        .data-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .data-type-tag {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: var(--accent-light);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .data-type-tag.danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .alert-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .add-asset-form {
+            background: rgba(14, 165, 233, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .quick-scan-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(14, 165, 233, 0.08) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .quick-scan-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-scan-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .quick-result {
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+
+        .pro-gate {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .pro-gate .lock-icon {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .spinner-border-sm { width: 1rem; height: 1rem; }
+
+        @media (max-width: 768px) {
+            .dwm-hero { padding: 1.5rem 0; }
+            .dwm-hero h1 { font-size: 1.5rem; }
+            .stat-card .stat-number { font-size: 1.75rem; }
+            .asset-item { flex-direction: column; align-items: flex-start; }
+            .asset-stats { width: 100%; justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <!-- Unified Navbar -->
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/dark-web-monitor" class="sl-nav-link active">Dark Web</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="dwm-hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1><i class="bi bi-shield-exclamation me-2" style="color: var(--accent-color);"></i>Dark Web Monitoring</h1>
+                    <p class="text-secondary mb-0">Monitor your emails, domains, and credentials across dark web databases, breach records, and paste sites.</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <button class="btn btn-primary px-4" onclick="scanAllAssets()" id="scanAllBtn" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border: none;">
+                        <i class="bi bi-radar me-2"></i>Scan All Assets
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content (requires Pro) -->
+    <div id="mainContent" class="container py-4" style="display: none;">
+
+        <!-- Stats Row -->
+        <div class="row g-3 mb-4" id="statsRow">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number stat-info" id="statAssets">0</div>
+                    <div class="stat-label">Monitored Assets</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number stat-danger" id="statBreaches">0</div>
+                    <div class="stat-label">Breaches Found</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number stat-warning" id="statExposed">0</div>
+                    <div class="stat-label">Exposed Records</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number" id="statAlerts" style="color: var(--accent-color);">0</div>
+                    <div class="stat-label">Unread Alerts</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-5">
+                <!-- Monitored Assets -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3><i class="bi bi-eye me-2"></i>Monitored Assets</h3>
+                        <button class="btn btn-sm btn-outline-primary" onclick="toggleAddForm()">
+                            <i class="bi bi-plus-lg me-1"></i>Add
+                        </button>
+                    </div>
+
+                    <!-- Add Asset Form -->
+                    <div class="add-asset-form mb-3" id="addAssetForm" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Asset Type</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="assetType" onchange="updateAssetPlaceholder()">
+                                <option value="email">Email Address</option>
+                                <option value="domain">Domain</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Value</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="assetValue" placeholder="user@example.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">Label (optional)</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="assetLabel" placeholder="e.g., Work Email">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm flex-fill" onclick="addAsset()">
+                                <i class="bi bi-plus-circle me-1"></i>Add Asset
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="toggleAddForm()">Cancel</button>
+                        </div>
+                        <div class="mt-2 small" id="addAssetMsg"></div>
+                    </div>
+
+                    <!-- Asset List -->
+                    <div id="assetList">
+                        <div class="empty-state">
+                            <i class="bi bi-shield-plus d-block"></i>
+                            <p>No assets monitored yet.<br>Add an email or domain to start.</p>
+                        </div>
+                    </div>
+
+                    <div class="text-secondary small mt-2" id="assetCountInfo"></div>
+                </div>
+
+                <!-- Quick Scan -->
+                <div class="quick-scan-card">
+                    <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h3 class="mt-2">Quick Breach Check</h3>
+                    <p>Check any email address against breach databases — no account needed.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Enter email to check..." id="quickScanEmail">
+                        <button class="btn btn-primary" onclick="quickScan()" id="quickScanBtn">
+                            <i class="bi bi-search me-1"></i>Check
+                        </button>
+                    </div>
+                    <div id="quickScanResult" class="quick-result" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Right Column: Alerts -->
+            <div class="col-lg-7">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3><i class="bi bi-bell me-2"></i>Alerts & Findings</h3>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="markAllRead()" id="markAllBtn">
+                                <i class="bi bi-check2-all me-1"></i>Mark All Read
+                            </button>
+                            <select class="form-select form-select-sm bg-dark text-light border-secondary" style="width: auto;" id="alertFilter" onchange="loadAlerts()">
+                                <option value="all">All Alerts</option>
+                                <option value="unread">Unread Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="alertList">
+                        <div class="empty-state">
+                            <i class="bi bi-bell-slash d-block"></i>
+                            <p>No alerts yet.<br>Scan your assets to check for exposures.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pro Gate (shown for free users) -->
+    <div id="proGate" class="container py-5" style="display: none;">
+        <div class="section-card">
+            <div class="pro-gate">
+                <div class="lock-icon"><i class="bi bi-lock-fill"></i></div>
+                <h2 class="mb-3">Dark Web Monitoring</h2>
+                <p class="text-secondary mx-auto" style="max-width: 500px;">
+                    Continuously monitor your emails and domains across dark web databases, breach records, and paste sites. Get alerted instantly when your data appears in new breaches.
+                </p>
+                <a href="/pricing" class="btn btn-lg px-5 mt-3" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border: none; color: white;">
+                    <i class="bi bi-rocket-takeoff me-2"></i>Upgrade to Pro — $14.99/mo
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick scan still available for free users -->
+        <div class="row justify-content-center mt-4">
+            <div class="col-lg-6">
+                <div class="quick-scan-card">
+                    <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h3 class="mt-2">Free Quick Breach Check</h3>
+                    <p>Check any email against breach databases — available to all users.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Enter email to check..." id="quickScanEmailFree">
+                        <button class="btn btn-primary" onclick="quickScanFree()" id="quickScanBtnFree">
+                            <i class="bi bi-search me-1"></i>Check
+                        </button>
+                    </div>
+                    <div id="quickScanResultFree" class="quick-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '';
+        let currentUser = null;
+        let isPro = false;
+
+        // ============== Auth ==============
+        function getAuthHeaders() {
+            const token = localStorage.getItem('auth_token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/validate`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (!data.valid || !data.user) throw new Error('Not authenticated');
+                currentUser = data.user;
+                isPro = ['pro', 'enterprise'].includes(data.user.subscription_tier);
+
+                if (isPro) {
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('proGate').style.display = 'none';
+                    loadAssets();
+                    loadAlerts();
+                } else {
+                    document.getElementById('mainContent').style.display = 'none';
+                    document.getElementById('proGate').style.display = 'block';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+
+        // ============== Assets ==============
+        async function loadAssets() {
+            try {
+                const res = await fetch(`${API_BASE}/api/dark-web/assets`, { headers: getAuthHeaders() });
+                const data = await res.json();
+
+                const assets = data.assets || [];
+                const count = data.count || {};
+
+                document.getElementById('statAssets').textContent = assets.length;
+
+                // Count totals
+                let totalBreaches = 0, totalExposed = 0;
+                assets.forEach(a => { totalBreaches += a.breach_count || 0; });
+                document.getElementById('statBreaches').textContent = totalBreaches;
+
+                // Asset count info
+                const max = count.max;
+                const info = max < 0 ? `${assets.length} assets (unlimited)` : `${assets.length} / ${max} assets`;
+                document.getElementById('assetCountInfo').textContent = info;
+
+                if (assets.length === 0) {
+                    document.getElementById('assetList').innerHTML = `
+                        <div class="empty-state">
+                            <i class="bi bi-shield-plus d-block"></i>
+                            <p>No assets monitored yet.<br>Add an email or domain to start.</p>
+                        </div>`;
+                    return;
+                }
+
+                let html = '';
+                assets.forEach(a => {
+                    const iconClass = a.asset_type === 'email' ? 'bi-envelope-fill' :
+                                     a.asset_type === 'domain' ? 'bi-globe2' :
+                                     a.asset_type === 'username' ? 'bi-person-fill' : 'bi-phone-fill';
+                    const riskClass = `risk-${a.risk_level || 'unknown'}`;
+                    const lastScan = a.last_scanned ? new Date(a.last_scanned).toLocaleDateString() : 'Never';
+
+                    html += `
+                        <div class="asset-item">
+                            <div class="asset-info">
+                                <div class="asset-icon ${a.asset_type}">
+                                    <i class="bi ${iconClass}"></i>
+                                </div>
+                                <div class="asset-details">
+                                    <h5>${escapeHtml(a.label)}</h5>
+                                    <div class="asset-meta">
+                                        ${a.asset_type.charAt(0).toUpperCase() + a.asset_type.slice(1)} &bull; Last scan: ${lastScan}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="asset-stats">
+                                <span class="asset-badge ${riskClass}">${(a.risk_level || 'unknown').toUpperCase()}</span>
+                                ${a.breach_count > 0 ? `<span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i>${a.breach_count} breaches</span>` : ''}
+                                <button class="btn btn-sm btn-outline-primary" onclick="scanAsset(${a.id})" title="Scan now">
+                                    <i class="bi bi-radar"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeAsset(${a.id})" title="Remove">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('assetList').innerHTML = html;
+            } catch (e) {
+                console.error('Error loading assets:', e);
+            }
+        }
+
+        function toggleAddForm() {
+            const form = document.getElementById('addAssetForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('addAssetMsg').innerHTML = '';
+        }
+
+        function updateAssetPlaceholder() {
+            const type = document.getElementById('assetType').value;
+            const input = document.getElementById('assetValue');
+            const placeholders = {
+                email: 'user@example.com',
+                domain: 'example.com'
+            };
+            input.placeholder = placeholders[type] || 'Enter value';
+        }
+
+        async function addAsset() {
+            const type = document.getElementById('assetType').value;
+            const value = document.getElementById('assetValue').value.trim();
+            const label = document.getElementById('assetLabel').value.trim();
+            const msg = document.getElementById('addAssetMsg');
+
+            if (!value) { msg.innerHTML = '<span class="text-danger">Please enter a value</span>'; return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/dark-web/assets`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ asset_type: type, asset_value: value, label: label })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    msg.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Asset added!</span>';
+                    document.getElementById('assetValue').value = '';
+                    document.getElementById('assetLabel').value = '';
+                    loadAssets();
+                    // Auto-scan the new asset
+                    if (data.asset && data.asset.id) {
+                        setTimeout(() => scanAsset(data.asset.id), 500);
+                    }
+                } else {
+                    msg.innerHTML = `<span class="text-danger">${data.error || 'Failed to add'}</span>`;
+                }
+            } catch (e) {
+                msg.innerHTML = '<span class="text-danger">Network error</span>';
+            }
+        }
+
+        async function removeAsset(id) {
+            if (!confirm('Remove this asset from monitoring? All associated alerts will be deleted.')) return;
+
+            try {
+                await fetch(`${API_BASE}/api/dark-web/assets/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                loadAssets();
+                loadAlerts();
+            } catch (e) {
+                console.error('Error removing asset:', e);
+            }
+        }
+
+        // ============== Scanning ==============
+        async function scanAsset(assetId) {
+            const btn = event ? event.target.closest('button') : null;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/dark-web/scan`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ asset_id: assetId })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                } else {
+                    const count = data.results?.[0]?.results?.summary?.total_breaches || 0;
+                    showToast(count > 0 ? `Scan complete: ${count} breach(es) found` : 'Scan complete: No breaches found!', count > 0 ? 'warning' : 'success');
+                    loadAssets();
+                    loadAlerts();
+                }
+            } catch (e) {
+                showToast('Scan failed: ' + e.message, 'danger');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-radar"></i>'; }
+            }
+        }
+
+        async function scanAllAssets() {
+            const btn = document.getElementById('scanAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/dark-web/scan`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                } else {
+                    showToast(`Scan complete: ${data.assets_scanned} asset(s) checked`, 'success');
+                    loadAssets();
+                    loadAlerts();
+                }
+            } catch (e) {
+                showToast('Scan failed: ' + e.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-radar me-2"></i>Scan All Assets';
+            }
+        }
+
+        // ============== Alerts ==============
+        async function loadAlerts() {
+            try {
+                const filter = document.getElementById('alertFilter').value;
+                const unread = filter === 'unread' ? 'true' : 'false';
+                const res = await fetch(`${API_BASE}/api/dark-web/alerts?unread=${unread}&limit=50`, { headers: getAuthHeaders() });
+                const data = await res.json();
+
+                const alerts = data.alerts || [];
+                const counts = data.counts || {};
+
+                document.getElementById('statAlerts').textContent = counts.unread || 0;
+
+                // Update exposed records from alerts
+                let totalExposed = 0;
+                alerts.forEach(a => totalExposed += a.exposed_records || 0);
+                document.getElementById('statExposed').textContent = formatNumber(totalExposed);
+
+                if (alerts.length === 0) {
+                    document.getElementById('alertList').innerHTML = `
+                        <div class="empty-state">
+                            <i class="bi bi-bell-slash d-block"></i>
+                            <p>${filter === 'unread' ? 'No unread alerts.' : 'No alerts yet.<br>Scan your assets to check for exposures.'}</p>
+                        </div>`;
+                    return;
+                }
+
+                let html = '';
+                alerts.forEach(a => {
+                    const severityClass = `severity-${a.severity}`;
+                    const unreadClass = a.is_read ? '' : 'unread';
+                    const resolvedBadge = a.is_resolved ? '<span class="badge bg-success ms-2">Resolved</span>' : '';
+                    const dateStr = a.breach_date ? new Date(a.breach_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : '';
+                    const createdStr = a.created_at ? new Date(a.created_at).toLocaleDateString() : '';
+                    const typeIcon = a.alert_type === 'data_breach' ? 'bi-database-exclamation' :
+                                    a.alert_type === 'paste_exposure' ? 'bi-file-earmark-text' : 'bi-key';
+
+                    // Data types
+                    const dangerTypes = ['Passwords', 'Credit cards', 'Social security numbers', 'Bank account numbers'];
+                    let typesHtml = '';
+                    if (a.exposed_data_types && a.exposed_data_types.length > 0) {
+                        typesHtml = '<div class="data-types">';
+                        a.exposed_data_types.forEach(dt => {
+                            const isDanger = dangerTypes.includes(dt);
+                            typesHtml += `<span class="data-type-tag ${isDanger ? 'danger' : ''}">${escapeHtml(dt)}</span>`;
+                        });
+                        typesHtml += '</div>';
+                    }
+
+                    html += `
+                        <div class="alert-item ${severityClass} ${unreadClass}">
+                            <div class="alert-header">
+                                <h5>
+                                    <i class="bi ${typeIcon} me-2" style="color: var(--${a.severity === 'critical' ? 'danger' : a.severity === 'high' ? 'danger' : 'warning'}-color);"></i>
+                                    ${escapeHtml(a.title)}
+                                    ${resolvedBadge}
+                                </h5>
+                                <span class="asset-badge risk-${a.severity}">${a.severity.toUpperCase()}</span>
+                            </div>
+                            <div class="alert-body">
+                                ${a.description ? `<p>${truncateHtml(a.description, 200)}</p>` : ''}
+                                ${a.exposed_records > 0 ? `<p><strong>${formatNumber(a.exposed_records)}</strong> records exposed${dateStr ? ` (${dateStr})` : ''}</p>` : ''}
+                                ${typesHtml}
+                            </div>
+                            <div class="alert-footer">
+                                <span><i class="bi bi-clock me-1"></i>Found: ${createdStr} &bull; Source: ${escapeHtml(a.source || 'Unknown')}</span>
+                                <div class="d-flex gap-2">
+                                    ${!a.is_read ? `<button class="btn btn-sm btn-outline-primary" onclick="markRead(${a.id})"><i class="bi bi-check2"></i></button>` : ''}
+                                    ${!a.is_resolved ? `<button class="btn btn-sm btn-outline-success" onclick="resolveAlert(${a.id})" title="Mark resolved"><i class="bi bi-check-circle"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('alertList').innerHTML = html;
+            } catch (e) {
+                console.error('Error loading alerts:', e);
+            }
+        }
+
+        async function markRead(alertId) {
+            await fetch(`${API_BASE}/api/dark-web/alerts/${alertId}/read`, { method: 'POST', headers: getAuthHeaders() });
+            loadAlerts();
+        }
+
+        async function markAllRead() {
+            await fetch(`${API_BASE}/api/dark-web/alerts/read-all`, { method: 'POST', headers: getAuthHeaders() });
+            loadAlerts();
+            showToast('All alerts marked as read', 'success');
+        }
+
+        async function resolveAlert(alertId) {
+            await fetch(`${API_BASE}/api/dark-web/alerts/${alertId}/resolve`, { method: 'POST', headers: getAuthHeaders() });
+            loadAlerts();
+            showToast('Alert marked as resolved', 'success');
+        }
+
+        // ============== Quick Scan ==============
+        async function quickScan() {
+            const email = document.getElementById('quickScanEmail').value.trim();
+            if (!email) return;
+            await doQuickScan(email, 'quickScanBtn', 'quickScanResult');
+        }
+
+        async function quickScanFree() {
+            const email = document.getElementById('quickScanEmailFree').value.trim();
+            if (!email) return;
+            await doQuickScan(email, 'quickScanBtnFree', 'quickScanResultFree');
+        }
+
+        async function doQuickScan(email, btnId, resultId) {
+            const btn = document.getElementById(btnId);
+            const resultDiv = document.getElementById(resultId);
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning...';
+            resultDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/dark-web/scan-quick`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<div class="alert alert-danger py-2">${escapeHtml(data.error)}</div>`;
+                } else {
+                    const summary = data.summary || {};
+                    const breaches = data.breaches || [];
+                    const riskClass = `risk-${data.risk_level || 'safe'}`;
+
+                    let html = `
+                        <div class="section-card mt-3 p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Results for ${escapeHtml(email)}</h5>
+                                <span class="asset-badge ${riskClass}">${(data.risk_level || 'safe').toUpperCase()}</span>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-4 text-center">
+                                    <div style="font-size:1.5rem;font-weight:700;" class="${summary.total_breaches > 0 ? 'text-danger' : 'text-success'}">${summary.total_breaches || 0}</div>
+                                    <div class="small text-secondary">Breaches</div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div style="font-size:1.5rem;font-weight:700;" class="text-warning">${summary.total_pastes || 0}</div>
+                                    <div class="small text-secondary">Pastes</div>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div style="font-size:1.5rem;font-weight:700;">${formatNumber(summary.total_records_exposed || 0)}</div>
+                                    <div class="small text-secondary">Records</div>
+                                </div>
+                            </div>`;
+
+                    if (summary.exposed_data_types && summary.exposed_data_types.length > 0) {
+                        html += '<div class="mb-3"><strong class="small">Exposed Data Types:</strong><div class="data-types mt-1">';
+                        const dangerTypes = ['Passwords', 'Credit cards', 'Social security numbers'];
+                        summary.exposed_data_types.forEach(dt => {
+                            html += `<span class="data-type-tag ${dangerTypes.includes(dt) ? 'danger' : ''}">${escapeHtml(dt)}</span>`;
+                        });
+                        html += '</div></div>';
+                    }
+
+                    if (breaches.length > 0) {
+                        html += '<div class="mt-2"><strong class="small">Breaches:</strong>';
+                        breaches.slice(0, 5).forEach(b => {
+                            html += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
+                                <span class="small">${escapeHtml(b.title || b.name)}</span>
+                                <span class="text-secondary small">${b.breach_date ? new Date(b.breach_date).toLocaleDateString('en-US', {year:'numeric',month:'short'}) : ''}</span>
+                            </div>`;
+                        });
+                        if (breaches.length > 5) html += `<p class="text-secondary small mt-2">...and ${breaches.length - 5} more</p>`;
+                        html += '</div>';
+                    }
+
+                    if (!isPro && summary.total_breaches > 0) {
+                        html += `<div class="text-center mt-3 pt-3 border-top border-secondary">
+                            <a href="/pricing" class="btn btn-sm btn-primary">
+                                <i class="bi bi-rocket-takeoff me-1"></i>Upgrade to Pro for continuous monitoring
+                            </a>
+                        </div>`;
+                    }
+
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                }
+                resultDiv.style.display = 'block';
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="alert alert-danger py-2 mt-3">Scan failed: ${e.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search me-1"></i>Check';
+            }
+        }
+
+        // ============== Utilities ==============
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function truncateHtml(html, maxLen) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            const text = tmp.textContent || tmp.innerText;
+            if (text.length <= maxLen) return html;
+            return escapeHtml(text.substring(0, maxLen)) + '...';
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed shadow`;
+            toast.style.cssText = 'top: 80px; right: 20px; z-index: 9999; max-width: 400px; animation: fadeIn 0.3s ease;';
+            toast.innerHTML = `<div class="d-flex align-items-center gap-2">
+                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i>
+                <span>${escapeHtml(message)}</span>
+            </div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+
+        // ============== Init ==============
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
+    </script>
+</body>
+</html>

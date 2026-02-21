@@ -55,12 +55,10 @@ class User(Base):
     stripe_customer_id = Column(String(100), nullable=True)
     stripe_subscription_id = Column(String(100), nullable=True)
     
-    # Email monitoring settings (encrypted)
-    monitored_email = Column(String(255), nullable=True)
-    monitored_email_host = Column(String(255), nullable=True)
-    monitored_email_port = Column(Integer, default=993)
-    monitored_email_password_encrypted = Column(Text, nullable=True)
-    email_monitoring_enabled = Column(Boolean, default=False)
+    # Dark web monitoring
+    dark_web_monitoring_enabled = Column(Boolean, default=False)
+    dark_web_last_scan = Column(DateTime, nullable=True)
+    dark_web_alert_email = Column(Boolean, default=True)  # Send email on new findings
     
     # Notification preferences
     desktop_notifications = Column(Boolean, default=True)
@@ -95,8 +93,8 @@ class User(Base):
             'subscription_expires': self.subscription_expires.isoformat() if self.subscription_expires else None,
             'stripe_customer_id': getattr(self, 'stripe_customer_id', None),
             'stripe_subscription_id': getattr(self, 'stripe_subscription_id', None),
-            'monitored_email': self.monitored_email,
-            'email_monitoring_enabled': self.email_monitoring_enabled,
+            'dark_web_monitoring_enabled': getattr(self, 'dark_web_monitoring_enabled', False),
+            'dark_web_last_scan': self.dark_web_last_scan.isoformat() if getattr(self, 'dark_web_last_scan', None) else None,
             'desktop_notifications': self.desktop_notifications,
             'email_notifications': self.email_notifications,
             'weekly_reports_enabled': getattr(self, 'weekly_reports_enabled', True),
@@ -111,8 +109,8 @@ class User(Base):
         limits = {
             SubscriptionTier.FREE.value: {
                 'daily_scans': 25,
-                'email_monitoring': False,
-                'max_email_accounts': 0,
+                'dark_web_monitoring': False,
+                'max_monitored_assets': 0,
                 'api_access': False,
                 'priority_support': False,
                 'advanced_analysis': False,
@@ -125,8 +123,8 @@ class User(Base):
             },
             SubscriptionTier.PRO.value: {
                 'daily_scans': -1,  # Unlimited
-                'email_monitoring': True,
-                'max_email_accounts': 3,
+                'dark_web_monitoring': True,
+                'max_monitored_assets': 5,
                 'api_access': True,
                 'priority_support': False,
                 'advanced_analysis': True,
@@ -139,8 +137,8 @@ class User(Base):
             },
             SubscriptionTier.ENTERPRISE.value: {
                 'daily_scans': -1,  # Unlimited
-                'email_monitoring': True,
-                'max_email_accounts': -1,  # Unlimited
+                'dark_web_monitoring': True,
+                'max_monitored_assets': -1,  # Unlimited
                 'api_access': True,
                 'priority_support': True,
                 'advanced_analysis': True,
@@ -229,6 +227,111 @@ class DailyScanCount(Base):
     count = Column(Integer, default=0)
 
 
+class MonitoredAsset(Base):
+    """Assets being monitored on the dark web (emails, domains, usernames, phones)"""
+    __tablename__ = 'monitored_assets'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    
+    asset_type = Column(String(20), nullable=False)  # email, domain, username, phone
+    asset_value = Column(String(255), nullable=False)
+    label = Column(String(100), nullable=True)  # User-friendly label
+    
+    # Monitoring status
+    is_active = Column(Boolean, default=True)
+    last_scanned = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    
+    # Results cache
+    breach_count = Column(Integer, default=0)
+    paste_count = Column(Integer, default=0)
+    risk_level = Column(String(20), default='unknown')  # safe, low, medium, high, critical
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="monitored_assets")
+    alerts = relationship("DarkWebAlert", back_populates="asset", cascade="all, delete-orphan")
+    
+    def to_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'asset_type': self.asset_type,
+            'asset_value': self.asset_value,
+            'label': self.label or self.asset_value,
+            'is_active': self.is_active,
+            'last_scanned': self.last_scanned.isoformat() if self.last_scanned else None,
+            'last_error': self.last_error,
+            'breach_count': self.breach_count,
+            'paste_count': self.paste_count,
+            'risk_level': self.risk_level,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class DarkWebAlert(Base):
+    """Individual dark web findings/alerts"""
+    __tablename__ = 'dark_web_alerts'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    asset_id = Column(Integer, ForeignKey('monitored_assets.id'), nullable=False)
+    
+    # Alert details
+    alert_type = Column(String(50), nullable=False)  # data_breach, paste_exposure, credential_leak
+    severity = Column(String(20), nullable=False)  # critical, high, medium, low, info
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    source = Column(String(100), nullable=True)  # e.g., "Have I Been Pwned"
+    source_ref = Column(String(255), nullable=True)  # e.g., breach name
+    
+    # Breach details
+    breach_date = Column(DateTime, nullable=True)
+    exposed_records = Column(Integer, default=0)
+    exposed_data_types = Column(Text, nullable=True)  # JSON array of data types
+    
+    # Status
+    is_read = Column(Boolean, default=False)
+    is_resolved = Column(Boolean, default=False)
+    resolved_at = Column(DateTime, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    asset = relationship("MonitoredAsset", back_populates="alerts")
+    
+    def to_dict(self) -> Dict:
+        import json
+        data_types = []
+        if self.exposed_data_types:
+            try:
+                data_types = json.loads(self.exposed_data_types)
+            except:
+                data_types = [self.exposed_data_types]
+        
+        return {
+            'id': self.id,
+            'asset_id': self.asset_id,
+            'alert_type': self.alert_type,
+            'severity': self.severity,
+            'title': self.title,
+            'description': self.description,
+            'source': self.source,
+            'source_ref': self.source_ref,
+            'breach_date': self.breach_date.isoformat() if self.breach_date else None,
+            'exposed_records': self.exposed_records,
+            'exposed_data_types': data_types,
+            'is_read': self.is_read,
+            'is_resolved': self.is_resolved,
+            'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 class PasswordResetToken(Base):
     """Password reset tokens"""
     __tablename__ = 'password_reset_tokens'
@@ -296,6 +399,17 @@ class AuthManager:
                 # Tutorial tracking
                 if 'tutorial_seen' not in columns:
                     conn.execute(text('ALTER TABLE users ADD COLUMN tutorial_seen BOOLEAN DEFAULT 0'))
+                    conn.commit()
+                
+                # Dark web monitoring columns
+                if 'dark_web_monitoring_enabled' not in columns:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_monitoring_enabled BOOLEAN DEFAULT 0'))
+                    conn.commit()
+                if 'dark_web_last_scan' not in columns:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_last_scan DATETIME'))
+                    conn.commit()
+                if 'dark_web_alert_email' not in columns:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_alert_email BOOLEAN DEFAULT 1'))
                     conn.commit()
     
     def get_session(self):
@@ -1005,67 +1119,292 @@ class AuthManager:
         finally:
             session.close()
     
-    def update_email_settings(self, user_id: int, email_settings: Dict) -> Dict:
-        """Update email monitoring settings"""
+    # ============== Dark Web Monitoring Methods ==============
+    
+    def get_monitored_assets(self, user_id: int) -> list:
+        """Get all monitored assets for a user"""
+        session = self.get_session()
+        try:
+            assets = session.query(MonitoredAsset).filter(
+                MonitoredAsset.user_id == user_id
+            ).order_by(MonitoredAsset.created_at).all()
+            return [a.to_dict() for a in assets]
+        finally:
+            session.close()
+    
+    def add_monitored_asset(self, user_id: int, asset_type: str, asset_value: str, 
+                            label: str = None) -> Dict:
+        """Add a new asset to dark web monitoring"""
         session = self.get_session()
         try:
             user = session.query(User).filter(User.id == user_id).first()
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
-            # Check if user has Pro subscription for email monitoring
-            if user.subscription_tier == SubscriptionTier.FREE.value:
-                return {'success': False, 'error': 'Email monitoring requires Pro subscription'}
+            limits = user.get_plan_limits()
+            if not limits.get('dark_web_monitoring'):
+                return {'success': False, 'error': 'Dark web monitoring requires Pro or Enterprise subscription'}
             
-            user.monitored_email = email_settings.get('email')
-            user.monitored_email_host = email_settings.get('host', 'imap.gmail.com')
-            user.monitored_email_port = email_settings.get('port', 993)
-            user.email_monitoring_enabled = email_settings.get('enabled', False)
+            max_assets = limits.get('max_monitored_assets', 0)
+            current_count = session.query(MonitoredAsset).filter(
+                MonitoredAsset.user_id == user_id
+            ).count()
             
-            # In production, encrypt the password before storing
-            if 'password' in email_settings:
-                # Simple encoding for demo - use proper encryption in production!
-                import base64
-                encoded = base64.b64encode(email_settings['password'].encode()).decode()
-                user.monitored_email_password_encrypted = encoded
+            if max_assets > 0 and current_count >= max_assets:
+                return {
+                    'success': False,
+                    'error': f'Maximum monitored assets reached ({max_assets}). Upgrade for more.'
+                }
             
+            # Check for duplicate
+            existing = session.query(MonitoredAsset).filter(
+                MonitoredAsset.user_id == user_id,
+                MonitoredAsset.asset_type == asset_type,
+                MonitoredAsset.asset_value == asset_value
+            ).first()
+            if existing:
+                return {'success': False, 'error': 'This asset is already being monitored'}
+            
+            asset = MonitoredAsset(
+                user_id=user_id,
+                asset_type=asset_type,
+                asset_value=asset_value,
+                label=label or asset_value,
+                is_active=True
+            )
+            session.add(asset)
             session.commit()
-            return {'success': True, 'message': 'Email settings updated'}
             
+            return {
+                'success': True,
+                'asset': asset.to_dict(),
+                'message': 'Asset added for monitoring'
+            }
         except Exception as e:
             session.rollback()
             return {'success': False, 'error': str(e)}
         finally:
             session.close()
     
-    def get_email_settings(self, user_id: int) -> Dict:
-        """Get email monitoring settings (without password)"""
+    def delete_monitored_asset(self, user_id: int, asset_id: int) -> Dict:
+        """Remove a monitored asset and its alerts"""
+        session = self.get_session()
+        try:
+            asset = session.query(MonitoredAsset).filter(
+                MonitoredAsset.id == asset_id,
+                MonitoredAsset.user_id == user_id
+            ).first()
+            if not asset:
+                return {'success': False, 'error': 'Asset not found'}
+            
+            session.delete(asset)
+            session.commit()
+            return {'success': True, 'message': 'Asset removed from monitoring'}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def get_dark_web_alerts(self, user_id: int, unread_only: bool = False, 
+                            limit: int = 50) -> list:
+        """Get dark web alerts for a user"""
+        session = self.get_session()
+        try:
+            query = session.query(DarkWebAlert).filter(
+                DarkWebAlert.user_id == user_id
+            )
+            if unread_only:
+                query = query.filter(DarkWebAlert.is_read == False)
+            alerts = query.order_by(DarkWebAlert.created_at.desc()).limit(limit).all()
+            return [a.to_dict() for a in alerts]
+        finally:
+            session.close()
+    
+    def get_dark_web_alert_count(self, user_id: int) -> Dict:
+        """Get counts of dark web alerts"""
+        session = self.get_session()
+        try:
+            total = session.query(DarkWebAlert).filter(DarkWebAlert.user_id == user_id).count()
+            unread = session.query(DarkWebAlert).filter(
+                DarkWebAlert.user_id == user_id,
+                DarkWebAlert.is_read == False
+            ).count()
+            critical = session.query(DarkWebAlert).filter(
+                DarkWebAlert.user_id == user_id,
+                DarkWebAlert.severity.in_(['critical', 'high']),
+                DarkWebAlert.is_resolved == False
+            ).count()
+            return {'total': total, 'unread': unread, 'critical': critical}
+        finally:
+            session.close()
+    
+    def mark_alert_read(self, user_id: int, alert_id: int) -> Dict:
+        """Mark a dark web alert as read"""
+        session = self.get_session()
+        try:
+            alert = session.query(DarkWebAlert).filter(
+                DarkWebAlert.id == alert_id,
+                DarkWebAlert.user_id == user_id
+            ).first()
+            if not alert:
+                return {'success': False, 'error': 'Alert not found'}
+            alert.is_read = True
+            session.commit()
+            return {'success': True}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def mark_all_alerts_read(self, user_id: int) -> Dict:
+        """Mark all dark web alerts as read"""
+        session = self.get_session()
+        try:
+            session.query(DarkWebAlert).filter(
+                DarkWebAlert.user_id == user_id,
+                DarkWebAlert.is_read == False
+            ).update({'is_read': True})
+            session.commit()
+            return {'success': True}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def resolve_alert(self, user_id: int, alert_id: int) -> Dict:
+        """Mark a dark web alert as resolved"""
+        session = self.get_session()
+        try:
+            alert = session.query(DarkWebAlert).filter(
+                DarkWebAlert.id == alert_id,
+                DarkWebAlert.user_id == user_id
+            ).first()
+            if not alert:
+                return {'success': False, 'error': 'Alert not found'}
+            alert.is_resolved = True
+            alert.resolved_at = datetime.utcnow()
+            alert.is_read = True
+            session.commit()
+            return {'success': True}
+        except Exception as e:
+            session.rollback()
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def save_scan_results(self, user_id: int, asset_id: int, scan_results: Dict) -> Dict:
+        """Save dark web scan results as alerts, avoiding duplicates"""
+        import json
+        session = self.get_session()
+        try:
+            asset = session.query(MonitoredAsset).filter(
+                MonitoredAsset.id == asset_id,
+                MonitoredAsset.user_id == user_id
+            ).first()
+            if not asset:
+                return {'success': False, 'error': 'Asset not found'}
+            
+            new_alerts = 0
+            
+            # Process breaches
+            for breach in scan_results.get('breaches', []):
+                # Check for duplicate by source_ref
+                existing = session.query(DarkWebAlert).filter(
+                    DarkWebAlert.asset_id == asset_id,
+                    DarkWebAlert.source_ref == breach.get('name', '')
+                ).first()
+                if existing:
+                    continue
+                
+                # Determine severity
+                data_classes = breach.get('data_classes', [])
+                severity = 'medium'
+                if any(d in data_classes for d in ['Passwords', 'Credit cards', 'Social security numbers']):
+                    severity = 'critical'
+                elif any(d in data_classes for d in ['Phone numbers', 'Physical addresses', 'Dates of birth']):
+                    severity = 'high'
+                elif breach.get('is_verified'):
+                    severity = 'medium'
+                else:
+                    severity = 'low'
+                
+                alert = DarkWebAlert(
+                    user_id=user_id,
+                    asset_id=asset_id,
+                    alert_type='data_breach',
+                    severity=severity,
+                    title=f"Data breach: {breach.get('title', breach.get('name', 'Unknown'))}",
+                    description=breach.get('description', ''),
+                    source='Have I Been Pwned',
+                    source_ref=breach.get('name', ''),
+                    breach_date=datetime.fromisoformat(breach['breach_date']) if breach.get('breach_date') else None,
+                    exposed_records=breach.get('pwn_count', 0),
+                    exposed_data_types=json.dumps(data_classes)
+                )
+                session.add(alert)
+                new_alerts += 1
+            
+            # Process pastes
+            for paste in scan_results.get('pastes', []):
+                paste_ref = f"paste-{paste.get('source', '')}-{paste.get('paste_id', '')}"
+                existing = session.query(DarkWebAlert).filter(
+                    DarkWebAlert.asset_id == asset_id,
+                    DarkWebAlert.source_ref == paste_ref
+                ).first()
+                if existing:
+                    continue
+                
+                alert = DarkWebAlert(
+                    user_id=user_id,
+                    asset_id=asset_id,
+                    alert_type='paste_exposure',
+                    severity='medium',
+                    title=f"Paste exposure: {paste.get('title', paste.get('source', 'Unknown'))}",
+                    description=f"Email found in paste on {paste.get('source', 'Unknown')} with {paste.get('email_count', 0)} other emails",
+                    source=paste.get('source', 'Unknown'),
+                    source_ref=paste_ref,
+                    breach_date=datetime.fromisoformat(paste['date']) if paste.get('date') else None,
+                    exposed_records=paste.get('email_count', 0)
+                )
+                session.add(alert)
+                new_alerts += 1
+            
+            # Update asset stats
+            asset.last_scanned = datetime.utcnow()
+            asset.breach_count = len(scan_results.get('breaches', []))
+            asset.paste_count = len(scan_results.get('pastes', []))
+            asset.risk_level = scan_results.get('risk_level', 'unknown')
+            asset.last_error = None
+            
+            session.commit()
+            return {'success': True, 'new_alerts': new_alerts}
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error saving scan results: {e}")
+            return {'success': False, 'error': str(e)}
+        finally:
+            session.close()
+    
+    def get_monitored_asset_count(self, user_id: int) -> Dict:
+        """Get monitored asset count and limits"""
         session = self.get_session()
         try:
             user = session.query(User).filter(User.id == user_id).first()
             if not user:
-                return {}
-            
+                return {'current': 0, 'max': 0}
+            limits = user.get_plan_limits()
+            max_assets = limits.get('max_monitored_assets', 0)
+            current = session.query(MonitoredAsset).filter(
+                MonitoredAsset.user_id == user_id
+            ).count()
             return {
-                'email': user.monitored_email,
-                'host': user.monitored_email_host,
-                'port': user.monitored_email_port,
-                'enabled': user.email_monitoring_enabled,
-                'has_password': bool(user.monitored_email_password_encrypted)
+                'current': current,
+                'max': max_assets,
+                'can_add': max_assets < 0 or current < max_assets
             }
-        finally:
-            session.close()
-    
-    def get_decrypted_email_password(self, user_id: int) -> Optional[str]:
-        """Get decrypted email password for monitoring"""
-        session = self.get_session()
-        try:
-            user = session.query(User).filter(User.id == user_id).first()
-            if not user or not user.monitored_email_password_encrypted:
-                return None
-            
-            import base64
-            return base64.b64decode(user.monitored_email_password_encrypted.encode()).decode()
         finally:
             session.close()
     
@@ -1633,7 +1972,7 @@ SUBSCRIPTION_PLANS = {
         'name': 'Free',
         'price': 0,
         'period': 'forever',
-        'max_email_accounts': 0,
+        'max_monitored_assets': 0,
         'features': [
             '25 link scans per day',
             'Basic threat detection',
@@ -1643,7 +1982,7 @@ SUBSCRIPTION_PLANS = {
             'Desktop notifications'
         ],
         'limitations': [
-            'No email monitoring',
+            'No dark web monitoring',
             'No Attack Surface Monitoring',
             'No API access'
         ]
@@ -1652,12 +1991,12 @@ SUBSCRIPTION_PLANS = {
         'name': 'Pro',
         'price': 14.99,
         'period': 'month',
-        'max_email_accounts': 3,
+        'max_monitored_assets': 5,
         'features': [
             'Unlimited link scans',
             'Advanced threat detection',
             'Full scan history',
-            'Monitor up to 3 email accounts',
+            'Dark web monitoring (5 assets)',
             'API access',
             'Whitelist/Blacklist',
             'Export reports',
@@ -1672,11 +2011,11 @@ SUBSCRIPTION_PLANS = {
         'name': 'Enterprise',
         'price': 59.99,
         'period': 'month',
-        'max_email_accounts': -1,
+        'max_monitored_assets': -1,
         'features': [
             'Unlimited link scans',
             'Everything in Pro',
-            'Unlimited email monitoring',
+            'Unlimited dark web monitoring',
             'Attack Surface Monitoring (25 domains, hourly)',
             'AI-powered remediation advice',
             'Team management',

@@ -16,7 +16,7 @@ from sqlalchemy import and_
 
 from config import Config
 from link_verifier import LinkVerifier, VerificationResult
-from email_monitor import EmailMonitor, EmailLink
+from dark_web_monitor import DarkWebMonitor, get_dark_web_monitor
 from notifications import NotificationService
 from database import Database, ForumCategory, ForumPost, ForumComment, ForumVote
 from auth import AuthManager, SUBSCRIPTION_PLANS, SubscriptionTier
@@ -111,8 +111,8 @@ oauth = init_oauth(app, config)
 init_attack_surface(config, auth_manager)
 app.register_blueprint(attack_surface_bp)
 
-# Store email monitors per user
-user_email_monitors = {}
+# Initialize Dark Web Monitor
+dark_web_monitor = get_dark_web_monitor(config)
 
 
 def get_token_from_request():
@@ -198,105 +198,6 @@ def require_admin_role(required_role: str):
             return f(*args, **kwargs)
         return decorated
     return decorator
-
-
-def on_email_link_found_for_user(user_id: int, email_account: str = None, monitor = None):
-    """Create callback for email link found"""
-    def callback(link: EmailLink, result: VerificationResult):
-        from link_verifier import RiskLevel
-        
-        # Save to database with email account info
-        db.save_verification(
-            result,
-            source='email',
-            email_subject=link.email_subject,
-            email_from=link.email_from,
-            email_account=email_account,
-            user_id=user_id
-        )
-        
-        # Check for high-risk links
-        is_high_risk = result.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL]
-        
-        # Send notification if unsafe
-        if not result.is_safe:
-            account_info = f" ({email_account})" if email_account else ""
-            notification_service.notify(result, f"Email{account_info}: {link.email_subject}")
-        
-        # For high-risk links: quarantine and send detailed report
-        if is_high_risk and monitor:
-            logger.warning(f"HIGH RISK link detected for user {user_id}: {link.url} - Risk: {result.risk_level.value}")
-            
-            # Quarantine the email
-            quarantine_success = monitor.quarantine_email(link.email_uid)
-            if quarantine_success:
-                logger.info(f"Email {link.email_uid} quarantined successfully")
-            else:
-                logger.error(f"Failed to quarantine email {link.email_uid}")
-            
-            # Send detailed threat report
-            report_sent = monitor.send_threat_report(link, result, email_account)
-            if report_sent:
-                logger.info(f"Threat report sent to {email_account}")
-            else:
-                logger.error(f"Failed to send threat report for email {link.email_uid}")
-        
-        logger.info(f"Email link verified for user {user_id} ({email_account}): {link.url} - Safe: {result.is_safe}")
-    
-    return callback
-
-
-def start_monitoring_for_user(user_id: int):
-    """Start email monitoring for all active accounts of a user"""
-    # Stop existing monitors if running
-    if user_id in user_email_monitors and user_email_monitors[user_id]:
-        for monitor in user_email_monitors[user_id]:
-            try:
-                monitor.stop_monitoring()
-            except:
-                pass
-    
-    # Get user's active email accounts
-    accounts = auth_manager.get_active_email_accounts(user_id)
-    
-    if not accounts:
-        user_email_monitors[user_id] = None
-        return
-    
-    # Create monitors for all active accounts
-    monitors = []
-    
-    for account in accounts:
-        try:
-            # Test connection first
-            from imapclient import IMAPClient
-            test_client = IMAPClient(
-                account['host'],
-                port=account['port'],
-                ssl=True
-            )
-            test_client.login(account['email'], account['password'])
-            test_client.logout()
-            
-            # Connection works, start monitoring
-            user_config = Config()
-            user_config.EMAIL_USERNAME = account['email']
-            user_config.EMAIL_PASSWORD = account['password']
-            user_config.EMAIL_HOST = account['host']
-            user_config.EMAIL_PORT = account['port']
-            
-            # Create monitor first, then set callback with monitor reference
-            monitor = EmailMonitor(user_config)
-            monitor.on_link_found = on_email_link_found_for_user(user_id, account['email'], monitor)
-            monitor.start_monitoring()
-            monitors.append(monitor)
-            logger.info(f"Started monitoring for {account['email']}")
-            
-        except Exception as e:
-            logger.error(f"Error starting monitor for {account['email']}: {e}")
-            auth_manager.update_email_account_status(account['id'], checked=True, error=str(e))
-    
-    user_email_monitors[user_id] = monitors if monitors else None
 
 
 # ============== Page Routes ==============
@@ -1151,202 +1052,189 @@ def mark_tutorial_seen():
         session.close()
 
 
-# ============== Email Account Routes (Multiple Accounts) ==============
+# ============== Dark Web Monitoring Routes ==============
 
-@app.route('/api/email-accounts', methods=['GET'])
+@app.route('/dark-web-monitor')
+def dark_web_monitor_page():
+    """Render the dark web monitoring page"""
+    return render_template('dark_web_monitor.html')
+
+
+@app.route('/api/dark-web/assets', methods=['GET'])
 @require_pro
-def get_email_accounts():
-    """Get all email accounts for the user"""
-    accounts = auth_manager.get_email_accounts(request.current_user['id'])
-    count_info = auth_manager.get_email_account_count(request.current_user['id'])
-    return jsonify({
-        'accounts': accounts,
-        'count': count_info
-    })
+def get_dark_web_assets():
+    """Get all monitored assets"""
+    assets = auth_manager.get_monitored_assets(request.current_user['id'])
+    count_info = auth_manager.get_monitored_asset_count(request.current_user['id'])
+    return jsonify({'assets': assets, 'count': count_info})
 
 
-@app.route('/api/email-accounts', methods=['POST'])
+@app.route('/api/dark-web/assets', methods=['POST'])
 @require_pro
-def add_email_account():
-    """Add a new email account for monitoring"""
+def add_dark_web_asset():
+    """Add a new asset to dark web monitoring"""
     data = request.get_json()
-    user_id = request.current_user['id']
+    asset_type = data.get('asset_type', '').strip()
+    asset_value = data.get('asset_value', '').strip()
+    label = data.get('label', '').strip()
     
-    required = ['email', 'host', 'port', 'password']
-    if not all(k in data for k in required):
-        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+    if not asset_type or not asset_value:
+        return jsonify({'success': False, 'error': 'Asset type and value are required'}), 400
     
-    result = auth_manager.add_email_account(
-        user_id=user_id,
-        email=data['email'],
-        host=data['host'],
-        port=data['port'],
-        password=data['password'],
-        label=data.get('label')
+    # Validate asset type
+    valid_types = ['email', 'domain', 'username', 'phone']
+    if asset_type not in valid_types:
+        return jsonify({'success': False, 'error': f'Invalid asset type. Must be one of: {", ".join(valid_types)}'}), 400
+    
+    # Validate format
+    if asset_type == 'email' and not dark_web_monitor.validate_email(asset_value):
+        return jsonify({'success': False, 'error': 'Invalid email address format'}), 400
+    if asset_type == 'domain' and not dark_web_monitor.validate_domain(asset_value):
+        return jsonify({'success': False, 'error': 'Invalid domain format'}), 400
+    
+    result = auth_manager.add_monitored_asset(
+        user_id=request.current_user['id'],
+        asset_type=asset_type,
+        asset_value=asset_value,
+        label=label or None
     )
-    
-    # Auto-start monitoring for this user if account was added successfully
-    if result.get('success'):
-        try:
-            start_monitoring_for_user(user_id)
-        except Exception as e:
-            logger.error(f"Error auto-starting monitor: {e}")
-    
     return jsonify(result)
 
 
-@app.route('/api/email-accounts/<int:account_id>', methods=['GET'])
+@app.route('/api/dark-web/assets/<int:asset_id>', methods=['DELETE'])
 @require_pro
-def get_email_account(account_id):
-    """Get a specific email account"""
-    account = auth_manager.get_email_account(request.current_user['id'], account_id)
-    if not account:
-        return jsonify({'error': 'Account not found'}), 404
-    return jsonify(account)
-
-
-@app.route('/api/email-accounts/<int:account_id>', methods=['PUT'])
-@require_pro
-def update_email_account(account_id):
-    """Update an email account"""
-    data = request.get_json()
-    user_id = request.current_user['id']
-    result = auth_manager.update_email_account(
-        user_id=user_id,
-        account_id=account_id,
-        data=data
-    )
-    
-    # Restart monitoring if is_active was changed
-    if result.get('success') and 'is_active' in data:
-        try:
-            start_monitoring_for_user(user_id)
-        except Exception as e:
-            logger.error(f"Error restarting monitor: {e}")
-    
+def delete_dark_web_asset(asset_id):
+    """Remove a monitored asset"""
+    result = auth_manager.delete_monitored_asset(request.current_user['id'], asset_id)
     return jsonify(result)
 
 
-@app.route('/api/email-accounts/<int:account_id>', methods=['DELETE'])
+@app.route('/api/dark-web/scan', methods=['POST'])
 @require_pro
-def delete_email_account(account_id):
-    """Delete an email account"""
-    user_id = request.current_user['id']
-    result = auth_manager.delete_email_account(
-        user_id=user_id,
-        account_id=account_id
-    )
-    
-    # Restart monitoring after deletion
-    if result.get('success'):
-        try:
-            start_monitoring_for_user(user_id)
-        except Exception as e:
-            logger.error(f"Error restarting monitor: {e}")
-    return jsonify(result)
-
-
-@app.route('/api/email-accounts/<int:account_id>/test', methods=['POST'])
-@require_pro
-def test_email_account(account_id):
-    """Test connection for a specific email account"""
+def scan_dark_web():
+    """Run a dark web scan for a specific asset or all assets"""
     data = request.get_json() or {}
-    
-    # Get the existing account to use stored credentials if not provided
-    account = auth_manager.get_email_account(request.current_user['id'], account_id)
-    if not account:
-        return jsonify({'success': False, 'error': 'Account not found'}), 404
-    
-    # Use provided data or fall back to stored values
-    host = data.get('host') or account.get('host', 'imap.gmail.com')
-    port = data.get('port') or account.get('port', 993)
-    email = data.get('email') or account.get('email')
-    password = data.get('password')
-    
-    # If no password provided, try to get stored password
-    if not password:
-        password = auth_manager.get_email_account_password(request.current_user['id'], account_id)
-    
-    if not password:
-        return jsonify({'success': False, 'error': 'Password required for testing'}), 400
+    user_id = request.current_user['id']
+    asset_id = data.get('asset_id')
     
     try:
-        from imapclient import IMAPClient
+        assets = auth_manager.get_monitored_assets(user_id)
+        if not assets:
+            return jsonify({'error': 'No monitored assets. Add an email or domain to start monitoring.'}), 400
         
-        client = IMAPClient(host, port=port, ssl=True)
-        client.login(email, password)
-        client.logout()
+        # Filter to specific asset if requested
+        if asset_id:
+            assets = [a for a in assets if a['id'] == asset_id]
+            if not assets:
+                return jsonify({'error': 'Asset not found'}), 404
         
-        # Update account status - mark as verified
-        auth_manager.update_email_account_status(account_id, checked=True, error=None)
+        all_results = []
+        for asset in assets:
+            if asset['asset_type'] == 'email':
+                scan_result = dark_web_monitor.full_scan(asset['asset_value'])
+                # Save results as alerts
+                auth_manager.save_scan_results(user_id, asset['id'], scan_result)
+                all_results.append({
+                    'asset': asset,
+                    'results': scan_result
+                })
+            elif asset['asset_type'] == 'domain':
+                breaches, error = dark_web_monitor.check_domain_breaches(asset['asset_value'])
+                scan_result = {
+                    'breaches': [b.to_dict() for b in breaches],
+                    'pastes': [],
+                    'risk_level': 'safe' if not breaches else 'medium',
+                    'errors': [error] if error else [],
+                    'summary': {
+                        'total_breaches': len(breaches),
+                        'total_pastes': 0,
+                        'total_records_exposed': sum(b.pwn_count for b in breaches)
+                    }
+                }
+                auth_manager.save_scan_results(user_id, asset['id'], scan_result)
+                all_results.append({
+                    'asset': asset,
+                    'results': scan_result
+                })
         
-        return jsonify({'success': True, 'message': 'Connection successful! Account verified.'})
+        return jsonify({
+            'success': True,
+            'results': all_results,
+            'assets_scanned': len(all_results)
+        })
     except Exception as e:
-        auth_manager.update_email_account_status(account_id, checked=True, error=str(e))
-        return jsonify({'success': False, 'error': str(e)})
+        logger.error(f"Dark web scan error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/email-accounts/test-new', methods=['POST'])
-@require_pro
-def test_new_email_account():
-    """Test connection for a new email account before adding"""
-    data = request.get_json()
+@app.route('/api/dark-web/scan-quick', methods=['POST'])
+@require_auth
+def quick_dark_web_scan():
+    """Quick one-off scan without saving as monitored asset (available to all users)"""
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    
+    if not email:
+        return jsonify({'error': 'Email address is required'}), 400
+    if not dark_web_monitor.validate_email(email):
+        return jsonify({'error': 'Invalid email format'}), 400
     
     try:
-        from imapclient import IMAPClient
-        
-        client = IMAPClient(
-            data.get('host', 'imap.gmail.com'),
-            port=data.get('port', 993),
-            ssl=True
-        )
-        client.login(data.get('email'), data.get('password'))
-        client.logout()
-        
-        return jsonify({'success': True, 'message': 'Connection successful'})
+        result = dark_web_monitor.full_scan(email)
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        logger.error(f"Quick dark web scan error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
-# ============== Legacy Email Settings (for backward compatibility) ==============
-
-@app.route('/api/email-settings', methods=['GET'])
+@app.route('/api/dark-web/alerts', methods=['GET'])
 @require_pro
-def get_email_settings():
-    """Get user's email monitoring settings (legacy - redirects to accounts)"""
-    settings = auth_manager.get_email_settings(request.current_user['id'])
-    return jsonify(settings)
+def get_dark_web_alerts():
+    """Get dark web alerts for the user"""
+    unread_only = request.args.get('unread', 'false').lower() == 'true'
+    limit = min(int(request.args.get('limit', 50)), 200)
+    alerts = auth_manager.get_dark_web_alerts(request.current_user['id'], unread_only=unread_only, limit=limit)
+    counts = auth_manager.get_dark_web_alert_count(request.current_user['id'])
+    return jsonify({'alerts': alerts, 'counts': counts})
 
 
-@app.route('/api/email-settings', methods=['PUT'])
+@app.route('/api/dark-web/alerts/<int:alert_id>/read', methods=['POST'])
 @require_pro
-def update_email_settings():
-    """Update email monitoring settings (legacy)"""
-    data = request.get_json()
-    result = auth_manager.update_email_settings(request.current_user['id'], data)
+def mark_dark_web_alert_read(alert_id):
+    """Mark alert as read"""
+    result = auth_manager.mark_alert_read(request.current_user['id'], alert_id)
     return jsonify(result)
 
 
-@app.route('/api/email-settings/test', methods=['POST'])
+@app.route('/api/dark-web/alerts/read-all', methods=['POST'])
 @require_pro
-def test_email_connection():
-    """Test email connection (legacy)"""
-    data = request.get_json()
+def mark_all_dark_web_alerts_read():
+    """Mark all alerts as read"""
+    result = auth_manager.mark_all_alerts_read(request.current_user['id'])
+    return jsonify(result)
+
+
+@app.route('/api/dark-web/alerts/<int:alert_id>/resolve', methods=['POST'])
+@require_pro
+def resolve_dark_web_alert(alert_id):
+    """Mark alert as resolved"""
+    result = auth_manager.resolve_alert(request.current_user['id'], alert_id)
+    return jsonify(result)
+
+
+@app.route('/api/dark-web/password-check', methods=['POST'])
+@require_auth
+def check_password_dark_web():
+    """Check if a password has appeared in data breaches"""
+    data = request.get_json() or {}
+    password = data.get('password', '')
+    if not password:
+        return jsonify({'error': 'Password is required'}), 400
     
-    try:
-        from imapclient import IMAPClient
-        
-        client = IMAPClient(
-            data.get('host', 'imap.gmail.com'),
-            port=data.get('port', 993),
-            ssl=True
-        )
-        client.login(data.get('email'), data.get('password'))
-        client.logout()
-        
-        return jsonify({'success': True, 'message': 'Connection successful'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    count, error = dark_web_monitor.check_password_pwned(password)
+    if error:
+        return jsonify({'error': error}), 500
+    return jsonify({'count': count, 'is_compromised': count > 0})
 
 
 # ============== Subscription Routes ==============
@@ -1966,210 +1854,36 @@ def get_news():
         return jsonify({'error': 'Failed to fetch news'}), 500
 
 
-# ============== Email Monitoring Routes ==============
+# ============== Dark Web Monitoring Status Route ==============
 
-@app.route('/api/email-accounts/status', methods=['GET'])
+@app.route('/api/dark-web/status', methods=['GET'])
 @require_auth
-def get_email_accounts_status():
-    """Get email accounts status for the navbar indicator"""
+def get_dark_web_status():
+    """Get dark web monitoring status for the navbar indicator"""
     user_id = request.current_user['id']
     tier = request.current_user.get('subscription_tier', 'free')
     
-    # Free users don't have email monitoring
     if tier == 'free':
         return jsonify({
-            'connected': False,
-            'account_count': 0,
-            'active_count': 0,
-            'monitoring': False
+            'enabled': False,
+            'asset_count': 0,
+            'unread_alerts': 0,
+            'critical_alerts': 0
         })
     
     try:
-        accounts = auth_manager.get_email_accounts(user_id)
-        active_accounts = [a for a in accounts if a.get('is_active')]
-        monitoring = user_id in user_email_monitors and user_email_monitors[user_id] is not None
+        assets = auth_manager.get_monitored_assets(user_id)
+        alert_counts = auth_manager.get_dark_web_alert_count(user_id)
         
         return jsonify({
-            'connected': len(active_accounts) > 0,
-            'account_count': len(accounts),
-            'active_count': len(active_accounts),
-            'monitoring': monitoring,
-            'accounts': [{'email': a['email'], 'label': a['label'], 'is_active': a['is_active']} for a in accounts]
+            'enabled': len(assets) > 0,
+            'asset_count': len(assets),
+            'unread_alerts': alert_counts.get('unread', 0),
+            'critical_alerts': alert_counts.get('critical', 0)
         })
     except Exception as e:
-        logger.error(f"Error getting email status: {e}")
-        return jsonify({'connected': False, 'account_count': 0, 'active_count': 0, 'monitoring': False})
-
-
-@app.route('/api/check-emails', methods=['POST'])
-@require_pro
-def check_emails():
-    """Check all connected email accounts for links"""
-    user_id = request.current_user['id']
-    
-    # Get user's email accounts
-    accounts = auth_manager.get_active_email_accounts(user_id)
-    
-    if not accounts:
-        return jsonify({'error': 'No email accounts configured. Go to Profile > Email Settings to connect your email.'}), 400
-    
-    all_results = []
-    errors = []
-    
-    try:
-        for account in accounts:
-            try:
-                # Test connection first before attempting to check
-                from imapclient import IMAPClient
-                test_client = IMAPClient(
-                    account['host'],
-                    port=account['port'],
-                    ssl=True
-                )
-                test_client.login(account['email'], account['password'])
-                test_client.logout()
-                
-                # Create temporary config with this account's settings
-                user_config = Config()
-                user_config.EMAIL_USERNAME = account['email']
-                user_config.EMAIL_PASSWORD = account['password']
-                user_config.EMAIL_HOST = account['host']
-                user_config.EMAIL_PORT = account['port']
-                
-                monitor = EmailMonitor(user_config, on_link_found=on_email_link_found_for_user(user_id, account['email']))
-                results = monitor.check_emails_once(limit=10)
-                
-                # Add account info to each result
-                for r in results:
-                    r['email_account'] = account['email']
-                    r['account_label'] = account.get('label', account['email'])
-                
-                all_results.extend(results)
-                
-                # Update account status
-                auth_manager.update_email_account_status(account['id'], checked=True, error=None)
-                
-            except Exception as e:
-                error_msg = str(e)
-                logger.error(f"Error checking account {account['email']}: {error_msg}")
-                errors.append({'account': account['email'], 'error': error_msg})
-                auth_manager.update_email_account_status(account['id'], checked=True, error=error_msg)
-        
-        # If all accounts failed, return error
-        if not all_results and errors and len(errors) == len(accounts):
-            return jsonify({
-                'error': 'Failed to check emails. Check your credentials.',
-                'errors': errors
-            }), 400
-        
-        return jsonify({
-            'results': all_results, 
-            'count': len(all_results),
-            'accounts_checked': len(accounts) - len(errors),
-            'errors': errors
-        })
-    
-    except Exception as e:
-        logger.error(f"Error checking emails: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/email/start', methods=['POST'])
-@require_pro
-def start_email_monitor():
-    """Start continuous email monitoring for all active accounts"""
-    user_id = request.current_user['id']
-    
-    # Get user's active email accounts
-    accounts = auth_manager.get_active_email_accounts(user_id)
-    
-    if not accounts:
-        return jsonify({'error': 'No email accounts configured. Go to Profile > Email Settings to add accounts.'}), 400
-    
-    try:
-        # Stop existing monitors if running
-        if user_id in user_email_monitors:
-            for monitor in user_email_monitors[user_id]:
-                try:
-                    monitor.stop_monitoring()
-                except:
-                    pass
-        
-        # Create monitors for all active accounts - test connection first
-        monitors = []
-        started_accounts = []
-        failed_accounts = []
-        
-        for account in accounts:
-            try:
-                # Test connection first
-                from imapclient import IMAPClient
-                test_client = IMAPClient(
-                    account['host'],
-                    port=account['port'],
-                    ssl=True
-                )
-                test_client.login(account['email'], account['password'])
-                test_client.logout()
-                
-                # Connection works, start monitoring
-                user_config = Config()
-                user_config.EMAIL_USERNAME = account['email']
-                user_config.EMAIL_PASSWORD = account['password']
-                user_config.EMAIL_HOST = account['host']
-                user_config.EMAIL_PORT = account['port']
-                
-                # Create monitor first, then set callback with monitor reference
-                monitor = EmailMonitor(user_config)
-                monitor.on_link_found = on_email_link_found_for_user(user_id, account['email'], monitor)
-                monitor.start_monitoring()
-                monitors.append(monitor)
-                started_accounts.append(account['email'])
-                
-            except Exception as e:
-                error_msg = str(e)
-                logger.error(f"Error starting monitor for {account['email']}: {error_msg}")
-                failed_accounts.append({'email': account['email'], 'error': error_msg})
-                auth_manager.update_email_account_status(account['id'], checked=True, error=error_msg)
-        
-        user_email_monitors[user_id] = monitors if monitors else None
-        
-        if not started_accounts and failed_accounts:
-            # All accounts failed
-            error_details = '; '.join([f"{a['email']}: {a['error']}" for a in failed_accounts])
-            return jsonify({
-                'error': f'Failed to connect to email accounts. {error_details}',
-                'failed_accounts': failed_accounts
-            }), 400
-        
-        return jsonify({
-            'status': 'started',
-            'accounts': started_accounts,
-            'count': len(started_accounts),
-            'failed_accounts': failed_accounts
-        })
-    
-    except Exception as e:
-        logger.error(f"Error starting email monitor: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/email/stop', methods=['POST'])
-@require_pro
-def stop_email_monitor():
-    """Stop email monitoring for all accounts"""
-    user_id = request.current_user['id']
-    
-    if user_id in user_email_monitors:
-        for monitor in user_email_monitors[user_id]:
-            try:
-                monitor.stop_monitoring()
-            except:
-                pass
-        del user_email_monitors[user_id]
-        return jsonify({'status': 'stopped'})
-    
-    return jsonify({'status': 'not_running'})
+        logger.error(f"Error getting dark web status: {e}")
+        return jsonify({'enabled': False, 'asset_count': 0, 'unread_alerts': 0, 'critical_alerts': 0})
 
 
 @app.route('/api/whitelist', methods=['GET', 'POST'])
@@ -3842,7 +3556,7 @@ if __name__ == '__main__':
     ║  • User accounts with persistent login (stay signed in)   ║
     ║  • Paste links to verify their safety                     ║
     ║  • Attack Surface Monitoring (domain security scans)      ║
-    ║  • Email monitoring for Pro users                         ║
+    ║  • Dark web monitoring for Pro users                      ║
     ║  • Desktop notifications for dangerous links              ║
     ║  • Hourly threat alerts via email                         ║
     ║  • Weekly security reports via email                      ║

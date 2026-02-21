@@ -3,313 +3,561 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>Community - SecureLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        /* Page-specific styles */
+        .hidden { display: none !important; }
+
+        .community-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            transition: background 0.2s;
         }
-        .card-glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .community-card:hover {
+            background: var(--bg-card-hover);
         }
-        .card-glass:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
+
         .badge-bronze { background: linear-gradient(135deg, #cd7f32, #8b4513); }
         .badge-silver { background: linear-gradient(135deg, #c0c0c0, #808080); }
         .badge-gold { background: linear-gradient(135deg, #ffd700, #daa520); }
         .badge-platinum { background: linear-gradient(135deg, #e5e4e2, #8e8e8e); }
         .badge-diamond { background: linear-gradient(135deg, #b9f2ff, #4169e1); }
+
         .vote-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
             transition: all 0.2s ease;
+            padding: 2px 4px;
+            color: var(--text-muted);
         }
-        .vote-btn:hover {
-            transform: scale(1.1);
+        .vote-btn:hover { transform: scale(1.1); }
+        .vote-btn.voted { transform: scale(1.2); }
+        .vote-btn.voted-up { color: var(--success-color); }
+        .vote-btn.voted-down { color: var(--danger-color); }
+
+        .tab-btn {
+            border: none;
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            color: var(--text-primary);
+            background: var(--bg-card-hover);
+            transition: all 0.2s;
         }
-        .vote-btn.voted {
-            transform: scale(1.2);
-        }
-        .vote-btn.voted-up { color: #10b981; }
-        .vote-btn.voted-down { color: #ef4444; }
+        .tab-btn:hover { background: var(--bg-card); }
         .tab-btn.active {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
             color: white;
         }
-        .post-card {
-            transition: all 0.2s ease;
-        }
-        .post-card:hover {
-            transform: translateX(4px);
-        }
+
+        .post-card { transition: all 0.2s ease; cursor: pointer; }
+        .post-card:hover { transform: translateX(4px); }
+
         .category-badge {
             font-size: 0.75rem;
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
+            display: inline-block;
         }
+
+        .filter-btn {
+            border: 1px solid transparent;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            background: var(--bg-card-hover);
+        }
+        .filter-btn.filter-active-pending {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--warning-color);
+            color: var(--warning-color);
+        }
+        .filter-btn.filter-active-verified {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+        .filter-btn.filter-active-rejected {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .sort-btn {
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .sort-btn:hover, .sort-btn.sort-active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .category-list-btn {
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .category-list-btn:hover, .category-list-btn.cat-active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         /* Modal styles */
         .modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.8);
-            z-index: 100;
+            z-index: 1100;
             align-items: center;
             justify-content: center;
         }
-        .modal-overlay.active {
-            display: flex;
-        }
+        .modal-overlay.active { display: flex; }
         .modal-content {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
             max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
+            padding: 1.5rem;
         }
+
+        /* Form controls */
+        .form-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 0.75rem;
+            color: var(--text-primary);
+            transition: border-color 0.2s;
+        }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-input:focus { outline: none; border-color: var(--primary-color); }
+
+        /* Gradient buttons */
+        .btn-gradient-green {
+            background: linear-gradient(135deg, var(--success-color), var(--primary-color));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-gradient-green:hover { opacity: 0.9; color: white; }
+
+        .btn-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-gradient-primary:hover { opacity: 0.9; color: white; }
+
+        .btn-gradient-danger {
+            background: linear-gradient(135deg, var(--danger-color), #f97316);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .btn-gradient-danger:hover { opacity: 0.9; color: white; }
+
+        /* Type & Status badges */
+        .type-badge, .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .type-phishing { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+        .type-malware { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .type-scam { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .type-spam { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .type-other { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-verified { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        /* Category color classes */
+        .cat-color-blue { color: #60a5fa; }
+        .cat-color-green { color: #4ade80; }
+        .cat-color-red { color: #f87171; }
+        .cat-color-yellow { color: #fbbf24; }
+        .cat-color-purple { color: #a78bfa; }
+        .cat-color-pink { color: #f472b6; }
+        .cat-color-orange { color: #fb923c; }
+        .cat-color-cyan { color: #22d3ee; }
+
+        .cat-badge-blue { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+        .cat-badge-green { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+        .cat-badge-red { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .cat-badge-yellow { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+        .cat-badge-purple { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
+        .cat-badge-pink { background: rgba(236, 72, 153, 0.2); color: #f9a8d4; }
+        .cat-badge-orange { background: rgba(249, 115, 22, 0.2); color: #fdba74; }
+        .cat-badge-cyan { background: rgba(6, 182, 212, 0.2); color: #67e8f9; }
+
+        /* Score colors */
+        .score-positive { color: var(--success-color); }
+        .score-negative { color: var(--danger-color); }
+        .score-neutral { color: var(--text-muted); }
+
+        /* Sticky sidebar */
+        .sticky-sidebar { position: sticky; top: 84px; }
+
+        /* Text utilities */
+        .text-primary-color { color: var(--primary-color); }
+        .text-accent-color { color: var(--accent-color); }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid var(--text-muted);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Back button */
+        .back-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            font-size: inherit;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--primary-light); }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <!-- Navigation -->
-    <nav class="p-4 border-b border-gray-700">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <a href="/home" class="text-2xl font-bold">
-                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
             </a>
-            <div class="flex items-center space-x-4">
-                <a href="/home" class="hover:text-blue-400 transition">Home</a>
-                <a href="/attack-surface" class="hover:text-blue-400 transition">Attack Surface</a>
-                <a href="/breach-checker" class="hover:text-blue-400 transition">Breach Checker</a>
-                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
-                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/dark-web-monitor" class="sl-nav-link">Dark Web</a>
+                <a href="/community" class="sl-nav-link active">Community</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-6">
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div>
-                <h1 class="text-4xl font-bold mb-2">
-                    <i class="fas fa-users text-green-400 mr-2"></i>Community
-                </h1>
-                <p class="text-gray-400">Report threats, discuss security, and help keep the internet safe</p>
+    <div class="sl-page sl-bg-gradient">
+        <main class="container py-4" style="max-width: 1152px;">
+            <!-- Header -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                <div>
+                    <h1 class="fw-bold mb-2" style="font-size: 2.25rem;">
+                        <i class="bi bi-people-fill me-2" style="color: var(--success-color);"></i>Community
+                    </h1>
+                    <p style="color: var(--text-secondary);">Report threats, discuss security, and help keep the internet safe</p>
+                </div>
             </div>
-        </div>
 
-        <!-- Main Tabs -->
-        <div class="flex space-x-2 mb-6">
-            <button onclick="switchMainTab('reports')" id="tabReports" class="tab-btn px-6 py-3 rounded-lg font-semibold transition active">
-                <i class="fas fa-flag mr-2"></i>Threat Reports
-            </button>
-            <button onclick="switchMainTab('discussions')" id="tabDiscussions" class="tab-btn px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 font-semibold transition">
-                <i class="fas fa-comments mr-2"></i>Discussions
-            </button>
-        </div>
-
-        <!-- ==================== REPORTS SECTION ==================== -->
-        <div id="reportsSection">
-            <div class="flex justify-end mb-4">
-                <button onclick="showReportModal()" 
-                        class="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
-                    <i class="fas fa-flag mr-2"></i>Report a Link
+            <!-- Main Tabs -->
+            <div class="d-flex gap-2 mb-4">
+                <button onclick="switchMainTab('reports')" id="tabReports" class="tab-btn active">
+                    <i class="bi bi-flag-fill me-2"></i>Threat Reports
+                </button>
+                <button onclick="switchMainTab('discussions')" id="tabDiscussions" class="tab-btn">
+                    <i class="bi bi-chat-dots me-2"></i>Discussions
                 </button>
             </div>
 
-        <!-- Stats and Leaderboard Row -->
-        <div class="grid md:grid-cols-3 gap-6 mb-8">
-            <!-- Your Stats -->
-            <div class="card-glass rounded-xl p-6">
-                <h3 class="text-xl font-semibold mb-4">
-                    <i class="fas fa-user-circle text-blue-400 mr-2"></i>Your Reputation
-                </h3>
-                <div id="myReputation" class="text-center">
-                    <p class="text-gray-400">Log in to see your stats</p>
-                </div>
-            </div>
-
-            <!-- Community Stats -->
-            <div class="card-glass rounded-xl p-6">
-                <h3 class="text-xl font-semibold mb-4">
-                    <i class="fas fa-chart-line text-yellow-400 mr-2"></i>Community Stats
-                </h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Total Reports</span>
-                        <span class="font-bold" id="totalReports">-</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Verified Today</span>
-                        <span class="font-bold text-green-400" id="verifiedToday">-</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Active Reporters</span>
-                        <span class="font-bold text-blue-400" id="activeReporters">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Contributors -->
-            <div class="card-glass rounded-xl p-6">
-                <h3 class="text-xl font-semibold mb-4">
-                    <i class="fas fa-trophy text-yellow-400 mr-2"></i>Top Contributors
-                </h3>
-                <div id="leaderboard" class="space-y-2">
-                    <p class="text-gray-400">Loading...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Tabs -->
-        <div class="flex space-x-2 mb-6 overflow-x-auto">
-            <button onclick="filterReports('pending')" class="filter-btn px-4 py-2 rounded-lg bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400" data-status="pending">
-                <i class="fas fa-clock mr-2"></i>Pending
-            </button>
-            <button onclick="filterReports('verified')" class="filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300" data-status="verified">
-                <i class="fas fa-check mr-2"></i>Verified
-            </button>
-            <button onclick="filterReports('rejected')" class="filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300" data-status="rejected">
-                <i class="fas fa-times mr-2"></i>Rejected
-            </button>
-        </div>
-
-        <!-- Reports List -->
-        <div id="reportsList" class="space-y-4">
-            <p class="text-gray-400 text-center py-8">Loading reports...</p>
-        </div>
-        </div> <!-- End reportsSection -->
-
-        <!-- ==================== DISCUSSIONS SECTION ==================== -->
-        <div id="discussionsSection" class="hidden">
-            <div class="grid lg:grid-cols-4 gap-6">
-                <!-- Sidebar - Categories -->
-                <div class="lg:col-span-1">
-                    <div class="card-glass rounded-xl p-4 sticky top-6">
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-folder text-yellow-400 mr-2"></i>Topics
-                        </h3>
-                        <div id="forumCategoriesList" class="space-y-2">
-                            <div class="text-center text-gray-400 py-4">
-                                <i class="fas fa-spinner fa-spin"></i> Loading...
-                            </div>
-                        </div>
-                        
-                        <hr class="border-gray-700 my-4">
-                        
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-sort text-purple-400 mr-2"></i>Sort By
-                        </h3>
-                        <div class="space-y-2">
-                            <button onclick="setForumSort('newest')" class="sort-btn w-full text-left px-3 py-2 rounded-lg bg-white bg-opacity-10 transition" data-sort="newest">
-                                <i class="fas fa-clock mr-2"></i>Newest
-                            </button>
-                            <button onclick="setForumSort('top')" class="sort-btn w-full text-left px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 transition" data-sort="top">
-                                <i class="fas fa-fire-alt mr-2"></i>Top
-                            </button>
-                            <button onclick="setForumSort('hot')" class="sort-btn w-full text-left px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 transition" data-sort="hot">
-                                <i class="fas fa-chart-line mr-2"></i>Hot
-                            </button>
-                        </div>
-                    </div>
+            <!-- ==================== REPORTS SECTION ==================== -->
+            <div id="reportsSection">
+                <div class="d-flex justify-content-end mb-3">
+                    <button onclick="showReportModal()" class="btn-gradient-green">
+                        <i class="bi bi-flag-fill me-2"></i>Report a Link
+                    </button>
                 </div>
 
-                <!-- Main Content - Posts -->
-                <div class="lg:col-span-3">
-                    <!-- Post List View -->
-                    <div id="postListView">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold" id="currentCategoryTitle">All Discussions</h2>
-                            <button onclick="showNewPostModal()" id="newPostBtn" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-semibold hover:opacity-90 transition hidden">
-                                <i class="fas fa-plus mr-2"></i>New Post
-                            </button>
-                        </div>
-                        
-                        <div id="forumPostsList" class="space-y-4">
-                            <div class="text-center text-gray-400 py-8">
-                                <i class="fas fa-spinner fa-spin text-2xl"></i>
-                                <p class="mt-2">Loading discussions...</p>
+                <!-- Stats and Leaderboard Row -->
+                <div class="row g-4 mb-4">
+                    <!-- Your Stats -->
+                    <div class="col-md-4">
+                        <div class="community-card h-100">
+                            <h3 class="fs-5 fw-semibold mb-3">
+                                <i class="bi bi-person-circle me-2" style="color: var(--primary-color);"></i>Your Reputation
+                            </h3>
+                            <div id="myReputation" class="text-center">
+                                <p style="color: var(--text-secondary);">Log in to see your stats</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Single Post View -->
-                    <div id="postDetailView" class="hidden">
-                        <button onclick="showPostList()" class="mb-4 text-blue-400 hover:text-blue-300 transition">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to Discussions
-                        </button>
-                        
-                        <div id="postDetail" class="card-glass rounded-xl p-6">
-                            <!-- Post content loaded here -->
-                        </div>
-                        
-                        <div class="mt-6">
-                            <h3 class="text-xl font-semibold mb-4" id="commentsHeader">Comments</h3>
-                            
-                            <!-- New Comment Form -->
-                            <div id="newCommentForm" class="card-glass rounded-xl p-4 mb-6 hidden">
-                                <textarea id="newCommentInput" rows="3" placeholder="Write a comment..." 
-                                    class="w-full bg-gray-800 bg-opacity-50 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none"></textarea>
-                                <div class="flex justify-end mt-2">
-                                    <button onclick="submitComment()" class="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
-                                        <i class="fas fa-paper-plane mr-2"></i>Post Comment
-                                    </button>
+                    <!-- Community Stats -->
+                    <div class="col-md-4">
+                        <div class="community-card h-100">
+                            <h3 class="fs-5 fw-semibold mb-3">
+                                <i class="bi bi-graph-up me-2" style="color: var(--warning-color);"></i>Community Stats
+                            </h3>
+                            <div class="d-flex flex-column gap-3">
+                                <div class="d-flex justify-content-between">
+                                    <span style="color: var(--text-secondary);">Total Reports</span>
+                                    <span class="fw-bold" id="totalReports">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span style="color: var(--text-secondary);">Verified Today</span>
+                                    <span class="fw-bold" style="color: var(--success-color);" id="verifiedToday">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span style="color: var(--text-secondary);">Active Reporters</span>
+                                    <span class="fw-bold text-primary-color" id="activeReporters">-</span>
                                 </div>
                             </div>
-                            
-                            <div id="commentsList" class="space-y-4">
-                                <!-- Comments loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Top Contributors -->
+                    <div class="col-md-4">
+                        <div class="community-card h-100">
+                            <h3 class="fs-5 fw-semibold mb-3">
+                                <i class="bi bi-trophy me-2" style="color: var(--warning-color);"></i>Top Contributors
+                            </h3>
+                            <div id="leaderboard" class="d-flex flex-column gap-2">
+                                <p style="color: var(--text-secondary);">Loading...</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div> <!-- End discussionsSection -->
 
-    </main>
+                <!-- Filter Tabs -->
+                <div class="d-flex gap-2 mb-4 overflow-auto">
+                    <button onclick="filterReports('pending')" class="filter-btn filter-active-pending" data-status="pending">
+                        <i class="bi bi-clock me-2"></i>Pending
+                    </button>
+                    <button onclick="filterReports('verified')" class="filter-btn" data-status="verified">
+                        <i class="bi bi-check-lg me-2"></i>Verified
+                    </button>
+                    <button onclick="filterReports('rejected')" class="filter-btn" data-status="rejected">
+                        <i class="bi bi-x-lg me-2"></i>Rejected
+                    </button>
+                </div>
+
+                <!-- Reports List -->
+                <div id="reportsList" class="d-flex flex-column gap-3">
+                    <p class="text-center py-5" style="color: var(--text-secondary);">Loading reports...</p>
+                </div>
+            </div> <!-- End reportsSection -->
+
+            <!-- ==================== DISCUSSIONS SECTION ==================== -->
+            <div id="discussionsSection" class="hidden">
+                <div class="row g-4">
+                    <!-- Sidebar - Categories -->
+                    <div class="col-lg-3">
+                        <div class="community-card sticky-sidebar">
+                            <h3 class="fs-6 fw-semibold mb-3">
+                                <i class="bi bi-folder me-2" style="color: var(--warning-color);"></i>Topics
+                            </h3>
+                            <div id="forumCategoriesList" class="d-flex flex-column gap-2">
+                                <div class="text-center py-3" style="color: var(--text-secondary);">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span> Loading...
+                                </div>
+                            </div>
+
+                            <hr style="border-color: var(--border-color);" class="my-3">
+
+                            <h3 class="fs-6 fw-semibold mb-3">
+                                <i class="bi bi-sort-down me-2" style="color: var(--accent-color);"></i>Sort By
+                            </h3>
+                            <div class="d-flex flex-column gap-2">
+                                <button onclick="setForumSort('newest')" class="sort-btn sort-active" data-sort="newest">
+                                    <i class="bi bi-clock me-2"></i>Newest
+                                </button>
+                                <button onclick="setForumSort('top')" class="sort-btn" data-sort="top">
+                                    <i class="bi bi-fire me-2"></i>Top
+                                </button>
+                                <button onclick="setForumSort('hot')" class="sort-btn" data-sort="hot">
+                                    <i class="bi bi-graph-up me-2"></i>Hot
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content - Posts -->
+                    <div class="col-lg-9">
+                        <!-- Post List View -->
+                        <div id="postListView">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h2 class="fs-5 fw-semibold" id="currentCategoryTitle">All Discussions</h2>
+                                <button onclick="showNewPostModal()" id="newPostBtn" class="btn-gradient-primary hidden">
+                                    <i class="bi bi-plus-lg me-2"></i>New Post
+                                </button>
+                            </div>
+
+                            <div id="forumPostsList" class="d-flex flex-column gap-3">
+                                <div class="text-center py-5" style="color: var(--text-secondary);">
+                                    <div class="loading-spinner"></div>
+                                    <p class="mt-2">Loading discussions...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Single Post View -->
+                        <div id="postDetailView" class="hidden">
+                            <button onclick="showPostList()" class="back-link mb-3 d-block">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Discussions
+                            </button>
+
+                            <div id="postDetail" class="community-card">
+                                <!-- Post content loaded here -->
+                            </div>
+
+                            <div class="mt-4">
+                                <h3 class="fs-5 fw-semibold mb-3" id="commentsHeader">Comments</h3>
+
+                                <!-- New Comment Form -->
+                                <div id="newCommentForm" class="community-card mb-4 hidden">
+                                    <textarea id="newCommentInput" rows="3" placeholder="Write a comment..."
+                                        class="form-input mb-2"></textarea>
+                                    <div class="d-flex justify-content-end">
+                                        <button onclick="submitComment()" class="btn-gradient-primary">
+                                            <i class="bi bi-send me-2"></i>Post Comment
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="commentsList" class="d-flex flex-column gap-3">
+                                    <!-- Comments loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End discussionsSection -->
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="sl-footer">
+            <div class="sl-footer-inner">
+                <div class="sl-footer-brand">
+                    <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                        <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                        <span class="sl-brand-text">SecureLink</span>
+                    </a>
+                    <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Product</h4>
+                    <a href="/features">Features</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/dark-web-monitor">Dark Web Monitor</a>
+                    <a href="/extension">Browser Extension</a>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Resources</h4>
+                    <a href="/guide">User Guide</a>
+                    <a href="/security-news">Security News</a>
+                    <a href="/community">Community</a>
+                    <a href="mailto:support@securelinkapp.com">Support</a>
+                </div>
+                <div class="sl-footer-col">
+                    <h4>Legal</h4>
+                    <a href="/privacy">Privacy Policy</a>
+                    <a href="/terms">Terms of Service</a>
+                </div>
+            </div>
+            <div class="sl-footer-bottom">
+                <p>&copy; 2026 SecureLink. All rights reserved.</p>
+                <div class="sl-footer-bottom-links">
+                    <a href="/privacy">Privacy</a>
+                    <a href="/terms">Terms</a>
+                    <a href="mailto:support@securelinkapp.com">Contact</a>
+                </div>
+            </div>
+        </footer>
+    </div>
 
     <!-- New Post Modal -->
     <div class="modal-overlay" id="newPostModal">
-        <div class="modal-content p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Create New Post</h2>
-                <button onclick="closeNewPostModal()" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+        <div class="modal-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fs-4 fw-bold">Create New Post</h2>
+                <button onclick="closeNewPostModal()" class="btn-close btn-close-white" aria-label="Close"></button>
             </div>
-            
+
             <form id="newPostForm" onsubmit="submitNewPost(event)">
-                <div class="mb-4">
-                    <label class="block text-gray-300 mb-2">Topic</label>
-                    <select id="postCategory" required
-                        class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-400 focus:outline-none">
+                <div class="mb-3">
+                    <label class="form-label" style="color: var(--text-secondary);">Topic</label>
+                    <select id="postCategory" required class="form-input">
                         <option value="">Select a topic...</option>
                     </select>
                 </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-300 mb-2">Title</label>
+
+                <div class="mb-3">
+                    <label class="form-label" style="color: var(--text-secondary);">Title</label>
                     <input type="text" id="postTitle" required minlength="5" maxlength="300"
-                        class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none"
-                        placeholder="What's on your mind?">
+                        class="form-input" placeholder="What's on your mind?">
                 </div>
-                
-                <div class="mb-6">
-                    <label class="block text-gray-300 mb-2">Content</label>
+
+                <div class="mb-4">
+                    <label class="form-label" style="color: var(--text-secondary);">Content</label>
                     <textarea id="postContent" required minlength="10" rows="6"
-                        class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none"
-                        placeholder="Share your thoughts, questions, or security tips..."></textarea>
+                        class="form-input" placeholder="Share your thoughts, questions, or security tips..."></textarea>
                 </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeNewPostModal()" class="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition">
-                        Cancel
-                    </button>
-                    <button type="submit" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:opacity-90 transition">
-                        <i class="fas fa-paper-plane mr-2"></i>Post
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" onclick="closeNewPostModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-gradient-primary">
+                        <i class="bi bi-send me-2"></i>Post
                     </button>
                 </div>
             </form>
@@ -318,45 +566,38 @@
 
     <!-- Login Required Modal -->
     <div class="modal-overlay" id="loginModal">
-        <div class="modal-content p-6 text-center">
-            <i class="fas fa-lock text-5xl text-blue-400 mb-4"></i>
-            <h2 class="text-2xl font-bold mb-2">Login Required</h2>
-            <p class="text-gray-400 mb-6">You need to be logged in to participate in discussions.</p>
-            <div class="flex justify-center space-x-3">
-                <button onclick="closeLoginModal()" class="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition">
-                    Cancel
-                </button>
-                <a href="/login" class="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+        <div class="modal-content text-center">
+            <i class="bi bi-lock-fill d-block mb-3" style="font-size: 3rem; color: var(--primary-color);"></i>
+            <h2 class="fs-4 fw-bold mb-2">Login Required</h2>
+            <p class="mb-4" style="color: var(--text-secondary);">You need to be logged in to participate in discussions.</p>
+            <div class="d-flex justify-content-center gap-2">
+                <button onclick="closeLoginModal()" class="btn btn-secondary">Cancel</button>
+                <a href="/login" class="btn-gradient-primary text-decoration-none d-inline-flex align-items-center">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Login
                 </a>
             </div>
         </div>
     </div>
 
     <!-- Report Modal -->
-    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">
-                    <i class="fas fa-flag text-red-400 mr-2"></i>Report Suspicious Link
+    <div id="reportModal" class="modal-overlay" style="background: rgba(0, 0, 0, 0.5);">
+        <div class="modal-content" style="max-width: 32rem; padding: 2rem;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fs-4 fw-bold">
+                    <i class="bi bi-flag-fill me-2" style="color: var(--danger-color);"></i>Report Suspicious Link
                 </h2>
-                <button onclick="hideReportModal()" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+                <button onclick="hideReportModal()" class="btn-close btn-close-white" aria-label="Close"></button>
             </div>
 
-            <form id="reportForm" class="space-y-4">
+            <form id="reportForm" class="d-flex flex-column gap-3">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Suspicious URL *</label>
-                    <input type="url" id="reportUrl" required
-                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
-                           placeholder="https://suspicious-site.com">
+                    <label class="form-label small" style="color: var(--text-secondary);">Suspicious URL *</label>
+                    <input type="url" id="reportUrl" required class="form-input" placeholder="https://suspicious-site.com">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Type of Threat *</label>
-                    <select id="reportType" required
-                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none">
+                    <label class="form-label small" style="color: var(--text-secondary);">Type of Threat *</label>
+                    <select id="reportType" required class="form-input">
                         <option value="phishing">Phishing</option>
                         <option value="malware">Malware</option>
                         <option value="scam">Scam</option>
@@ -366,21 +607,77 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Description</label>
-                    <textarea id="reportDescription" rows="3"
-                              class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
-                              placeholder="Describe why you think this link is suspicious..."></textarea>
+                    <label class="form-label small" style="color: var(--text-secondary);">Description</label>
+                    <textarea id="reportDescription" rows="3" class="form-input"
+                              placeholder="Describe why you think this link is suspicious..." style="resize: none;"></textarea>
                 </div>
 
-                <button type="submit" 
-                        class="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg font-semibold hover:opacity-90 transition">
-                    <i class="fas fa-paper-plane mr-2"></i>Submit Report
+                <button type="submit" class="btn-gradient-danger">
+                    <i class="bi bi-send me-2"></i>Submit Report
                 </button>
             </form>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ==================== ICON MAPPING ====================
+        const faToBI = {
+            'fa-shield-alt': 'bi-shield-lock-fill',
+            'fa-users': 'bi-people-fill',
+            'fa-flag': 'bi-flag-fill',
+            'fa-comments': 'bi-chat-dots',
+            'fa-comment': 'bi-chat',
+            'fa-comment-slash': 'bi-chat-slash',
+            'fa-fire': 'bi-fire',
+            'fa-fire-alt': 'bi-fire',
+            'fa-clock': 'bi-clock',
+            'fa-eye': 'bi-eye',
+            'fa-thumbs-up': 'bi-hand-thumbs-up',
+            'fa-thumbs-down': 'bi-hand-thumbs-down',
+            'fa-arrow-up': 'bi-arrow-up',
+            'fa-arrow-down': 'bi-arrow-down',
+            'fa-arrow-left': 'bi-arrow-left',
+            'fa-search': 'bi-search',
+            'fa-plus': 'bi-plus-lg',
+            'fa-times': 'bi-x-lg',
+            'fa-user': 'bi-person',
+            'fa-user-circle': 'bi-person-circle',
+            'fa-star': 'bi-star-fill',
+            'fa-link': 'bi-link-45deg',
+            'fa-globe': 'bi-globe',
+            'fa-exclamation-triangle': 'bi-exclamation-triangle',
+            'fa-check-circle': 'bi-check-circle-fill',
+            'fa-check': 'bi-check-lg',
+            'fa-paper-plane': 'bi-send',
+            'fa-reply': 'bi-reply',
+            'fa-trash': 'bi-trash',
+            'fa-edit': 'bi-pencil-square',
+            'fa-lock': 'bi-lock-fill',
+            'fa-sign-in-alt': 'bi-box-arrow-in-right',
+            'fa-folder': 'bi-folder',
+            'fa-sort': 'bi-sort-down',
+            'fa-chart-line': 'bi-graph-up',
+            'fa-trophy': 'bi-trophy',
+            'fa-thumbtack': 'bi-pin-fill',
+            'fa-spinner': 'bi-arrow-clockwise',
+            'fa-bug': 'bi-bug',
+            'fa-tools': 'bi-tools',
+            'fa-newspaper': 'bi-newspaper',
+            'fa-question-circle': 'bi-question-circle',
+            'fa-lightbulb': 'bi-lightbulb',
+            'fa-graduation-cap': 'bi-mortarboard',
+            'fa-code': 'bi-code-slash',
+            'fa-network-wired': 'bi-diagram-3',
+            'fa-database': 'bi-database'
+        };
+
+        function mapIcon(faClass) {
+            if (!faClass) return 'bi-folder';
+            const key = faClass.replace('fas ', '').replace('far ', '').replace('fab ', '').trim();
+            return faToBI[key] || 'bi-folder';
+        }
+
         // ==================== SHARED STATE ====================
         const token = localStorage.getItem('authToken') || localStorage.getItem('auth_token');
         const userDataStr = localStorage.getItem('userData');
@@ -394,17 +691,15 @@
 
         function switchMainTab(tab) {
             currentMainTab = tab;
-            
+
             // Update tab buttons
             document.getElementById('tabReports').classList.toggle('active', tab === 'reports');
             document.getElementById('tabDiscussions').classList.toggle('active', tab === 'discussions');
-            document.getElementById('tabReports').classList.toggle('bg-gray-700', tab !== 'reports');
-            document.getElementById('tabDiscussions').classList.toggle('bg-gray-700', tab !== 'discussions');
-            
+
             // Show/hide sections
             document.getElementById('reportsSection').classList.toggle('hidden', tab !== 'reports');
             document.getElementById('discussionsSection').classList.toggle('hidden', tab !== 'discussions');
-            
+
             // Load data for the active tab
             if (tab === 'discussions') {
                 loadForumCategories();
@@ -425,13 +720,11 @@
                 window.location.href = '/login';
                 return;
             }
-            document.getElementById('reportModal').classList.remove('hidden');
-            document.getElementById('reportModal').classList.add('flex');
+            document.getElementById('reportModal').classList.add('active');
         }
 
         function hideReportModal() {
-            document.getElementById('reportModal').classList.add('hidden');
-            document.getElementById('reportModal').classList.remove('flex');
+            document.getElementById('reportModal').classList.remove('active');
         }
 
         document.getElementById('reportForm').addEventListener('submit', async (e) => {
@@ -476,38 +769,38 @@
                 const reports = data.reports || [];
 
                 if (reports.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 text-center py-8">No reports found</p>';
+                    container.innerHTML = '<p class="text-center py-5" style="color: var(--text-secondary);">No reports found</p>';
                     return;
                 }
 
                 container.innerHTML = reports.map(report => `
-                    <div class="card-glass rounded-xl p-6">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="px-2 py-1 rounded text-xs font-semibold ${getTypeColor(report.report_type)}">
+                    <div class="community-card">
+                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="type-badge type-${report.report_type}">
                                         ${report.report_type}
                                     </span>
-                                    <span class="px-2 py-1 rounded text-xs ${getStatusColor(report.status)}">
+                                    <span class="status-badge status-${report.status}">
                                         ${report.status}
                                     </span>
                                 </div>
-                                <p class="text-blue-400 break-all mb-2">${escapeHtml(report.url)}</p>
-                                ${report.description ? `<p class="text-gray-400 text-sm">${escapeHtml(report.description)}</p>` : ''}
-                                <p class="text-gray-500 text-xs mt-2">
+                                <p class="mb-2" style="color: var(--primary-color); word-break: break-all;">${escapeHtml(report.url)}</p>
+                                ${report.description ? `<p class="small" style="color: var(--text-secondary);">${escapeHtml(report.description)}</p>` : ''}
+                                <p class="mt-2" style="color: var(--text-muted); font-size: 0.75rem;">
                                     Reported ${formatTimeAgo(report.created_at)}
                                 </p>
                             </div>
-                            <div class="flex items-center gap-4">
-                                <div class="flex flex-col items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex flex-column align-items-center">
                                     <button onclick="voteReport(${report.id}, true)" 
-                                            class="vote-btn text-2xl ${report.user_voted === true ? 'text-green-400 voted' : 'text-gray-500 hover:text-green-400'}">
-                                        <i class="fas fa-arrow-up"></i>
+                                            class="vote-btn fs-5 ${report.user_voted === true ? 'voted-up voted' : ''}">
+                                        <i class="bi bi-arrow-up"></i>
                                     </button>
-                                    <span class="font-bold text-lg">${(report.votes_up || 0) - (report.votes_down || 0)}</span>
+                                    <span class="fw-bold fs-5">${(report.votes_up || 0) - (report.votes_down || 0)}</span>
                                     <button onclick="voteReport(${report.id}, false)" 
-                                            class="vote-btn text-2xl ${report.user_voted === false ? 'text-red-400 voted' : 'text-gray-500 hover:text-red-400'}">
-                                        <i class="fas fa-arrow-down"></i>
+                                            class="vote-btn fs-5 ${report.user_voted === false ? 'voted-down voted' : ''}">
+                                        <i class="bi bi-arrow-down"></i>
                                     </button>
                                 </div>
                             </div>
@@ -555,21 +848,21 @@
                 const leaderboard = data.leaderboard || [];
 
                 if (leaderboard.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400">No contributors yet</p>';
+                    container.innerHTML = '<p style="color: var(--text-secondary);">No contributors yet</p>';
                     return;
                 }
 
                 container.innerHTML = leaderboard.map((user, index) => `
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="w-6 text-center font-bold ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-orange-400' : 'text-gray-500'}">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold text-center" style="width: 1.5rem; color: ${index === 0 ? '#fbbf24' : index === 1 ? '#d1d5db' : index === 2 ? '#fb923c' : 'var(--text-muted)'};">
                                 ${index + 1}
                             </span>
-                            <span class="ml-2">${escapeHtml(user.username)}</span>
+                            <span class="ms-2">${escapeHtml(user.username)}</span>
                         </div>
-                        <div class="flex items-center">
-                            <span class="px-2 py-0.5 rounded text-xs ${getBadgeClass(user.badge_level)}">${user.badge_level}</span>
-                            <span class="ml-2 text-yellow-400">${user.karma}</span>
+                        <div class="d-flex align-items-center">
+                            <span class="px-2 rounded small ${getBadgeClass(user.badge_level)}">${user.badge_level}</span>
+                            <span class="ms-2" style="color: var(--warning-color);">${user.karma}</span>
                         </div>
                     </div>
                 `).join('');
@@ -592,21 +885,21 @@
                 
                 if (data.karma !== undefined) {
                     container.innerHTML = `
-                        <div class="mb-4">
-                            <span class="px-3 py-1 rounded-full text-sm font-semibold ${getBadgeClass(data.badge_level)}">
+                        <div class="mb-3">
+                            <span class="px-3 py-1 rounded-pill small fw-semibold ${getBadgeClass(data.badge_level)}">
                                 ${data.badge_level}
                             </span>
                         </div>
-                        <div class="text-4xl font-bold text-yellow-400 mb-2">${data.karma}</div>
-                        <div class="text-gray-400">Karma Points</div>
-                        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <div class="text-2xl font-bold">${data.reports_submitted || 0}</div>
-                                <div class="text-gray-400">Reports</div>
+                        <div class="fs-1 fw-bold mb-2" style="color: var(--warning-color);">${data.karma}</div>
+                        <div style="color: var(--text-secondary);">Karma Points</div>
+                        <div class="row g-3 mt-3 small">
+                            <div class="col-6">
+                                <div class="fs-4 fw-bold">${data.reports_submitted || 0}</div>
+                                <div style="color: var(--text-secondary);">Reports</div>
                             </div>
-                            <div>
-                                <div class="text-2xl font-bold">${data.reports_verified || 0}</div>
-                                <div class="text-gray-400">Verified</div>
+                            <div class="col-6">
+                                <div class="fs-4 fw-bold">${data.reports_verified || 0}</div>
+                                <div style="color: var(--text-secondary);">Verified</div>
                             </div>
                         </div>
                     `;
@@ -620,10 +913,9 @@
             currentFilter = status;
             
             document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn';
                 if (btn.dataset.status === status) {
-                    btn.className = `filter-btn px-4 py-2 rounded-lg bg-${getStatusBgColor(status)} bg-opacity-20 border border-${getStatusBgColor(status)} text-${getStatusTextColor(status)}`;
-                } else {
-                    btn.className = 'filter-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300';
+                    btn.classList.add('filter-active-' + status);
                 }
             });
 
@@ -653,28 +945,33 @@
             }
         }
 
+        function getCatColorClass(color) {
+            const valid = ['blue','green','red','yellow','purple','pink','orange','cyan'];
+            return valid.includes(color) ? color : 'blue';
+        }
+
         function renderForumCategories() {
             const container = document.getElementById('forumCategoriesList');
             
             if (forumCategories.length === 0) {
                 container.innerHTML = `
-                    <p class="text-gray-400 text-sm">No topics yet.</p>
-                    <button onclick="seedForumCategories()" class="mt-2 text-blue-400 hover:text-blue-300 text-sm">
-                        <i class="fas fa-plus mr-1"></i>Create default topics
+                    <p class="small" style="color: var(--text-secondary);">No topics yet.</p>
+                    <button onclick="seedForumCategories()" class="back-link small mt-2">
+                        <i class="bi bi-plus-lg me-1"></i>Create default topics
                     </button>
                 `;
                 return;
             }
 
             container.innerHTML = `
-                <button onclick="filterByForumCategory(null)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 transition ${!currentForumCategory ? 'bg-white bg-opacity-10' : ''}">
-                    <i class="fas fa-globe mr-2 text-gray-400"></i>All Discussions
+                <button onclick="filterByForumCategory(null)" class="category-list-btn ${!currentForumCategory ? 'cat-active' : ''}">
+                    <i class="bi bi-globe me-2" style="color: var(--text-muted);"></i>All Discussions
                 </button>
                 ${forumCategories.map(cat => `
-                    <button onclick="filterByForumCategory('${cat.slug}')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 transition ${currentForumCategory === cat.slug ? 'bg-white bg-opacity-10' : ''}">
-                        <i class="fas ${cat.icon} mr-2 text-${cat.color}-400"></i>
+                    <button onclick="filterByForumCategory('${cat.slug}')" class="category-list-btn ${currentForumCategory === cat.slug ? 'cat-active' : ''}">
+                        <i class="bi ${mapIcon(cat.icon)} me-2 cat-color-${getCatColorClass(cat.color)}"></i>
                         ${cat.name}
-                        <span class="text-gray-500 text-xs ml-1">(${cat.post_count})</span>
+                        <span class="ms-1" style="color: var(--text-muted); font-size: 0.75rem;">(${cat.post_count})</span>
                     </button>
                 `).join('')}
             `;
@@ -712,8 +1009,7 @@
         function setForumSort(sort) {
             currentForumSort = sort;
             document.querySelectorAll('.sort-btn').forEach(btn => {
-                btn.classList.toggle('bg-white', btn.dataset.sort === sort);
-                btn.classList.toggle('bg-opacity-10', btn.dataset.sort === sort);
+                btn.classList.toggle('sort-active', btn.dataset.sort === sort);
             });
             loadForumPosts();
         }
@@ -721,8 +1017,8 @@
         async function loadForumPosts() {
             const container = document.getElementById('forumPostsList');
             container.innerHTML = `
-                <div class="text-center text-gray-400 py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl"></i>
+                <div class="text-center py-5" style="color: var(--text-secondary);">
+                    <div class="loading-spinner"></div>
                     <p class="mt-2">Loading discussions...</p>
                 </div>
             `;
@@ -738,10 +1034,10 @@
                 
                 if (data.posts.length === 0) {
                     container.innerHTML = `
-                        <div class="text-center text-gray-400 py-12">
-                            <i class="fas fa-comments text-5xl mb-4"></i>
-                            <p class="text-lg">No discussions yet</p>
-                            <p class="text-sm mt-2">Be the first to start a conversation!</p>
+                        <div class="text-center py-5" style="color: var(--text-secondary);">
+                            <i class="bi bi-chat-dots d-block mb-3" style="font-size: 3rem;"></i>
+                            <p class="fs-5">No discussions yet</p>
+                            <p class="small mt-2">Be the first to start a conversation!</p>
                         </div>
                     `;
                     return;
@@ -756,8 +1052,8 @@
             } catch (error) {
                 console.error('Error loading posts:', error);
                 container.innerHTML = `
-                    <div class="text-center text-red-400 py-8">
-                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    <div class="text-center py-5" style="color: var(--danger-color);">
+                        <i class="bi bi-exclamation-triangle d-block" style="font-size: 1.5rem;"></i>
                         <p class="mt-2">Error loading discussions</p>
                     </div>
                 `;
@@ -771,34 +1067,35 @@
                 const category = post.category || {};
                 const userVote = forumUserVotes[`post_${post.id}`] || 0;
                 const timeAgo = formatTimeAgo(post.created_at);
+                const catColor = getCatColorClass(category.color || 'blue');
                 
                 return `
-                    <div class="post-card card-glass rounded-xl p-4 cursor-pointer" onclick="viewForumPost(${post.id})">
-                        <div class="flex">
-                            <div class="flex flex-col items-center mr-4 text-center" onclick="event.stopPropagation()">
-                                <button onclick="voteForumPost(${post.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up' : 'text-gray-400'} hover:text-green-400">
-                                    <i class="fas fa-arrow-up text-lg"></i>
+                    <div class="post-card community-card" onclick="viewForumPost(${post.id})">
+                        <div class="d-flex">
+                            <div class="d-flex flex-column align-items-center me-3 text-center" onclick="event.stopPropagation()">
+                                <button onclick="voteForumPost(${post.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up voted' : ''}">
+                                    <i class="bi bi-arrow-up fs-5"></i>
                                 </button>
-                                <span class="text-lg font-bold my-1 ${post.score > 0 ? 'text-green-400' : post.score < 0 ? 'text-red-400' : 'text-gray-400'}">${post.score}</span>
-                                <button onclick="voteForumPost(${post.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down' : 'text-gray-400'} hover:text-red-400">
-                                    <i class="fas fa-arrow-down text-lg"></i>
+                                <span class="fs-5 fw-bold my-1 ${post.score > 0 ? 'score-positive' : post.score < 0 ? 'score-negative' : 'score-neutral'}">${post.score}</span>
+                                <button onclick="voteForumPost(${post.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down voted' : ''}">
+                                    <i class="bi bi-arrow-down fs-5"></i>
                                 </button>
                             </div>
                             
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-2 flex-wrap">
-                                    <span class="category-badge bg-${category.color || 'blue'}-500 bg-opacity-20 text-${category.color || 'blue'}-300">
-                                        <i class="fas ${category.icon || 'fa-folder'} mr-1"></i>${category.name || 'General'}
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                    <span class="category-badge cat-badge-${catColor}">
+                                        <i class="bi ${mapIcon(category.icon || 'fa-folder')} me-1"></i>${category.name || 'General'}
                                     </span>
-                                    ${post.is_pinned ? '<span class="category-badge bg-yellow-500 bg-opacity-20 text-yellow-300"><i class="fas fa-thumbtack mr-1"></i>Pinned</span>' : ''}
+                                    ${post.is_pinned ? '<span class="category-badge" style="background: rgba(234,179,8,0.2); color: #fde047;"><i class="bi bi-pin-fill me-1"></i>Pinned</span>' : ''}
                                 </div>
                                 
-                                <h3 class="text-lg font-semibold mb-2 hover:text-blue-400 transition truncate">${escapeHtml(post.title)}</h3>
+                                <h3 class="fs-5 fw-semibold mb-2 text-truncate">${escapeHtml(post.title)}</h3>
                                 
-                                <div class="flex items-center text-sm text-gray-400 space-x-4">
-                                    <span><i class="fas fa-user mr-1"></i>${escapeHtml(post.author_username)}</span>
-                                    <span><i class="fas fa-clock mr-1"></i>${timeAgo}</span>
-                                    <span><i class="fas fa-comment mr-1"></i>${post.comment_count}</span>
+                                <div class="d-flex align-items-center small gap-3" style="color: var(--text-muted);">
+                                    <span><i class="bi bi-person me-1"></i>${escapeHtml(post.author_username)}</span>
+                                    <span><i class="bi bi-clock me-1"></i>${timeAgo}</span>
+                                    <span><i class="bi bi-chat me-1"></i>${post.comment_count}</span>
                                 </div>
                             </div>
                         </div>
@@ -814,8 +1111,8 @@
 
             const container = document.getElementById('postDetail');
             container.innerHTML = `
-                <div class="text-center py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                <div class="text-center py-5">
+                    <div class="loading-spinner"></div>
                 </div>
             `;
 
@@ -824,7 +1121,7 @@
                 const data = await response.json();
 
                 if (!data.post) {
-                    container.innerHTML = '<p class="text-red-400">Post not found</p>';
+                    container.innerHTML = '<p style="color: var(--danger-color);">Post not found</p>';
                     return;
                 }
 
@@ -836,7 +1133,7 @@
                 renderPostDetail(data.post, data.comments);
             } catch (error) {
                 console.error('Error loading post:', error);
-                container.innerHTML = '<p class="text-red-400">Error loading post</p>';
+                container.innerHTML = '<p style="color: var(--danger-color);">Error loading post</p>';
             }
         }
 
@@ -844,33 +1141,34 @@
             const category = post.category || {};
             const userVote = forumUserVotes[`post_${post.id}`] || 0;
             const timeAgo = formatTimeAgo(post.created_at);
+            const catColor = getCatColorClass(category.color || 'blue');
 
             document.getElementById('postDetail').innerHTML = `
-                <div class="flex">
-                    <div class="flex flex-col items-center mr-6 text-center">
-                        <button onclick="voteForumPost(${post.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up' : 'text-gray-400'} hover:text-green-400">
-                            <i class="fas fa-arrow-up text-2xl"></i>
+                <div class="d-flex">
+                    <div class="d-flex flex-column align-items-center me-4 text-center">
+                        <button onclick="voteForumPost(${post.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up voted' : ''}">
+                            <i class="bi bi-arrow-up fs-4"></i>
                         </button>
-                        <span class="text-2xl font-bold my-2 ${post.score > 0 ? 'text-green-400' : post.score < 0 ? 'text-red-400' : 'text-gray-400'}" id="postScore_${post.id}">${post.score}</span>
-                        <button onclick="voteForumPost(${post.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down' : 'text-gray-400'} hover:text-red-400">
-                            <i class="fas fa-arrow-down text-2xl"></i>
+                        <span class="fs-4 fw-bold my-2 ${post.score > 0 ? 'score-positive' : post.score < 0 ? 'score-negative' : 'score-neutral'}" id="postScore_${post.id}">${post.score}</span>
+                        <button onclick="voteForumPost(${post.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down voted' : ''}">
+                            <i class="bi bi-arrow-down fs-4"></i>
                         </button>
                     </div>
                     
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-3 flex-wrap">
-                            <span class="category-badge bg-${category.color || 'blue'}-500 bg-opacity-20 text-${category.color || 'blue'}-300">
-                                <i class="fas ${category.icon || 'fa-folder'} mr-1"></i>${category.name || 'General'}
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                            <span class="category-badge cat-badge-${catColor}">
+                                <i class="bi ${mapIcon(category.icon || 'fa-folder')} me-1"></i>${category.name || 'General'}
                             </span>
                         </div>
                         
-                        <h1 class="text-2xl font-bold mb-4">${escapeHtml(post.title)}</h1>
+                        <h1 class="fs-4 fw-bold mb-3">${escapeHtml(post.title)}</h1>
                         
-                        <div class="prose prose-invert max-w-none mb-4 text-gray-300 whitespace-pre-wrap">${escapeHtml(post.content)}</div>
+                        <div class="mb-3" style="color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(post.content)}</div>
                         
-                        <div class="flex items-center text-sm text-gray-400 space-x-4 pt-4 border-t border-gray-700">
-                            <span><i class="fas fa-user mr-1"></i>${escapeHtml(post.author_username)}</span>
-                            <span><i class="fas fa-clock mr-1"></i>${timeAgo}</span>
+                        <div class="d-flex align-items-center small gap-3 pt-3" style="color: var(--text-muted); border-top: 1px solid var(--border-color);">
+                            <span><i class="bi bi-person me-1"></i>${escapeHtml(post.author_username)}</span>
+                            <span><i class="bi bi-clock me-1"></i>${timeAgo}</span>
                         </div>
                     </div>
                 </div>
@@ -885,8 +1183,8 @@
             
             if (comments.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fas fa-comment-slash text-3xl mb-2"></i>
+                    <div class="text-center py-5" style="color: var(--text-secondary);">
+                        <i class="bi bi-chat d-block mb-2" style="font-size: 2rem;"></i>
                         <p>No comments yet. Be the first to comment!</p>
                     </div>
                 `;
@@ -898,24 +1196,24 @@
                 const timeAgo = formatTimeAgo(comment.created_at);
                 
                 return `
-                    <div class="card-glass rounded-lg p-4">
-                        <div class="flex">
-                            <div class="flex flex-col items-center mr-4 text-center">
-                                <button onclick="voteForumComment(${comment.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up' : 'text-gray-400'} hover:text-green-400">
-                                    <i class="fas fa-arrow-up"></i>
+                    <div class="community-card" style="padding: 1rem;">
+                        <div class="d-flex">
+                            <div class="d-flex flex-column align-items-center me-3 text-center">
+                                <button onclick="voteForumComment(${comment.id}, 1)" class="vote-btn ${userVote === 1 ? 'voted-up voted' : ''}">
+                                    <i class="bi bi-arrow-up"></i>
                                 </button>
-                                <span class="font-bold my-1 ${comment.score > 0 ? 'text-green-400' : comment.score < 0 ? 'text-red-400' : 'text-gray-400'}">${comment.score}</span>
-                                <button onclick="voteForumComment(${comment.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down' : 'text-gray-400'} hover:text-red-400">
-                                    <i class="fas fa-arrow-down"></i>
+                                <span class="fw-bold my-1 ${comment.score > 0 ? 'score-positive' : comment.score < 0 ? 'score-negative' : 'score-neutral'}">${comment.score}</span>
+                                <button onclick="voteForumComment(${comment.id}, -1)" class="vote-btn ${userVote === -1 ? 'voted-down voted' : ''}">
+                                    <i class="bi bi-arrow-down"></i>
                                 </button>
                             </div>
                             
-                            <div class="flex-1">
-                                <div class="flex items-center text-sm text-gray-400 mb-2">
-                                    <span class="font-semibold text-white mr-2">${escapeHtml(comment.author_username)}</span>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center small mb-2" style="color: var(--text-muted);">
+                                    <span class="fw-semibold me-2" style="color: var(--text-primary);">${escapeHtml(comment.author_username)}</span>
                                     <span>${timeAgo}</span>
                                 </div>
-                                <div class="text-gray-300 whitespace-pre-wrap">${escapeHtml(comment.content)}</div>
+                                <div style="color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(comment.content)}</div>
                             </div>
                         </div>
                     </div>
@@ -1087,43 +1385,23 @@
 
         // ==================== HELPER FUNCTIONS ====================
         function getTypeColor(type) {
-            const colors = {
-                'phishing': 'bg-blue-500 bg-opacity-20 text-blue-400',
-                'malware': 'bg-red-500 bg-opacity-20 text-red-400',
-                'scam': 'bg-yellow-500 bg-opacity-20 text-yellow-400',
-                'spam': 'bg-purple-500 bg-opacity-20 text-purple-400',
-                'other': 'bg-gray-500 bg-opacity-20 text-gray-400'
-            };
-            return colors[type] || colors['other'];
+            return 'type-' + (type || 'other');
         }
 
         function getStatusColor(status) {
-            const colors = {
-                'pending': 'bg-yellow-500 bg-opacity-20 text-yellow-400',
-                'verified': 'bg-green-500 bg-opacity-20 text-green-400',
-                'rejected': 'bg-red-500 bg-opacity-20 text-red-400'
-            };
-            return colors[status] || colors['pending'];
-        }
-
-        function getStatusBgColor(status) {
-            return status === 'pending' ? 'yellow-500' : status === 'verified' ? 'green-500' : 'red-500';
-        }
-
-        function getStatusTextColor(status) {
-            return status === 'pending' ? 'yellow-400' : status === 'verified' ? 'green-400' : 'red-400';
+            return 'status-' + (status || 'pending');
         }
 
         function getBadgeClass(badge) {
             const classes = {
-                'Newcomer': 'bg-gray-600',
+                'Newcomer': 'bg-secondary',
                 'Bronze': 'badge-bronze',
                 'Silver': 'badge-silver',
                 'Gold': 'badge-gold',
                 'Platinum': 'badge-platinum',
                 'Diamond': 'badge-diamond'
             };
-            return classes[badge] || 'bg-gray-600';
+            return classes[badge] || 'bg-secondary';
         }
 
         function formatTimeAgo(dateString) {
@@ -1158,6 +1436,13 @@
             loadLeaderboard();
             loadMyReputation();
         });
+    </script>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>

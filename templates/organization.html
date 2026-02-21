@@ -3,257 +3,497 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
     <title>Organization Dashboard - SecureLink</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        /* ===== Page-Specific Styles ===== */
+        .org-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
         }
-        .card-glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        @media (max-width: 768px) {
+            .org-stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        .api-key {
-            font-family: monospace;
-            background: rgba(0, 0, 0, 0.3);
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            transition: border-color 0.3s;
         }
+        .stat-card:hover { border-color: var(--primary-color); }
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .stat-card .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .stat-danger { color: var(--danger-color); }
+        .stat-primary { color: var(--primary-color); }
+        .stat-success { color: var(--success-color); }
+
+        .org-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .org-header h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 4px;
+        }
+        .org-header h1 i { color: var(--accent-color); margin-right: 10px; }
+        .org-header .org-subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 14px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(14, 165, 233, 0.12);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            color: var(--primary-light);
+        }
+
+        /* Tabs */
+        .org-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-muted);
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.04); }
+        .tab-btn.active {
+            background: rgba(14, 165, 233, 0.12);
+            color: var(--primary-color);
+        }
+
+        /* Webhook / form cards */
+        .webhook-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+        }
+        .webhook-item .webhook-icon {
+            font-size: 1.5rem;
+            margin-right: 14px;
+            flex-shrink: 0;
+        }
+        .webhook-item h4 { font-weight: 600; margin-bottom: 2px; }
+        .webhook-item .webhook-desc { font-size: 0.82rem; color: var(--text-muted); }
+
+        /* Member row */
+        .member-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            transition: border-color 0.25s;
+        }
+        .member-row:hover { border-color: var(--border-light); }
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .member-role-admin {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-light);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .member-role-member {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* API key */
+        .api-key-display {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            overflow-x: auto;
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .api-example-box {
+            background: rgba(14, 165, 233, 0.06);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: var(--radius-md);
+            padding: 20px;
+        }
+        .api-example-box pre {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* No-org view */
+        .no-org-view {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .no-org-view .no-org-icon {
+            font-size: 4rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        .no-org-view h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .no-org-view p {
+            color: var(--text-secondary);
+            max-width: 480px;
+            margin: 0 auto 32px;
+            font-size: 1rem;
+        }
+
+        /* Scan result alerts */
+        .scan-safe {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            color: var(--success-color);
+        }
+        .scan-danger {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            color: var(--danger-color);
+        }
+        .scan-danger .threat-detail { color: var(--text-secondary); font-size: 0.85rem; margin-top: 6px; }
+
+        /* Modals */
+        .org-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1050;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .org-modal-overlay.show { display: flex; }
+        .org-modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            max-width: 480px;
+            width: 100%;
+            margin: 16px;
+        }
+        .org-modal-box h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .org-modal-box h2 i { margin-right: 10px; }
+
+        /* scan input row */
+        .scan-row { display: flex; gap: 12px; }
+        @media (max-width: 576px) { .scan-row { flex-direction: column; } }
+
+        /* btn icon helpers */
+        .btn-icon-sm {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-icon-sm:hover { background: rgba(255,255,255,0.1); }
+        .btn-icon-sm.primary { background: var(--primary-color); border-color: var(--primary-color); }
+        .btn-icon-sm.primary:hover { background: var(--primary-dark); }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <!-- Navigation -->
-    <nav class="p-4 border-b border-gray-700">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="/home" class="text-2xl font-bold">
-                <i class="fas fa-shield-alt text-blue-400 mr-2"></i>SecureLink
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
             </a>
-            <div class="flex items-center space-x-4">
-                <a href="/home" class="hover:text-blue-400 transition">Home</a>
-                <a href="/attack-surface" class="hover:text-blue-400 transition">Attack Surface</a>
-                <a href="/security-news" class="hover:text-blue-400 transition">Security News</a>
-                <a href="/community" class="hover:text-blue-400 transition">Community</a>
-                <a href="/profile" class="hover:text-blue-400 transition">Profile</a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/dark-web-monitor" class="sl-nav-link">Dark Web</a>
+                <a href="/organization" class="sl-nav-link active">Organization</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto p-6">
-        <!-- No Organization View -->
-        <div id="noOrgView" class="hidden">
-            <div class="text-center py-16">
-                <i class="fas fa-building text-6xl text-gray-600 mb-6"></i>
-                <h1 class="text-3xl font-bold mb-4">Organization Dashboard</h1>
-                <p class="text-gray-400 mb-8 max-w-lg mx-auto">
-                    Create an organization to manage team security, get webhook notifications, 
-                    and access enterprise features.
-                </p>
-                <button onclick="showCreateOrgModal()" 
-                        class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold text-lg hover:opacity-90 transition">
-                    <i class="fas fa-plus mr-2"></i>Create Organization
-                </button>
-            </div>
-        </div>
+    <div class="sl-page sl-bg-gradient">
+        <div class="sl-page-centered">
 
-        <!-- Organization View -->
-        <div id="orgView" class="hidden">
-            <!-- Header -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                <div>
-                    <h1 class="text-4xl font-bold mb-2">
-                        <i class="fas fa-building text-purple-400 mr-2"></i>
-                        <span id="orgName">Organization</span>
-                    </h1>
-                    <p class="text-gray-400">Manage your team's security</p>
-                </div>
-                <div class="mt-4 md:mt-0">
-                    <span id="userRole" class="px-3 py-1 bg-blue-500 bg-opacity-20 border border-blue-500 rounded-full text-sm"></span>
-                </div>
-            </div>
-
-            <!-- Stats Row -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="card-glass rounded-xl p-4">
-                    <p class="text-gray-400 text-sm">Total Scans</p>
-                    <p class="text-3xl font-bold" id="totalScans">-</p>
-                </div>
-                <div class="card-glass rounded-xl p-4">
-                    <p class="text-gray-400 text-sm">Threats Found</p>
-                    <p class="text-3xl font-bold text-red-400" id="threatsFound">-</p>
-                </div>
-                <div class="card-glass rounded-xl p-4">
-                    <p class="text-gray-400 text-sm">Team Members</p>
-                    <p class="text-3xl font-bold text-blue-400" id="memberCount">-</p>
-                </div>
-                <div class="card-glass rounded-xl p-4">
-                    <p class="text-gray-400 text-sm">This Week</p>
-                    <p class="text-3xl font-bold text-green-400" id="weeklyScans">-</p>
-                </div>
-            </div>
-
-            <!-- Quick Scan -->
-            <div class="card-glass rounded-2xl p-6 mb-8">
-                <h2 class="text-xl font-semibold mb-4">
-                    <i class="fas fa-search text-blue-400 mr-2"></i>Quick Link Scan
-                </h2>
-                <div class="flex gap-4">
-                    <input type="url" id="scanUrl" 
-                           class="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
-                           placeholder="Enter URL to scan...">
-                    <button onclick="scanLink()" 
-                            class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-semibold hover:opacity-90 transition">
-                        <i class="fas fa-shield-virus mr-2"></i>Scan
+            <!-- No Organization View -->
+            <div id="noOrgView" class="d-none">
+                <div class="no-org-view">
+                    <div class="no-org-icon"><i class="bi bi-building"></i></div>
+                    <h1>Organization Dashboard</h1>
+                    <p>Create an organization to manage team security, get webhook notifications, and access enterprise features.</p>
+                    <button onclick="showCreateOrgModal()" class="sl-btn sl-btn-primary sl-btn-lg">
+                        <i class="bi bi-plus-lg"></i> Create Organization
                     </button>
                 </div>
-                <div id="scanResult" class="mt-4 hidden"></div>
             </div>
 
-            <!-- Tabs -->
-            <div class="flex space-x-2 mb-6 border-b border-gray-700 pb-4">
-                <button onclick="showTab('members')" class="tab-btn px-4 py-2 rounded-lg bg-blue-500 bg-opacity-20 text-blue-400" data-tab="members">
-                    <i class="fas fa-users mr-2"></i>Members
-                </button>
-                <button onclick="showTab('webhooks')" class="tab-btn px-4 py-2 rounded-lg text-gray-400" data-tab="webhooks">
-                    <i class="fas fa-plug mr-2"></i>Webhooks
-                </button>
-                <button onclick="showTab('api')" class="tab-btn px-4 py-2 rounded-lg text-gray-400" data-tab="api">
-                    <i class="fas fa-key mr-2"></i>API Key
-                </button>
-            </div>
-
-            <!-- Members Tab -->
-            <div id="membersTab" class="tab-content">
-                <div class="card-glass rounded-xl p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-semibold">Team Members</h3>
-                        <button onclick="showInviteModal()" class="px-4 py-2 bg-green-500 rounded-lg hover:bg-green-600 transition">
-                            <i class="fas fa-user-plus mr-2"></i>Invite Member
-                        </button>
+            <!-- Organization View -->
+            <div id="orgView" class="d-none">
+                <!-- Header -->
+                <div class="org-header">
+                    <div>
+                        <h1><i class="bi bi-building"></i><span id="orgName">Organization</span></h1>
+                        <p class="org-subtitle">Manage your team's security</p>
                     </div>
-                    <div id="membersList" class="space-y-3">
-                        <p class="text-gray-400">Loading...</p>
+                    <div>
+                        <span id="userRole" class="role-badge"></span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Webhooks Tab -->
-            <div id="webhooksTab" class="tab-content hidden">
-                <div class="card-glass rounded-xl p-6">
-                    <h3 class="text-xl font-semibold mb-6">
-                        <i class="fas fa-bell text-yellow-400 mr-2"></i>Webhook Notifications
-                    </h3>
-                    <p class="text-gray-400 mb-6">
-                        Get instant notifications in your team chat when dangerous links are detected.
-                    </p>
-
-                    <form id="webhooksForm" class="space-y-6">
-                        <!-- Slack -->
-                        <div class="p-4 bg-gray-800 rounded-lg">
-                            <div class="flex items-center mb-3">
-                                <i class="fab fa-slack text-2xl text-purple-400 mr-3"></i>
-                                <div>
-                                    <h4 class="font-semibold">Slack</h4>
-                                    <p class="text-sm text-gray-400">Send alerts to a Slack channel</p>
-                                </div>
-                            </div>
-                            <input type="url" id="slackWebhook" 
-                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none"
-                                   placeholder="https://hooks.slack.com/services/...">
-                        </div>
-
-                        <!-- Discord -->
-                        <div class="p-4 bg-gray-800 rounded-lg">
-                            <div class="flex items-center mb-3">
-                                <i class="fab fa-discord text-2xl text-indigo-400 mr-3"></i>
-                                <div>
-                                    <h4 class="font-semibold">Discord</h4>
-                                    <p class="text-sm text-gray-400">Send alerts to a Discord channel</p>
-                                </div>
-                            </div>
-                            <input type="url" id="discordWebhook" 
-                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-indigo-500 focus:outline-none"
-                                   placeholder="https://discord.com/api/webhooks/...">
-                        </div>
-
-                        <!-- Microsoft Teams -->
-                        <div class="p-4 bg-gray-800 rounded-lg">
-                            <div class="flex items-center mb-3">
-                                <i class="fab fa-microsoft text-2xl text-blue-400 mr-3"></i>
-                                <div>
-                                    <h4 class="font-semibold">Microsoft Teams</h4>
-                                    <p class="text-sm text-gray-400">Send alerts to a Teams channel</p>
-                                </div>
-                            </div>
-                            <input type="url" id="teamsWebhook" 
-                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="https://outlook.office.com/webhook/...">
-                        </div>
-
-                        <button type="submit" 
-                                class="w-full py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
-                            <i class="fas fa-save mr-2"></i>Save Webhook Settings
-                        </button>
-                    </form>
+                <!-- Stats Row -->
+                <div class="org-stats-grid">
+                    <div class="stat-card">
+                        <p class="stat-label">Total Scans</p>
+                        <p class="stat-value" id="totalScans">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <p class="stat-label">Threats Found</p>
+                        <p class="stat-value stat-danger" id="threatsFound">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <p class="stat-label">Team Members</p>
+                        <p class="stat-value stat-primary" id="memberCount">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <p class="stat-label">This Week</p>
+                        <p class="stat-value stat-success" id="weeklyScans">-</p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- API Tab -->
-            <div id="apiTab" class="tab-content hidden">
-                <div class="card-glass rounded-xl p-6">
-                    <h3 class="text-xl font-semibold mb-6">
-                        <i class="fas fa-code text-green-400 mr-2"></i>API Access
-                    </h3>
-                    <p class="text-gray-400 mb-6">
-                        Use the API key to integrate SecureLink into your applications.
-                    </p>
+                <!-- Quick Scan -->
+                <div class="sl-card mb-4">
+                    <h2 class="h5 fw-semibold mb-3">
+                        <i class="bi bi-search" style="color:var(--primary-color);margin-right:8px"></i>Quick Link Scan
+                    </h2>
+                    <div class="scan-row">
+                        <input type="url" id="scanUrl" class="sl-input" placeholder="Enter URL to scan..." style="flex:1">
+                        <button onclick="scanLink()" class="sl-btn sl-btn-primary">
+                            <i class="bi bi-shield-lock-fill"></i> Scan
+                        </button>
+                    </div>
+                    <div id="scanResult" class="mt-3 d-none"></div>
+                </div>
 
-                    <div class="p-4 bg-gray-800 rounded-lg mb-6">
-                        <label class="block text-sm text-gray-400 mb-2">API Key</label>
-                        <div class="flex items-center gap-2">
-                            <code id="apiKey" class="api-key flex-1 px-4 py-3 rounded-lg overflow-x-auto">
-                                ••••••••••••••••••••••••••••••••
-                            </code>
-                            <button onclick="toggleApiKey()" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
-                                <i class="fas fa-eye" id="apiKeyIcon"></i>
+                <!-- Tabs -->
+                <div class="org-tabs">
+                    <button onclick="showTab('members')" class="tab-btn active" data-tab="members">
+                        <i class="bi bi-people"></i> Members
+                    </button>
+                    <button onclick="showTab('webhooks')" class="tab-btn" data-tab="webhooks">
+                        <i class="bi bi-broadcast"></i> Webhooks
+                    </button>
+                    <button onclick="showTab('api')" class="tab-btn" data-tab="api">
+                        <i class="bi bi-key"></i> API Key
+                    </button>
+                </div>
+
+                <!-- Members Tab -->
+                <div id="membersTab" class="tab-content">
+                    <div class="sl-card">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="h5 fw-semibold mb-0">Team Members</h3>
+                            <button onclick="showInviteModal()" class="sl-btn sl-btn-primary" style="padding:9px 18px;font-size:0.85rem">
+                                <i class="bi bi-person-plus"></i> Invite Member
                             </button>
-                            <button onclick="copyApiKey()" class="px-4 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
-                                <i class="fas fa-copy"></i>
-                            </button>
+                        </div>
+                        <div id="membersList" class="d-flex flex-column gap-2">
+                            <p class="text-secondary-sl">Loading...</p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="p-4 bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-lg">
-                        <h4 class="font-semibold mb-2">API Usage Example</h4>
-                        <pre class="text-sm text-gray-300 overflow-x-auto"><code>curl -X POST https://securelink.com/api/org/{org_id}/verify \
+                <!-- Webhooks Tab -->
+                <div id="webhooksTab" class="tab-content d-none">
+                    <div class="sl-card">
+                        <h3 class="h5 fw-semibold mb-2">
+                            <i class="bi bi-bell" style="color:var(--warning-color);margin-right:8px"></i>Webhook Notifications
+                        </h3>
+                        <p class="text-secondary-sl mb-4">
+                            Get instant notifications in your team chat when dangerous links are detected.
+                        </p>
+
+                        <form id="webhooksForm" class="d-flex flex-column gap-3">
+                            <!-- Slack -->
+                            <div class="webhook-item">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-hash webhook-icon" style="color:var(--accent-color)"></i>
+                                    <div>
+                                        <h4>Slack</h4>
+                                        <p class="webhook-desc">Send alerts to a Slack channel</p>
+                                    </div>
+                                </div>
+                                <input type="url" id="slackWebhook" class="sl-input" placeholder="https://hooks.slack.com/services/...">
+                            </div>
+
+                            <!-- Discord -->
+                            <div class="webhook-item">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-discord webhook-icon" style="color:#7289da"></i>
+                                    <div>
+                                        <h4>Discord</h4>
+                                        <p class="webhook-desc">Send alerts to a Discord channel</p>
+                                    </div>
+                                </div>
+                                <input type="url" id="discordWebhook" class="sl-input" placeholder="https://discord.com/api/webhooks/...">
+                            </div>
+
+                            <!-- Microsoft Teams -->
+                            <div class="webhook-item">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-microsoft-teams webhook-icon" style="color:var(--primary-color)"></i>
+                                    <div>
+                                        <h4>Microsoft Teams</h4>
+                                        <p class="webhook-desc">Send alerts to a Teams channel</p>
+                                    </div>
+                                </div>
+                                <input type="url" id="teamsWebhook" class="sl-input" placeholder="https://outlook.office.com/webhook/...">
+                            </div>
+
+                            <button type="submit" class="sl-btn sl-btn-primary w-100">
+                                <i class="bi bi-check-lg"></i> Save Webhook Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- API Tab -->
+                <div id="apiTab" class="tab-content d-none">
+                    <div class="sl-card">
+                        <h3 class="h5 fw-semibold mb-2">
+                            <i class="bi bi-code-slash" style="color:var(--success-color);margin-right:8px"></i>API Access
+                        </h3>
+                        <p class="text-secondary-sl mb-4">
+                            Use the API key to integrate SecureLink into your applications.
+                        </p>
+
+                        <div class="webhook-item mb-4">
+                            <label class="form-label text-secondary-sl" style="font-size:0.82rem">API Key</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <code id="apiKey" class="api-key-display">
+                                    ••••••••••••••••••••••••••••••••
+                                </code>
+                                <button type="button" onclick="toggleApiKey()" class="btn-icon-sm">
+                                    <i class="bi bi-eye" id="apiKeyIcon"></i>
+                                </button>
+                                <button type="button" onclick="copyApiKey()" class="btn-icon-sm primary">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="api-example-box">
+                            <h4 class="fw-semibold mb-2" style="font-size:0.95rem">API Usage Example</h4>
+                            <pre><code>curl -X POST https://securelink.com/api/org/{org_id}/verify \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com"}'</code></pre>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- Create Org Modal -->
-    <div id="createOrgModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
-            <h2 class="text-2xl font-bold mb-6">
-                <i class="fas fa-building text-purple-400 mr-2"></i>Create Organization
-            </h2>
-            <form id="createOrgForm" class="space-y-4">
+    <div id="createOrgModal" class="org-modal-overlay">
+        <div class="org-modal-box">
+            <h2><i class="bi bi-building" style="color:var(--accent-color)"></i>Create Organization</h2>
+            <form id="createOrgForm" class="d-flex flex-column gap-3">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Organization Name *</label>
-                    <input type="text" id="newOrgName" required
-                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-purple-500 focus:outline-none"
-                           placeholder="Acme Corp">
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem">Organization Name *</label>
+                    <input type="text" id="newOrgName" required class="sl-input" placeholder="Acme Corp">
                 </div>
-                <div class="flex gap-4">
-                    <button type="button" onclick="hideCreateOrgModal()" 
-                            class="flex-1 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                <div class="d-flex gap-3 mt-2">
+                    <button type="button" onclick="hideCreateOrgModal()" class="sl-btn sl-btn-outline flex-fill">
                         Cancel
                     </button>
-                    <button type="submit" 
-                            class="flex-1 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                    <button type="submit" class="sl-btn sl-btn-primary flex-fill">
                         Create
                     </button>
                 </div>
@@ -262,33 +502,26 @@
     </div>
 
     <!-- Invite Modal -->
-    <div id="inviteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="card-glass rounded-2xl p-8 max-w-lg w-full mx-4">
-            <h2 class="text-2xl font-bold mb-6">
-                <i class="fas fa-user-plus text-green-400 mr-2"></i>Invite Team Member
-            </h2>
-            <form id="inviteForm" class="space-y-4">
+    <div id="inviteModal" class="org-modal-overlay">
+        <div class="org-modal-box">
+            <h2><i class="bi bi-person-plus" style="color:var(--success-color)"></i>Invite Team Member</h2>
+            <form id="inviteForm" class="d-flex flex-column gap-3">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Email Address *</label>
-                    <input type="email" id="inviteEmail" required
-                           class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-green-500 focus:outline-none"
-                           placeholder="colleague@company.com">
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem">Email Address *</label>
+                    <input type="email" id="inviteEmail" required class="sl-input" placeholder="colleague@company.com">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Role</label>
-                    <select id="inviteRole" 
-                            class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-green-500 focus:outline-none">
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem">Role</label>
+                    <select id="inviteRole" class="sl-input">
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>
-                <div class="flex gap-4">
-                    <button type="button" onclick="hideInviteModal()" 
-                            class="flex-1 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                <div class="d-flex gap-3 mt-2">
+                    <button type="button" onclick="hideInviteModal()" class="sl-btn sl-btn-outline flex-fill">
                         Cancel
                     </button>
-                    <button type="submit" 
-                            class="flex-1 py-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg font-semibold hover:opacity-90 transition">
+                    <button type="submit" class="sl-btn sl-btn-primary flex-fill">
                         Send Invite
                     </button>
                 </div>
@@ -296,6 +529,47 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const token = localStorage.getItem('auth_token');
         let currentOrg = null;
@@ -338,10 +612,10 @@
                 if (profile.organization_id) {
                     await loadOrganization(profile.organization_id);
                 } else {
-                    document.getElementById('noOrgView').classList.remove('hidden');
+                    document.getElementById('noOrgView').classList.remove('d-none');
                 }
             } catch (error) {
-                document.getElementById('noOrgView').classList.remove('hidden');
+                document.getElementById('noOrgView').classList.remove('d-none');
             }
         }
 
@@ -357,17 +631,17 @@
                     currentOrg = data.organization;
                     
                     document.getElementById('orgName').textContent = currentOrg.name;
-                    document.getElementById('orgView').classList.remove('hidden');
+                    document.getElementById('orgView').classList.remove('d-none');
                     
                     // Load additional data
                     loadMembers();
                     loadStats();
                     loadWebhooks();
                 } else {
-                    document.getElementById('noOrgView').classList.remove('hidden');
+                    document.getElementById('noOrgView').classList.remove('d-none');
                 }
             } catch (error) {
-                document.getElementById('noOrgView').classList.remove('hidden');
+                document.getElementById('noOrgView').classList.remove('d-none');
             }
         }
 
@@ -387,17 +661,17 @@
                 document.getElementById('memberCount').textContent = members.length;
 
                 container.innerHTML = members.map(member => `
-                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3">
+                    <div class="member-row">
+                        <div class="d-flex align-items-center">
+                            <div class="member-avatar">
                                 ${member.username ? member.username[0].toUpperCase() : '?'}
                             </div>
                             <div>
-                                <p class="font-semibold">${member.username || 'Unknown'}</p>
-                                <p class="text-sm text-gray-400">${member.email || ''}</p>
+                                <p class="fw-semibold mb-0">${member.username || 'Unknown'}</p>
+                                <p class="text-secondary-sl mb-0" style="font-size:0.82rem">${member.email || ''}</p>
                             </div>
                         </div>
-                        <span class="px-2 py-1 rounded text-xs ${member.role === 'admin' ? 'bg-purple-500 bg-opacity-20 text-purple-400' : 'bg-gray-600 text-gray-300'}">
+                        <span class="${member.role === 'admin' ? 'member-role-admin' : 'member-role-member'}">
                             ${member.role}
                         </span>
                     </div>
@@ -443,8 +717,8 @@
             if (!url || !currentOrg) return;
 
             const resultDiv = document.getElementById('scanResult');
-            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
-            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm"></span> Scanning...</div>';
+            resultDiv.classList.remove('d-none');
 
             try {
                 const response = await fetch(`/api/org/${currentOrg.id}/verify`, {
@@ -460,62 +734,56 @@
 
                 if (data.is_safe) {
                     resultDiv.innerHTML = `
-                        <div class="p-4 bg-green-500 bg-opacity-20 border border-green-500 rounded-lg">
-                            <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                        <div class="scan-safe">
+                            <i class="bi bi-check-circle me-2"></i>
                             <strong>Safe</strong> - Risk Score: ${data.risk_score}/100
                         </div>
                     `;
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg">
-                            <div class="flex items-start">
-                                <i class="fas fa-exclamation-triangle text-red-400 mr-2 mt-1"></i>
+                        <div class="scan-danger">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-triangle me-2 mt-1"></i>
                                 <div>
                                     <strong>Dangerous</strong> - Risk Score: ${data.risk_score}/100
-                                    ${data.threat_types ? `<p class="text-sm mt-1">Threats: ${data.threat_types.join(', ')}</p>` : ''}
-                                    ${data.ai_explanation ? `<p class="text-sm mt-2 text-gray-300">${data.ai_explanation}</p>` : ''}
+                                    ${data.threat_types ? `<p class="threat-detail">Threats: ${data.threat_types.join(', ')}</p>` : ''}
+                                    ${data.ai_explanation ? `<p class="threat-detail">${data.ai_explanation}</p>` : ''}
                                 </div>
                             </div>
                         </div>
                     `;
                 }
             } catch (error) {
-                resultDiv.innerHTML = '<div class="text-red-400">Error scanning link</div>';
+                resultDiv.innerHTML = '<div style="color:var(--danger-color)">Error scanning link</div>';
             }
         }
 
         // Tab switching
         function showTab(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
             document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('bg-blue-500', 'bg-opacity-20', 'text-blue-400');
-                el.classList.add('text-gray-400');
+                el.classList.remove('active');
             });
 
-            document.getElementById(`${tab}Tab`).classList.remove('hidden');
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('bg-blue-500', 'bg-opacity-20', 'text-blue-400');
-            document.querySelector(`[data-tab="${tab}"]`).classList.remove('text-gray-400');
+            document.getElementById(`${tab}Tab`).classList.remove('d-none');
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
         }
 
         // Modals
         function showCreateOrgModal() {
-            document.getElementById('createOrgModal').classList.remove('hidden');
-            document.getElementById('createOrgModal').classList.add('flex');
+            document.getElementById('createOrgModal').classList.add('show');
         }
 
         function hideCreateOrgModal() {
-            document.getElementById('createOrgModal').classList.add('hidden');
-            document.getElementById('createOrgModal').classList.remove('flex');
+            document.getElementById('createOrgModal').classList.remove('show');
         }
 
         function showInviteModal() {
-            document.getElementById('inviteModal').classList.remove('hidden');
-            document.getElementById('inviteModal').classList.add('flex');
+            document.getElementById('inviteModal').classList.add('show');
         }
 
         function hideInviteModal() {
-            document.getElementById('inviteModal').classList.add('hidden');
-            document.getElementById('inviteModal').classList.remove('flex');
+            document.getElementById('inviteModal').classList.remove('show');
         }
 
         // Create organization
@@ -537,7 +805,7 @@
                 if (data.success) {
                     hideCreateOrgModal();
                     loadOrganization(data.organization.id);
-                    document.getElementById('noOrgView').classList.add('hidden');
+                    document.getElementById('noOrgView').classList.add('d-none');
                 } else {
                     alert(data.error || 'Failed to create organization');
                 }
@@ -618,12 +886,12 @@
             
             if (apiKeyVisible && currentOrg) {
                 keyEl.textContent = currentOrg.api_key;
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
             } else {
                 keyEl.textContent = '••••••••••••••••••••••••••••••••';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
             }
         }
 
@@ -636,6 +904,13 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', init);
+    </script>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
 </body>
 </html>
