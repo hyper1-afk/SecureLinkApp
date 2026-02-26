@@ -557,6 +557,131 @@ class AuthManager:
             print(f"Failed to send verification email: {e}")
             return False
     
+    def _send_welcome_email(self, email: str, username: str, full_name: Optional[str] = None) -> bool:
+        """Send a welcome email after a user successfully verifies their account"""
+        try:
+            display_name = full_name or username
+            login_url = 'https://securelinkapp.com/login'
+
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 40px; }}
+                    .logo {{ text-align: center; margin-bottom: 30px; }}
+                    .logo h1 {{ color: #0ea5e9; margin: 0; font-size: 28px; }}
+                    h2 {{ color: #f8fafc; margin-top: 0; }}
+                    p {{ color: #cbd5e1; line-height: 1.6; }}
+                    .btn {{ display: inline-block; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; margin: 20px 0; }}
+                    .features {{ background: #0f172a; border-radius: 12px; padding: 24px; margin: 24px 0; }}
+                    .feature {{ display: flex; align-items: flex-start; margin-bottom: 16px; }}
+                    .feature:last-child {{ margin-bottom: 0; }}
+                    .feature-icon {{ font-size: 20px; margin-right: 14px; flex-shrink: 0; }}
+                    .feature-text {{ color: #cbd5e1; }}
+                    .feature-text strong {{ color: #f8fafc; display: block; margin-bottom: 2px; }}
+                    .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155; color: #94a3b8; font-size: 13px; text-align: center; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">
+                        <h1>&#128274; SecureLink</h1>
+                    </div>
+                    <h2>Welcome to SecureLink, {display_name}!</h2>
+                    <p>Your account is verified and ready to go. We're glad to have you.</p>
+                    <p>Here's what you can do right away:</p>
+                    <div class="features">
+                        <div class="feature">
+                            <span class="feature-icon">&#128269;</span>
+                            <div class="feature-text">
+                                <strong>Link &amp; Website Scanner</strong>
+                                Instantly check any URL for malware, phishing, and suspicious activity before you click.
+                            </div>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">&#128737;</span>
+                            <div class="feature-text">
+                                <strong>Security Dashboard</strong>
+                                Monitor your overall security posture and get a real-time snapshot of threats and alerts.
+                            </div>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">&#128202;</span>
+                            <div class="feature-text">
+                                <strong>Threat Intelligence</strong>
+                                Stay informed with live threat feeds and dark web monitoring to protect your data.
+                            </div>
+                        </div>
+                    </div>
+                    <p style="text-align: center;">
+                        <a href="{login_url}" class="btn">Go to Your Dashboard</a>
+                    </p>
+                    <p>If you have any questions, just reply to this email — we're happy to help.</p>
+                    <div class="footer">
+                        <p>&#169; 2026 SecureLink &mdash; securelinkapp.com</p>
+                        <p>Protecting you from malicious links, one click at a time.</p>
+                        <p>You're receiving this because you created a SecureLink account.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            text_content = f"""
+Welcome to SecureLink, {display_name}!
+
+Your account is verified and ready to go.
+
+Here's what you can do right away:
+
+- Link & Website Scanner: Check any URL for malware and phishing instantly.
+- Security Dashboard: Monitor your security posture in real time.
+- Threat Intelligence: Live threat feeds and dark web monitoring.
+
+Log in and get started: {login_url}
+
+If you have any questions, just reply to this email.
+
+© 2026 SecureLink — securelinkapp.com
+            """
+
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'Welcome to SecureLink!'
+            msg['From'] = 'SecureLink <welcome@securelinkapp.com>'
+            msg['To'] = email
+
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+
+            smtp_host = self.config.SMTP_HOST or 'email-smtp.us-east-2.amazonaws.com'
+            smtp_port = self.config.SMTP_PORT or 587
+            smtp_user = self.config.SMTP_USERNAME or self.config.EMAIL_USERNAME
+            smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
+
+            if not smtp_user or not smtp_pass:
+                logger.warning("SMTP not configured — welcome email not sent")
+                return False
+
+            if getattr(self.config, 'SMTP_USE_SSL', False) or smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+
+            logger.info(f"Welcome email sent to {email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send welcome email to {email}: {e}")
+            return False
+
     def request_password_reset(self, email: str, base_url: str = None) -> Dict:
         """Request a password reset - sends email with reset link"""
         session = self.get_session()
@@ -831,8 +956,14 @@ class AuthManager:
             
             user.is_verified = True
             user.verification_token = None  # Clear the token after use
+            user_email = str(user.email)
+            user_username = str(user.username)
+            user_full_name = str(user.full_name) if user.full_name is not None else None
             session.commit()
-            
+
+            # Send welcome email now that the account is confirmed
+            self._send_welcome_email(user_email, user_username, user_full_name)
+
             return {
                 'success': True,
                 'message': 'Email verified successfully! You can now log in.',
