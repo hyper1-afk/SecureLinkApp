@@ -205,24 +205,48 @@ def require_auth(f):
     return decorated
 
 
+def _subscription_is_active(user):
+    """Return True if the user's paid subscription has not expired."""
+    expires_str = user.get('subscription_expires')
+    if not expires_str:
+        return True  # No expiry set — treated as active (e.g. lifetime / not yet implemented)
+    try:
+        from datetime import timezone
+        expires_at = datetime.fromisoformat(expires_str)
+        # Make both offset-naive for comparison
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+        return datetime.utcnow() < expires_at
+    except (ValueError, TypeError):
+        return False
+
+
 def require_pro(f):
-    """Decorator to require Pro subscription"""
+    """Decorator to require an active Pro (or Enterprise) subscription"""
     @wraps(f)
     @require_auth
     def decorated(*args, **kwargs):
-        if request.current_user.get('subscription_tier') == SubscriptionTier.FREE.value:
+        user = request.current_user
+        tier = user.get('subscription_tier')
+        if tier == SubscriptionTier.FREE.value:
             return jsonify({'error': 'This feature requires a Pro subscription'}), 403
+        if not _subscription_is_active(user):
+            return jsonify({'error': 'Your subscription has expired. Please renew to access this feature.'}), 403
         return f(*args, **kwargs)
     return decorated
 
 
 def require_enterprise(f):
-    """Decorator to require Enterprise subscription"""
+    """Decorator to require an active Enterprise subscription"""
     @wraps(f)
     @require_auth
     def decorated(*args, **kwargs):
-        if request.current_user.get('subscription_tier') != SubscriptionTier.ENTERPRISE.value:
+        user = request.current_user
+        tier = user.get('subscription_tier')
+        if tier != SubscriptionTier.ENTERPRISE.value:
             return jsonify({'error': 'This feature requires an Enterprise subscription'}), 403
+        if not _subscription_is_active(user):
+            return jsonify({'error': 'Your subscription has expired. Please renew to access this feature.'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -1481,32 +1505,34 @@ def verify_payment():
     """Verify a checkout session and activate the subscription"""
     data = request.get_json()
     session_id = data.get('session_id')
-    plan = data.get('plan')
-    
-    if not session_id or not plan:
-        return jsonify({'error': 'Missing session_id or plan'}), 400
-    
+
+    if not session_id:
+        return jsonify({'error': 'Missing session_id'}), 400
+
     user = request.current_user
-    
-    # Verify the checkout session with Stripe
+
+    # Verify the checkout session with Stripe and get plan from Stripe metadata (not client)
     result = payment_manager.verify_checkout_session(session_id)
-    
+
     if result and result.get('success'):
-        # Activate the subscription
-        from datetime import datetime, timedelta
+        # Use plan from Stripe session metadata — never trust the client-supplied plan
+        plan = result.get('plan')
+        if plan not in ['pro', 'enterprise']:
+            logger.error(f"verify_payment: invalid plan '{plan}' in Stripe session {session_id}")
+            return jsonify({'error': 'Invalid plan in session metadata'}), 400
+
         expires_at = datetime.utcnow() + timedelta(days=30)
         update_result = auth_manager.update_subscription(user['id'], plan, expires_at)
-        
-        # Save subscription ID if available
+
         if result.get('subscription_id'):
             auth_manager.update_stripe_subscription_id(user['id'], result['subscription_id'])
-        
+
         logger.info(f"Activated {plan} subscription for user {user['id']} via checkout verification")
         return jsonify({
             'success': True,
             **update_result
         })
-    
+
     return jsonify({'error': 'Payment not completed or session invalid'}), 400
 
 
@@ -1587,20 +1613,27 @@ def stripe_webhook():
                 logger.info(f"Activated {plan} subscription for user {user_id}")
         
         elif event_type == 'invoice.paid':
-            # Recurring payment successful - extend subscription
+            # Recurring payment successful - extend subscription by 30 days from now
             subscription_id = data.get('subscription')
             if subscription_id:
-                # Get subscription details to find user
-                sub_details = payment_manager.get_subscription(subscription_id)
-                if sub_details:
-                    # Would need to look up user by subscription ID
-                    logger.info(f"Recurring payment received for subscription {subscription_id}")
-        
+                user = auth_manager.get_user_by_subscription_id(subscription_id)
+                if user:
+                    new_expires = datetime.utcnow() + timedelta(days=30)
+                    auth_manager.update_subscription(user['id'], user['subscription_tier'], new_expires)
+                    logger.info(f"Extended subscription for user {user['id']} (sub {subscription_id})")
+                else:
+                    logger.warning(f"invoice.paid: no user found for subscription {subscription_id}")
+
         elif event_type == 'customer.subscription.deleted':
-            # Subscription cancelled/expired - downgrade to free
+            # Subscription cancelled/expired - downgrade to free immediately
             subscription_id = data.get('id')
-            # Would need to look up user by subscription ID and downgrade
-            logger.info(f"Subscription {subscription_id} cancelled")
+            if subscription_id:
+                user = auth_manager.get_user_by_subscription_id(subscription_id)
+                if user:
+                    auth_manager.update_subscription(user['id'], 'free', None)
+                    logger.info(f"Downgraded user {user['id']} to free (sub {subscription_id} deleted)")
+                else:
+                    logger.warning(f"subscription.deleted: no user found for subscription {subscription_id}")
         
         elif event_type == 'invoice.payment_failed':
             # Payment failed - notify user
