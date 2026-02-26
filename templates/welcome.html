@@ -1010,8 +1010,8 @@
                     updateBreachQuota(0);
                     return;
                 }
-                if (d.error && !d.has_breaches === undefined) {
-                    resultEl.innerHTML = `<p style="color:#ef4444;font-size:.9rem;">${d.error}</p>`;
+                if (!r.ok) {
+                    resultEl.innerHTML = `<p style="color:#ef4444;font-size:.9rem;">${d.error || 'Service temporarily unavailable. Please try again.'}</p>`;
                     resultEl.classList.add('show');
                     return;
                 }

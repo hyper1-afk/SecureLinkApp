@@ -1678,6 +1678,10 @@ def public_breach_check():
             'limit_reached': True
         }), 429
 
+    # Check API key before burning a user's daily check
+    if not getattr(dark_web_monitor, 'hibp_api_key', None):
+        return jsonify({'error': 'Breach database not configured. Check back soon.'}), 503
+
     try:
         breaches, error = dark_web_monitor.check_email_breaches(email)
     except Exception as e:
