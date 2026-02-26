@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Compliance Center - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: 68px;
+        }
+
+        /* Hero */
+        .comp-hero {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 2.5rem 0;
+        }
+        .comp-hero h1 { font-size: 2rem; font-weight: 700; }
+
+        /* Score ring */
+        .score-ring-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+        .score-ring-wrap svg { transform: rotate(-90deg); }
+        .score-ring-bg { fill: none; stroke: rgba(148,163,184,0.12); stroke-width: 12; }
+        .score-ring-fg { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 1s ease, stroke 0.5s ease; }
+        .score-ring-label {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; pointer-events: none;
+        }
+        .score-ring-label .pct { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+        .score-ring-label .grade { font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px; }
+
+        /* Stat cards */
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 1.5rem; text-align: center;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+        .stat-card .stat-number { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .stat-card .stat-label { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem; }
+
+        /* Section cards */
+        .section-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;
+        }
+        .section-header h3 { font-size: 1.15rem; font-weight: 600; margin: 0; }
+
+        /* Framework pills */
+        .fw-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.75rem; font-weight: 600; padding: 5px 12px;
+            border-radius: 20px; background: rgba(14,165,233,0.12); color: var(--primary-color);
+            cursor: pointer; border: 1px solid transparent; transition: all 0.2s ease;
+            user-select: none;
+        }
+        .fw-pill:hover { background: rgba(14,165,233,0.22); }
+        .fw-pill.active { border-color: var(--primary-color); background: rgba(14,165,233,0.25); }
+        .fw-pill.soc2 { background: rgba(16,185,129,0.12); color: #10b981; }
+        .fw-pill.soc2.active { border-color: #10b981; background: rgba(16,185,129,0.25); }
+        .fw-pill.iso27001 { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+        .fw-pill.iso27001.active { border-color: #8b5cf6; background: rgba(139,92,246,0.25); }
+        .fw-pill.gdpr { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .fw-pill.gdpr.active { border-color: #f59e0b; background: rgba(245,158,11,0.25); }
+
+        /* Category progress */
+        .cat-progress { margin-bottom: 1rem; }
+        .cat-progress .cat-label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.9rem; margin-bottom: 6px; font-weight: 500;
+        }
+        .cat-progress .cat-label span:last-child { color: var(--text-secondary); font-size: 0.8rem; }
+        .cat-bar {
+            height: 8px; border-radius: 4px; background: rgba(148,163,184,0.12);
+            overflow: hidden;
+        }
+        .cat-bar-fill {
+            height: 100%; border-radius: 4px; transition: width 0.8s ease;
+        }
+
+        /* Check item */
+        .check-item {
+            background: rgba(15,23,42,0.5); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.65rem;
+            display: flex; align-items: flex-start; gap: 1rem;
+            transition: all 0.2s ease; cursor: pointer;
+        }
+        .check-item:hover { border-color: var(--primary-color); background: rgba(14,165,233,0.04); }
+        .check-item.completed { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04); }
+        .check-box {
+            width: 26px; height: 26px; min-width: 26px; border-radius: 8px;
+            border: 2px solid var(--text-muted); display: flex; align-items: center;
+            justify-content: center; font-size: 14px; color: transparent;
+            transition: all 0.2s ease; margin-top: 2px;
+        }
+        .check-item.completed .check-box {
+            background: #10b981; border-color: #10b981; color: #fff;
+        }
+        .check-body { flex: 1; min-width: 0; }
+        .check-body h5 {
+            font-size: 0.95rem; font-weight: 600; margin: 0 0 4px 0;
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .check-body p { font-size: 0.82rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+        .check-item.completed .check-body h5 { color: rgba(241,245,249,0.7); }
+        .check-item.completed .check-body p { color: var(--text-muted); }
+        .check-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+        .check-tag {
+            font-size: 0.68rem; font-weight: 600; padding: 2px 8px;
+            border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .diff-easy { background: rgba(16,185,129,0.15); color: #10b981; }
+        .diff-medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .diff-hard { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .auto-badge { background: rgba(14,165,233,0.15); color: #0ea5e9; font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+        /* Policy cards */
+        .policy-card {
+            background: rgba(15,23,42,0.5); border: 1px solid var(--border-color);
+            border-radius: 14px; padding: 1.25rem; transition: all 0.2s ease;
+        }
+        .policy-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+        .policy-card h5 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.35rem; }
+        .policy-card p { font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.75rem; }
+        .policy-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; background: rgba(14,165,233,0.12); color: var(--primary-color);
+        }
+
+        /* Buttons */
+        .btn-sl {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none; color: #fff; font-weight: 600; padding: 10px 22px;
+            border-radius: 10px; font-size: 0.9rem; transition: all 0.2s ease;
+        }
+        .btn-sl:hover { filter: brightness(1.1); color: #fff; transform: translateY(-1px); }
+        .btn-outline-sl {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-secondary); font-weight: 500; padding: 8px 18px;
+            border-radius: 10px; font-size: 0.85rem; transition: all 0.2s ease;
+        }
+        .btn-outline-sl:hover { border-color: var(--primary-color); color: var(--primary-color); }
+
+        /* Modal */
+        .modal-content {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; color: var(--text-primary);
+        }
+        .modal-header { border-bottom: 1px solid var(--border-color); }
+        .modal-footer { border-top: 1px solid var(--border-color); }
+        .modal-body pre {
+            background: rgba(15,23,42,0.6); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 1.25rem; color: var(--text-secondary);
+            white-space: pre-wrap; font-size: 0.82rem; max-height: 500px; overflow-y: auto;
+        }
+
+        /* Upgrade gate */
+        .upgrade-gate {
+            text-align: center; padding: 4rem 1rem;
+        }
+        .upgrade-gate h2 { font-weight: 700; margin-bottom: 1rem; }
+        .upgrade-gate p { color: var(--text-secondary); max-width: 500px; margin: 0 auto 1.5rem; }
+
+        /* Toast */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Tab buttons */
+        .tab-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tab-pill {
+            padding: 8px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500;
+            border: 1px solid var(--border-color); background: transparent;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease;
+        }
+        .tab-pill:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tab-pill.active { background: rgba(14,165,233,0.15); border-color: var(--primary-color); color: var(--primary-color); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .comp-hero { padding: 1.5rem 0; }
+            .comp-hero h1 { font-size: 1.5rem; }
+            .score-ring-wrap { width: 120px; height: 120px; }
+            .score-ring-label .pct { font-size: 1.7rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <!-- Navbar -->
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/compliance" class="sl-nav-link active">Compliance</a>
+                <a href="/profile" class="sl-nav-link">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="comp-hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1><i class="bi bi-clipboard-check me-2" style="color: #10b981;"></i>Compliance Center</h1>
+                    <p class="text-secondary mb-0">Track your security posture against SOC 2, ISO 27001, and GDPR. Complete checks, generate policies, and export reports.</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <button class="btn-sl" onclick="exportReport()">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Export Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upgrade Gate (shown for free users) -->
+    <div id="upgradeGate" class="container" style="display:none;">
+        <div class="upgrade-gate">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+            <h2>Compliance Center</h2>
+            <p>Get SOC 2, ISO 27001, and GDPR compliance tracking, auto-generated policy templates, and exportable security posture reports.</p>
+            <a href="/profile#subscription-tab" class="btn-sl">Upgrade to Pro</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="container py-4" style="display:none;">
+
+        <!-- Score Overview -->
+        <div class="row g-3 mb-4 align-items-stretch">
+            <div class="col-md-4">
+                <div class="section-card h-100 d-flex flex-column align-items-center justify-content-center" style="padding:2rem;">
+                    <div class="score-ring-wrap">
+                        <svg viewBox="0 0 160 160" width="100%" height="100%">
+                            <circle class="score-ring-bg" cx="80" cy="80" r="68"></circle>
+                            <circle class="score-ring-fg" id="scoreRing" cx="80" cy="80" r="68"
+                                stroke-dasharray="427.26" stroke-dashoffset="427.26"></circle>
+                        </svg>
+                        <div class="score-ring-label">
+                            <span class="pct" id="scorePercent">0%</span>
+                            <span class="grade" id="scoreGrade">—</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <div style="font-weight:600; font-size:0.95rem;">Overall Compliance</div>
+                        <div style="color:var(--text-secondary); font-size:0.82rem;" id="scoreSubtext">0 / 0 controls completed</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="section-card h-100">
+                    <div class="section-header">
+                        <h3>Framework Scores</h3>
+                        <div class="d-flex gap-2 flex-wrap" id="frameworkFilters"></div>
+                    </div>
+                    <div class="row g-3 mb-3" id="frameworkCards"></div>
+                    <h6 style="font-weight:600; margin-bottom:0.75rem; margin-top:0.5rem;">Progress by Category</h6>
+                    <div id="categoryBars"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab pills -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="tab-pills">
+                <button class="tab-pill active" data-tab="checklist">
+                    <i class="bi bi-check2-square me-1"></i>Checklist
+                </button>
+                <button class="tab-pill" data-tab="policies">
+                    <i class="bi bi-file-earmark-text me-1"></i>Policy Templates
+                </button>
+            </div>
+            <div id="checklistStats" style="font-size:0.82rem; color:var(--text-secondary);"></div>
+        </div>
+
+        <!-- Checklist Tab -->
+        <div id="tab-checklist">
+            <div id="checklistContainer"></div>
+        </div>
+
+        <!-- Policies Tab -->
+        <div id="tab-policies" style="display:none;">
+            <div class="row g-3" id="policiesContainer"></div>
+        </div>
+
+    </div>
+
+    <!-- Policy Preview Modal -->
+    <div class="modal fade" id="policyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="policyModalTitle">Policy</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:6px; display:block;">Company Name:</label>
+                        <input type="text" id="companyNameInput" class="form-control form-control-sm"
+                            style="background:rgba(15,23,42,0.6); border-color:var(--border-color); color:var(--text-primary); max-width:340px;"
+                            placeholder="Your Company Name" value="">
+                    </div>
+                    <pre id="policyContent"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-outline-sl" data-bs-dismiss="modal">Close</button>
+                    <button class="btn-sl" onclick="downloadPolicy()">
+                        <i class="bi bi-download me-1"></i>Download .md
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ── State ──────────────────────────────────────────────
+        let authToken = null;
+        let checksData = [];
+        let scoreData = null;
+        let activeFramework = null;
+        let currentPolicyId = null;
+
+        // ── Auth ───────────────────────────────────────────────
+        function getAuthHeaders() {
+            return authToken ? { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' } : {};
+        }
+
+        async function checkAuth() {
+            authToken = localStorage.getItem('auth_token');
+            if (!authToken) { window.location.href = '/login'; return; }
+
+            try {
+                const res = await fetch('/api/auth/validate', { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (!data.valid) { localStorage.removeItem('auth_token'); window.location.href = '/login'; return; }
+
+                const tier = data.user?.subscription_tier || 'free';
+                if (tier === 'free') {
+                    document.getElementById('upgradeGate').style.display = '';
+                    return;
+                }
+
+                document.getElementById('mainContent').style.display = '';
+                loadDashboard();
+            } catch (e) {
+                console.error('Auth error', e);
+                window.location.href = '/login';
+            }
+        }
+
+        // ── Load everything ────────────────────────────────────
+        async function loadDashboard() {
+            await Promise.all([loadScore(), loadChecks(), loadPolicies()]);
+        }
+
+        // ── Score ──────────────────────────────────────────────
+        async function loadScore() {
+            try {
+                const res = await fetch('/api/compliance/score', { headers: getAuthHeaders() });
+                scoreData = await res.json();
+                renderScore();
+            } catch (e) { console.error('Score error', e); }
+        }
+
+        function renderScore() {
+            if (!scoreData) return;
+            const overall = scoreData.overall;
+
+            // Ring
+            const ring = document.getElementById('scoreRing');
+            const circumference = 2 * Math.PI * 68;
+            const offset = circumference - (overall.score / 100) * circumference;
+            ring.style.strokeDashoffset = offset;
+            ring.style.stroke = scoreColor(overall.score);
+
+            document.getElementById('scorePercent').textContent = overall.score + '%';
+            document.getElementById('scorePercent').style.color = scoreColor(overall.score);
+            document.getElementById('scoreGrade').textContent = 'Grade ' + overall.grade;
+            document.getElementById('scoreSubtext').textContent = overall.completed + ' / ' + overall.total + ' controls completed';
+
+            // Framework cards
+            const fwContainer = document.getElementById('frameworkCards');
+            fwContainer.innerHTML = '';
+            for (const [fwId, fw] of Object.entries(scoreData.frameworks)) {
+                const meta = { soc2: {name:'SOC 2', icon:'bi-shield-check', cls:'soc2'}, iso27001: {name:'ISO 27001', icon:'bi-patch-check', cls:'iso27001'}, gdpr: {name:'GDPR', icon:'bi-globe-europe-africa', cls:'gdpr'} };
+                const m = meta[fwId] || {name:fwId, icon:'bi-patch-check', cls:''};
+                fwContainer.innerHTML += `
+                    <div class="col-4">
+                        <div class="stat-card">
+                            <div style="font-size:1.5rem; margin-bottom:4px;"><i class="bi ${m.icon}" style="color:${scoreColor(fw.score)};"></i></div>
+                            <div class="stat-number" style="color:${scoreColor(fw.score)}; font-size:1.5rem;">${fw.score}%</div>
+                            <div class="stat-label">${m.name}<br><small>${fw.completed}/${fw.total}</small></div>
+                        </div>
+                    </div>`;
+            }
+
+            // Category bars
+            const catContainer = document.getElementById('categoryBars');
+            catContainer.innerHTML = '';
+            for (const cat of scoreData.categories) {
+                catContainer.innerHTML += `
+                    <div class="cat-progress">
+                        <div class="cat-label"><span>${cat.category}</span><span>${cat.completed}/${cat.total}</span></div>
+                        <div class="cat-bar"><div class="cat-bar-fill" style="width:${cat.score}%; background:${scoreColor(cat.score)};"></div></div>
+                    </div>`;
+            }
+        }
+
+        function scoreColor(pct) {
+            if (pct >= 80) return '#10b981';
+            if (pct >= 60) return '#0ea5e9';
+            if (pct >= 40) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        // ── Checks ────────────────────────────────────────────
+        async function loadChecks() {
+            try {
+                const url = activeFramework ? '/api/compliance/checks?framework=' + activeFramework : '/api/compliance/checks';
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                checksData = data.checks || [];
+                renderFrameworkFilters();
+                renderChecklist();
+            } catch (e) { console.error('Checks error', e); }
+        }
+
+        function renderFrameworkFilters() {
+            const container = document.getElementById('frameworkFilters');
+            const fws = [
+                { id: null, label: 'All' },
+                { id: 'soc2', label: 'SOC 2' },
+                { id: 'iso27001', label: 'ISO 27001' },
+                { id: 'gdpr', label: 'GDPR' },
+            ];
+            container.innerHTML = fws.map(fw => `
+                <span class="fw-pill ${fw.id || ''} ${activeFramework === fw.id ? 'active' : ''}"
+                      onclick="window._setFramework('${fw.id}')">${fw.label}</span>
+            `).join('');
+        }
+
+        window._setFramework = function(fwId) {
+            activeFramework = fwId === 'null' ? null : fwId;
+            loadChecks();
+        };
+
+        function renderChecklist() {
+            const container = document.getElementById('checklistContainer');
+            container.innerHTML = '';
+
+            // Group by category
+            const grouped = {};
+            for (const c of checksData) {
+                if (!grouped[c.category]) grouped[c.category] = [];
+                grouped[c.category].push(c);
+            }
+
+            const completed = checksData.filter(c => c.is_completed).length;
+            document.getElementById('checklistStats').textContent = completed + ' / ' + checksData.length + ' completed';
+
+            for (const cat of Object.keys(grouped)) {
+                const checks = grouped[cat];
+                const catDone = checks.filter(c => c.is_completed).length;
+                let html = `
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h3>${cat}</h3>
+                            <span style="font-size:0.82rem; color:var(--text-secondary);">${catDone}/${checks.length}</span>
+                        </div>`;
+
+                for (const c of checks) {
+                    const fwTags = (c.frameworks || []).map(fw => {
+                        const colors = { soc2: '#10b981', iso27001: '#8b5cf6', gdpr: '#f59e0b' };
+                        const labels = { soc2: 'SOC 2', iso27001: 'ISO', gdpr: 'GDPR' };
+                        return `<span class="check-tag" style="background:${colors[fw]}22; color:${colors[fw]};">${labels[fw] || fw}</span>`;
+                    }).join('');
+                    const diffCls = c.difficulty === 'easy' ? 'diff-easy' : c.difficulty === 'medium' ? 'diff-medium' : 'diff-hard';
+                    const autoTag = c.auto_source ? '<span class="auto-badge"><i class="bi bi-lightning-fill"></i> Auto-detected</span>' : '';
+
+                    html += `
+                        <div class="check-item ${c.is_completed ? 'completed' : ''}" data-id="${c.id}" onclick="window._toggleCheck('${c.id}', ${!c.is_completed})">
+                            <div class="check-box"><i class="bi bi-check-lg"></i></div>
+                            <div class="check-body">
+                                <h5>${escapeHtml(c.title)} ${autoTag}</h5>
+                                <p>${escapeHtml(c.description)}</p>
+                                <div class="check-tags">
+                                    <span class="check-tag ${diffCls}">${c.difficulty}</span>
+                                    ${fwTags}
+                                </div>
+                            </div>
+                        </div>`;
+                }
+
+                html += '</div>';
+                container.innerHTML += html;
+            }
+        }
+
+        window._toggleCheck = async function(checkId, completed) {
+            try {
+                const res = await fetch('/api/compliance/checks/' + checkId, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ completed })
+                });
+                if (res.ok) {
+                    // Update local state
+                    const check = checksData.find(c => c.id === checkId);
+                    if (check) check.is_completed = completed;
+                    renderChecklist();
+                    // Refresh score
+                    loadScore();
+                    showToast(completed ? 'Control marked as completed' : 'Control marked as pending', 'success');
+                } else {
+                    showToast('Failed to update control', 'danger');
+                }
+            } catch (e) {
+                console.error('Toggle error', e);
+                showToast('Network error', 'danger');
+            }
+        };
+
+        // ── Policies ──────────────────────────────────────────
+        async function loadPolicies() {
+            try {
+                const res = await fetch('/api/compliance/policies', { headers: getAuthHeaders() });
+                const data = await res.json();
+                renderPolicies(data.policies || []);
+            } catch (e) { console.error('Policies error', e); }
+        }
+
+        function renderPolicies(policies) {
+            const container = document.getElementById('policiesContainer');
+            container.innerHTML = policies.map(p => `
+                <div class="col-md-6 col-lg-3">
+                    <div class="policy-card" onclick="window._previewPolicy('${p.id}')">
+                        <div class="policy-icon"><i class="bi ${p.icon}"></i></div>
+                        <h5>${escapeHtml(p.title)}</h5>
+                        <p>Download a ready-made template pre-filled with your company name.</p>
+                        <button class="btn-outline-sl btn-sm w-100"><i class="bi bi-eye me-1"></i>Preview & Download</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window._previewPolicy = async function(policyId) {
+            currentPolicyId = policyId;
+            const company = document.getElementById('companyNameInput').value || '';
+            try {
+                const res = await fetch('/api/compliance/policies/' + policyId + '?company=' + encodeURIComponent(company), {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                document.getElementById('policyModalTitle').textContent = data.title;
+                document.getElementById('policyContent').textContent = data.content;
+                new bootstrap.Modal(document.getElementById('policyModal')).show();
+            } catch (e) {
+                console.error('Policy preview error', e);
+                showToast('Failed to load policy', 'danger');
+            }
+        };
+
+        window.downloadPolicy = function() {
+            const content = document.getElementById('policyContent').textContent;
+            const title = document.getElementById('policyModalTitle').textContent.replace(/\s+/g, '_');
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = title + '.md';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('Policy downloaded', 'success');
+        };
+
+        // Company name change handler — reload preview
+        document.getElementById('companyNameInput')?.addEventListener('change', function() {
+            if (currentPolicyId) window._previewPolicy(currentPolicyId);
+        });
+
+        // ── Export Report ──────────────────────────────────────
+        window.exportReport = async function() {
+            const company = document.getElementById('companyNameInput')?.value || '';
+            try {
+                const res = await fetch('/api/compliance/report?company=' + encodeURIComponent(company), {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                // Generate text report
+                let report = [];
+                report.push('═══════════════════════════════════════════════════════════');
+                report.push('       SECURITY COMPLIANCE POSTURE REPORT');
+                report.push('═══════════════════════════════════════════════════════════');
+                report.push('');
+                report.push('Company:        ' + (data.company_name || 'N/A'));
+                report.push('Generated:      ' + new Date(data.generated_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }));
+                report.push('Report by:      SecureLink Compliance Center');
+                report.push('');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('  OVERALL COMPLIANCE SCORE');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('');
+                report.push('  Score:   ' + data.overall.score + '%  (Grade ' + data.overall.grade + ')');
+                report.push('  Status:  ' + data.overall.completed + ' of ' + data.overall.total + ' controls completed');
+                report.push('');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('  FRAMEWORK BREAKDOWN');
+                report.push('───────────────────────────────────────────────────────────');
+                for (const [fw, sc] of Object.entries(data.frameworks)) {
+                    const name = data.frameworks_meta[fw]?.name || fw;
+                    report.push('  ' + name.padEnd(16) + sc.score + '%   (' + sc.completed + '/' + sc.total + ')');
+                }
+                report.push('');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('  CATEGORY BREAKDOWN');
+                report.push('───────────────────────────────────────────────────────────');
+                for (const cat of data.categories) {
+                    const bar = '█'.repeat(Math.round(cat.score / 5)) + '░'.repeat(20 - Math.round(cat.score / 5));
+                    report.push('  ' + cat.category.padEnd(24) + bar + '  ' + cat.score + '%');
+                }
+                report.push('');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('  COMPLETED CONTROLS (' + data.completed_checks.length + ')');
+                report.push('───────────────────────────────────────────────────────────');
+                for (const c of data.completed_checks) {
+                    report.push('  ✓  ' + c);
+                }
+                report.push('');
+                report.push('───────────────────────────────────────────────────────────');
+                report.push('  PENDING CONTROLS (' + data.pending_checks.length + ')');
+                report.push('───────────────────────────────────────────────────────────');
+                for (const c of data.pending_checks) {
+                    report.push('  ○  ' + c);
+                }
+                report.push('');
+                report.push('═══════════════════════════════════════════════════════════');
+                report.push('  This report was generated by SecureLink Compliance Center');
+                report.push('  https://securelinkapp.com/compliance');
+                report.push('═══════════════════════════════════════════════════════════');
+
+                const blob = new Blob([report.join('\n')], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'SecureLink_Compliance_Report_' + new Date().toISOString().slice(0,10) + '.txt';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                showToast('Compliance report exported', 'success');
+            } catch (e) {
+                console.error('Export error', e);
+                showToast('Failed to export report', 'danger');
+            }
+        };
+
+        // ── Tab switching ─────────────────────────────────────
+        document.querySelectorAll('.tab-pill').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tab = this.dataset.tab;
+                document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('tab-checklist').style.display = tab === 'checklist' ? '' : 'none';
+                document.getElementById('tab-policies').style.display = tab === 'policies' ? '' : 'none';
+            });
+        });
+
+        // ── Helpers ───────────────────────────────────────────
+        function escapeHtml(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        function showToast(message, type) {
+            type = type || 'info';
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-' + type + ' position-fixed shadow';
+            toast.style.cssText = 'top:80px;right:20px;z-index:9999;max-width:400px;animation:fadeIn 0.3s ease;';
+            toast.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi ' +
+                (type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill') +
+                '"></i><span>' + escapeHtml(message) + '</span></div>';
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+
+        // ── Init ──────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', checkAuth);
+
+    })();
+    </script>
+    <!-- Scroll animation observer -->
+    <script>
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
+    </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
+</body>
+</html>

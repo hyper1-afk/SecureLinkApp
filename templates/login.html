@@ -954,6 +954,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadOAuthProviders();
             checkPendingOAuth();
+
+            // Show inactivity timeout message if redirected
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('reason') === 'inactivity') {
+                showAlert('You were signed out due to inactivity. Please sign in again.', 'danger');
+                window.history.replaceState({}, document.title, '/login');
+            }
         });
         
         function switchTab(tab) {

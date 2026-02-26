@@ -357,6 +357,8 @@ class AuthManager:
     REMEMBER_ME_DURATION = timedelta(days=30)
     # Regular session duration - 24 hours
     SESSION_DURATION = timedelta(hours=24)
+    # Inactivity timeout - 30 minutes
+    INACTIVITY_TIMEOUT = timedelta(minutes=30)
     
     def __init__(self, config: Config = None):
         self.config = config or Config()
@@ -955,7 +957,8 @@ class AuthManager:
             session.close()
     
     def validate_token(self, token: str) -> Optional[Dict]:
-        """Validate a session token and return user info"""
+        """Validate a session token and return user info.
+        Sessions are invalidated after 30 minutes of inactivity."""
         session = self.get_session()
         try:
             token_hash = self._hash_token(token)
@@ -967,6 +970,13 @@ class AuthManager:
             ).first()
             
             if not user_session:
+                return None
+            
+            # Enforce inactivity timeout — expire session if idle > 30 minutes
+            if user_session.last_used and \
+               (datetime.utcnow() - user_session.last_used) > self.INACTIVITY_TIMEOUT:
+                user_session.is_active = False
+                session.commit()
                 return None
             
             # Update last used
@@ -2045,6 +2055,7 @@ SUBSCRIPTION_PLANS = {
         ],
         'limitations': [
             'No dark web monitoring',
+            'No Compliance Center',
             'No Attack Surface Monitoring',
             'No API access'
         ]
@@ -2059,6 +2070,7 @@ SUBSCRIPTION_PLANS = {
             'Advanced threat detection',
             'Full scan history',
             'Dark web monitoring (5 assets)',
+            'Compliance Center (SOC 2, ISO 27001, GDPR)',
             'API access',
             'Whitelist/Blacklist',
             'Export reports',
@@ -2079,6 +2091,7 @@ SUBSCRIPTION_PLANS = {
             'Everything in Pro',
             'Unlimited dark web monitoring',
             'Attack Surface Monitoring (25 domains, hourly)',
+            'Compliance Center with exportable reports',
             'AI-powered remediation advice',
             'Team management',
             'Scheduled reports',

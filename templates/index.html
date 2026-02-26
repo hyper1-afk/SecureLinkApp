@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
     <title>SecureLink</title>
+    <!-- REDESIGN-V2 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1418,6 +1419,229 @@
         .mobile-menu-toggle {
             display: none;
         }
+
+        /* ===== Dashboard Redesign Styles ===== */
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 28px 0 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .welcome-text h2 {
+            font-size: 1.55rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+            color: #fff !important;
+        }
+        .welcome-text p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin: 0;
+        }
+        .tier-badge-welcome {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 10px;
+            border-radius: 7px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .tier-badge-welcome.free { background: rgba(148,163,184,0.2); color: var(--text-secondary); }
+        .tier-badge-welcome.pro { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+        .tier-badge-welcome.enterprise { background: linear-gradient(135deg, var(--accent-color), #7c3aed); color: #fff; }
+        .dashboard-header-actions { flex-shrink: 0; align-self: center; }
+
+        /* Stat Widgets Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .stat-widget {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px 22px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+        .stat-widget:hover {
+            border-color: rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .sw-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .sw-icon.blue { background: rgba(14,165,233,0.12); color: var(--primary-color); }
+        .sw-icon.green { background: rgba(16,185,129,0.12); color: var(--success-color); }
+        .sw-icon.red { background: rgba(239,68,68,0.12); color: var(--danger-color); }
+        .sw-icon.purple { background: rgba(139,92,246,0.12); color: var(--accent-color); }
+        .sw-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin-bottom: 4px;
+            color: #fff !important;
+        }
+        .sw-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Dashboard 2-column layout */
+        .scanner-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 18px;
+            margin-bottom: 24px;
+            align-items: start;
+        }
+        .quick-actions-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .quick-action-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 13px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.25s ease;
+        }
+        .quick-action-tile:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(14,165,233,0.25);
+            transform: translateX(3px);
+            color: var(--text-primary);
+        }
+        .qa-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            flex-shrink: 0;
+        }
+        .quick-action-tile > div:not(.qa-icon) {
+            flex: 1;
+            min-width: 0;
+        }
+        .qa-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .qa-desc {
+            font-size: 0.73rem;
+            color: var(--text-muted);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .qa-arrow {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .panel-section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            padding: 4px 0 6px;
+        }
+
+        /* Upgrade Banner */
+        .upgrade-banner {
+            background: linear-gradient(135deg, rgba(14,165,233,0.08), rgba(139,92,246,0.08));
+            border: 1px solid rgba(14,165,233,0.2);
+            border-radius: 13px;
+            padding: 16px 18px;
+            text-align: center;
+        }
+        .upgrade-banner h6 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary) !important;
+            margin-bottom: 5px;
+        }
+        .upgrade-banner p {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .btn-upgrade {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 9px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #fff !important;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .btn-upgrade:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(14,165,233,0.3);
+        }
+
+        @media (max-width: 1100px) {
+            .scanner-layout { grid-template-columns: 1fr 280px; }
+        }
+        @media (max-width: 991px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .scanner-layout { grid-template-columns: 1fr; }
+            .quick-actions-panel { display: grid; grid-template-columns: repeat(2, 1fr); }
+            .upgrade-banner { grid-column: 1 / -1; }
+        }
+        @media (max-width: 576px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-widget { padding: 14px 16px; }
+            .sw-value { font-size: 1.35rem; }
+            .dashboard-header { padding: 18px 0 14px; }
+            .quick-actions-panel { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -1483,18 +1707,66 @@
         </div>
     </nav>
 
-    <div class="container py-5">
-        <!-- Main Verification Card -->
-        <div class="row justify-content-center mb-5">
-            <div class="col-lg-8">
+    <div class="container py-3">
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="welcome-text">
+                <h2>Welcome back, <span id="welcomeName">there</span> <span class="tier-badge-welcome free" id="welcomeTierBadge">Free</span></h2>
+                <p>Your security dashboard &mdash; stay protected around the clock</p>
+            </div>
+            <div class="dashboard-header-actions">
+                <a href="/api/reports/security-report-pdf" id="downloadReportBtn"
+                   class="btn btn-sm btn-outline-light" style="display:none;" target="_blank">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF Report
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-widget">
+                <div class="sw-icon blue"><i class="bi bi-shield-check-fill"></i></div>
+                <div>
+                    <div class="sw-value" id="swTotal">—</div>
+                    <div class="sw-label">Total Scans</div>
+                </div>
+            </div>
+            <div class="stat-widget">
+                <div class="sw-icon green"><i class="bi bi-check-circle-fill"></i></div>
+                <div>
+                    <div class="sw-value" id="swSafe">—</div>
+                    <div class="sw-label">Safe Links</div>
+                </div>
+            </div>
+            <div class="stat-widget">
+                <div class="sw-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div>
+                    <div class="sw-value" id="swThreats">—</div>
+                    <div class="sw-label">Threats Caught</div>
+                </div>
+            </div>
+            <div class="stat-widget">
+                <div class="sw-icon purple"><i class="bi bi-shield-exclamation"></i></div>
+                <div>
+                    <div class="sw-value" id="swDarkWebStatus">—</div>
+                    <div class="sw-label">Dark Web Monitor</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scanner + Quick Actions Layout -->
+        <div class="scanner-layout">
+            <!-- Scanner Column -->
+            <div>
                 <div class="card main-card p-4 p-md-5">
                     <div class="text-center mb-4">
-                        <h1 class="h2 mb-3">
+                        <h1 class="h3 mb-2">
                             <i class="bi bi-shield-lock-fill text-primary me-2"></i>
-                            Verify
+                            Scan &amp; Verify
                         </h1>
-                        <p class="text-secondary">
-                            Verify links or scan files for security threats. Our AI analyzes content for phishing, malware, and other risks.
+                        <p class="text-secondary" style="font-size:0.9rem;">
+                            Check any link or file for phishing, malware, and security threats with AI-powered analysis.
                         </p>
                     </div>
                     
@@ -1590,14 +1862,84 @@
                             </div>
                         </div>
                     </div>
+                </div><!-- /.card.main-card -->
+            </div><!-- /.scanner-column -->
+
+            <!-- Quick Actions Panel -->
+            <div class="quick-actions-panel">
+                <div class="panel-section-label"><i class="bi bi-compass me-1"></i>Quick Access</div>
+
+                <a href="/dark-web-monitor" class="quick-action-tile">
+                    <div class="qa-icon" style="background:rgba(139,92,246,0.12);color:var(--accent-color);">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div>
+                        <div class="qa-title">Dark Web Monitor</div>
+                        <p class="qa-desc">Check emails in breach databases</p>
+                    </div>
+                    <i class="bi bi-chevron-right qa-arrow"></i>
+                </a>
+
+                <a href="/attack-surface" class="quick-action-tile">
+                    <div class="qa-icon" style="background:rgba(14,165,233,0.12);color:var(--primary-color);">
+                        <i class="bi bi-hdd-network-fill"></i>
+                    </div>
+                    <div>
+                        <div class="qa-title">Attack Surface</div>
+                        <p class="qa-desc">Monitor domains for vulnerabilities</p>
+                    </div>
+                    <i class="bi bi-chevron-right qa-arrow"></i>
+                </a>
+
+                <a href="/security-news" class="quick-action-tile">
+                    <div class="qa-icon" style="background:rgba(245,158,11,0.12);color:var(--warning-color);">
+                        <i class="bi bi-newspaper"></i>
+                    </div>
+                    <div>
+                        <div class="qa-title">Security News</div>
+                        <p class="qa-desc">Latest cyber threat intelligence</p>
+                    </div>
+                    <i class="bi bi-chevron-right qa-arrow"></i>
+                </a>
+
+                <a href="/community" class="quick-action-tile">
+                    <div class="qa-icon" style="background:rgba(16,185,129,0.12);color:var(--success-color);">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="qa-title">Community</div>
+                        <p class="qa-desc">Share tips and discuss security</p>
+                    </div>
+                    <i class="bi bi-chevron-right qa-arrow"></i>
+                </a>
+
+                <a href="/compliance" class="quick-action-tile">
+                    <div class="qa-icon" style="background:rgba(14,165,233,0.08);color:var(--primary-color);">
+                        <i class="bi bi-clipboard-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="qa-title">Compliance Center</div>
+                        <p class="qa-desc">GDPR, SOC 2, ISO 27001 tools</p>
+                    </div>
+                    <i class="bi bi-chevron-right qa-arrow"></i>
+                </a>
+
+                <!-- Upgrade Banner (shown by JS based on tier) -->
+                <div class="upgrade-banner" id="upgradeBanner" style="display:none;">
+                    <i class="bi bi-arrow-up-circle-fill" style="font-size:1.6rem;color:var(--primary-color);margin-bottom:8px;display:block;"></i>
+                    <h6 id="upgradeBannerTitle">Unlock More Features</h6>
+                    <p id="upgradeBannerDesc">Upgrade your plan to access advanced security tools.</p>
+                    <a href="/profile#subscription-tab" class="btn-upgrade" id="upgradeBannerBtn">
+                        <i class="bi bi-arrow-up-circle-fill"></i> Upgrade Now
+                    </a>
                 </div>
-            </div>
-        </div>
+            </div><!-- /.quick-actions-panel -->
+
+        </div><!-- /.scanner-layout -->
 
         <!-- Result Card (hidden initially) -->
-        <div class="row justify-content-center mb-5" id="resultSection" style="display: none;">
-            <div class="col-lg-8">
-                <div class="card result-card p-4" id="resultCard">
+        <div class="mb-4" id="resultSection" style="display: none;">
+            <div class="card result-card p-4" id="resultCard">
                     <div class="row align-items-center mb-4">
                         <div class="col-auto">
                             <div class="score-circle" id="scoreCircle">
@@ -1641,10 +1983,9 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+        </div><!-- /#resultSection -->
 
-        <!-- Tabs for History and Stats -->
+        <!-- Activity Tabs -->
         <div class="row">
             <div class="col-12">
                 <ul class="nav nav-tabs mb-4" id="mainTabs">
@@ -1656,11 +1997,6 @@
                     <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#historyTab">
                             <i class="bi bi-clock-history me-2"></i>History
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#statsTab">
-                            <i class="bi bi-graph-up me-2"></i>Statistics
                         </button>
                     </li>
                     <li class="nav-item">
@@ -2940,6 +3276,14 @@
                 document.getElementById('statSafe').textContent = data.safe;
                 document.getElementById('statUnsafe').textContent = data.unsafe;
 
+                // Update top stat widgets
+                const swTotal = document.getElementById('swTotal');
+                const swSafe = document.getElementById('swSafe');
+                const swThreats = document.getElementById('swThreats');
+                if (swTotal) swTotal.textContent = data.total;
+                if (swSafe) swSafe.textContent = data.safe;
+                if (swThreats) swThreats.textContent = data.unsafe;
+
                 const breakdown = document.getElementById('riskBreakdown');
                 const levels = ['safe', 'low', 'medium', 'high', 'critical'];
                 const colors = {
@@ -3016,22 +3360,26 @@
                 });
                 const validateData = await validateResponse.json();
                 
+                const swDarkWeb = document.getElementById('swDarkWebStatus');
                 if (validateData.valid && validateData.user.subscription_tier === 'free') {
                     status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Pro required</span>';
                     if (accountsInfo) accountsInfo.style.display = 'none';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'none';
                     if (proRequiredWarning) proRequiredWarning.style.display = 'block';
+                    if (swDarkWeb) swDarkWeb.textContent = 'Off';
                 } else if (validateData.valid) {
                     status.innerHTML = '<span class="status-dot connected"></span><span><i class="bi bi-shield-check me-1"></i>Dark Web: Active</span>';
                     if (accountsInfo) accountsInfo.style.display = 'block';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'none';
                     if (proRequiredWarning) proRequiredWarning.style.display = 'none';
                     if (connectedAccountsText) connectedAccountsText.textContent = 'Dark web monitoring is active';
+                    if (swDarkWeb) swDarkWeb.textContent = 'Active';
                 } else {
                     status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Not configured</span>';
                     if (accountsInfo) accountsInfo.style.display = 'none';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'block';
                     if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                    if (swDarkWeb) swDarkWeb.textContent = 'Off';
                 }
             } catch (error) {
                 console.error('Error checking dark web status:', error);
@@ -3090,10 +3438,47 @@
             const loggedInNav = document.getElementById('loggedInNav');
             const userDisplayName = document.getElementById('userDisplayName');
             const badge = document.getElementById('subBadge');
-            
+
             // Store user tier globally for feature gating
             window.currentUserTier = user.subscription_tier || 'free';
-            
+
+            // Update welcome strip
+            const welcomeName = document.getElementById('welcomeName');
+            if (welcomeName) {
+                welcomeName.textContent = user.display_name || (user.email ? user.email.split('@')[0] : 'there');
+            }
+            const tierBadge = document.getElementById('welcomeTierBadge');
+            if (tierBadge) {
+                const tier = user.subscription_tier || 'free';
+                tierBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+                tierBadge.className = 'tier-badge-welcome ' + tier;
+            }
+
+            // Show/hide upgrade banner
+            const upgradeBanner = document.getElementById('upgradeBanner');
+            if (upgradeBanner) {
+                const tier = user.subscription_tier || 'free';
+                const bannerTitle = document.getElementById('upgradeBannerTitle');
+                const bannerDesc = document.getElementById('upgradeBannerDesc');
+                if (tier === 'free') {
+                    upgradeBanner.style.display = 'block';
+                    if (bannerTitle) bannerTitle.textContent = 'Unlock Dark Web Monitoring';
+                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Pro to monitor your email addresses for data breaches on the dark web.';
+                } else if (tier === 'pro') {
+                    upgradeBanner.style.display = 'block';
+                    if (bannerTitle) bannerTitle.textContent = 'Unlock Attack Surface Monitoring';
+                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Enterprise for domain security scanning and full organizational protection.';
+                } else {
+                    upgradeBanner.style.display = 'none';
+                }
+            }
+
+            // Show PDF report button for Enterprise users
+            const downloadReportBtn = document.getElementById('downloadReportBtn');
+            if (downloadReportBtn && (user.subscription_tier === 'enterprise')) {
+                downloadReportBtn.style.display = 'inline-flex';
+            }
+
             if (!loggedOutNav || !loggedInNav) {
                 console.error('Nav elements not found!');
                 return;
@@ -3408,6 +3793,7 @@
                 <a href="/features">Features</a>
                 <a href="/pricing">Pricing</a>
                 <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/compliance">Compliance Center</a>
                 <a href="/extension">Browser Extension</a>
             </div>
             <div class="sl-footer-col">
@@ -3439,5 +3825,6 @@
         }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
         document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
 </body>
 </html>

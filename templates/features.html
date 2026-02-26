@@ -135,6 +135,7 @@
         .icon-org { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1)); color: #f59e0b; }
         .icon-extension { background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.1)); color: #06b6d4; }
         .icon-attack-surface { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.1)); color: #f59e0b; }
+        .icon-compliance { background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(14, 165, 233, 0.1)); color: #10b981; }
         
         .feature-card h3 {
             font-weight: 700;
@@ -307,6 +308,18 @@
                     <i class="bi bi-briefcase"></i> Enterprise
                 </span>
             </a>
+            
+            <!-- Compliance Center -->
+            <a href="/compliance" class="feature-card">
+                <div class="feature-icon icon-compliance">
+                    <i class="bi bi-clipboard-check"></i>
+                </div>
+                <h3>Compliance Center</h3>
+                <p>Track SOC 2, ISO 27001 &amp; GDPR readiness with interactive checklists, auto-generated policy templates, and exportable reports.</p>
+                <span class="feature-badge badge-enterprise">
+                    <i class="bi bi-briefcase"></i> Enterprise
+                </span>
+            </a>
         </div>
     </div>
 
@@ -372,5 +385,6 @@
         }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
         document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
 </body>
 </html>

@@ -920,6 +920,10 @@
                     <a href="/features" class="btn btn-outline-primary">
                         <i class="bi bi-grid me-2"></i>Explore Features
                     </a>
+                    <a href="/api/reports/security-report-pdf" id="profileDownloadReportBtn"
+                       class="btn btn-outline-success" style="display:none;" target="_blank">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF Report
+                    </a>
                 </div>
             </div>
         </div>
@@ -1327,6 +1331,12 @@
             const tier = currentUser.subscription_tier || 'free';
             const planName = tier.charAt(0).toUpperCase() + tier.slice(1);
             document.getElementById('dashPlan').textContent = planName;
+
+            // Show PDF report download for Enterprise users
+            const profileDownloadBtn = document.getElementById('profileDownloadReportBtn');
+            if (profileDownloadBtn && tier === 'enterprise') {
+                profileDownloadBtn.style.display = 'block';
+            }
             
             if (currentUser.subscription_expires) {
                 const exp = new Date(currentUser.subscription_expires);
@@ -2191,5 +2201,6 @@
         }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
         document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
 </body>
 </html>

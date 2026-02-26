@@ -5,9 +5,12 @@ Uses threading + schedule library (same pattern as weekly_reports.py).
 Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import logging
+import smtplib
 import threading
 import time
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
 
 import schedule
@@ -131,18 +134,64 @@ class ScanScheduler:
                 severity='critical'
             )
 
-        # Alert: SSL expiring within 14 days
-        days_until_expiry = result.ssl_info.get('days_until_expiry')
-        if days_until_expiry is not None and 0 < days_until_expiry <= 14:
+        # Alert: SSL expiring within 30 days
+        days_until_expiry = result.ssl_info.get('days_until_expiry') if result.ssl_info else None
+        if days_until_expiry is not None and days_until_expiry <= 30:
+            if days_until_expiry <= 0:
+                ssl_severity = 'critical'
+                ssl_title = f'SSL certificate for {domain} has EXPIRED'
+                ssl_msg = (f'The SSL certificate for {domain} has expired. '
+                           f'Visitors will see browser security warnings immediately.')
+            elif days_until_expiry <= 7:
+                ssl_severity = 'high'
+                ssl_title = f'SSL certificate for {domain} expires in {days_until_expiry} days'
+                ssl_msg = (f'The SSL certificate for {domain} will expire in {days_until_expiry} day(s). '
+                           f'Renew it immediately to avoid browser warnings.')
+            else:
+                ssl_severity = 'medium'
+                ssl_title = f'SSL certificate for {domain} expires in {days_until_expiry} days'
+                ssl_msg = (f'The SSL certificate for {domain} will expire in {days_until_expiry} day(s). '
+                           f'Renew it before visitors see browser warnings.')
+
             self.db.create_alert(
                 monitored_domain_id=domain_id,
                 user_id=user_id,
                 alert_type='ssl_expiry',
-                title=f'SSL certificate for {domain} expires in {days_until_expiry} days',
-                message=f'The SSL certificate for {domain} will expire in {days_until_expiry} day(s). '
-                        f'Renew it before visitors see browser warnings.',
-                severity='high' if days_until_expiry <= 7 else 'medium'
+                title=ssl_title,
+                message=ssl_msg,
+                severity=ssl_severity
             )
+            self._send_expiry_alert_email(user_id, domain, 'ssl_expiry', days_until_expiry, ssl_severity)
+
+        # Alert: domain registration expiring within 30 days
+        whois_info = result.whois_info or {}
+        domain_days = whois_info.get('days_until_domain_expiry')
+        if domain_days is not None and domain_days <= 30:
+            if domain_days <= 0:
+                dom_severity = 'critical'
+                dom_title = f'Domain registration for {domain} has EXPIRED'
+                dom_msg = (f'The domain registration for {domain} has expired. '
+                           f'Your domain may be suspended or taken over.')
+            elif domain_days <= 7:
+                dom_severity = 'high'
+                dom_title = f'Domain registration for {domain} expires in {domain_days} days'
+                dom_msg = (f'The domain registration for {domain} expires in {domain_days} day(s). '
+                           f'Renew immediately to prevent service interruption.')
+            else:
+                dom_severity = 'medium'
+                dom_title = f'Domain registration for {domain} expires in {domain_days} days'
+                dom_msg = (f'The domain registration for {domain} expires in {domain_days} day(s). '
+                           f'Renew soon to avoid losing your domain.')
+
+            self.db.create_alert(
+                monitored_domain_id=domain_id,
+                user_id=user_id,
+                alert_type='domain_expiry',
+                title=dom_title,
+                message=dom_msg,
+                severity=dom_severity
+            )
+            self._send_expiry_alert_email(user_id, domain, 'domain_expiry', domain_days, dom_severity)
 
         # Alert: grade dropped to D or F
         if result.grade in ('D', 'F'):
@@ -157,6 +206,102 @@ class ScanScheduler:
                             f'Multiple security issues need to be addressed.',
                     severity='high'
                 )
+
+
+    def _send_expiry_alert_email(self, user_id: int, domain: str, alert_type: str,
+                                    days_remaining: int, severity: str):
+        """Send SSL or domain registration expiry alert email to the domain owner."""
+        try:
+            from auth import AuthManager
+            auth = AuthManager(self.config)
+            session = auth.Session()
+            from auth import User
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                return
+            # Respect user's email notification preference
+            if not getattr(user, 'email_notifications', True):
+                return
+            recipient = str(getattr(user, 'notification_email', None) or user.email)
+            session.close()
+        except Exception as e:
+            logger.error(f"Failed to look up user for expiry email: {e}")
+            return
+
+        smtp_user = getattr(self.config, 'EMAIL_USERNAME', None)
+        smtp_pass = getattr(self.config, 'EMAIL_PASSWORD', None)
+        if not smtp_user or not smtp_pass:
+            logger.warning("SMTP credentials not configured — skipping expiry alert email")
+            return
+
+        # Severity colours
+        color_map = {'critical': '#dc3545', 'high': '#fd7e14', 'medium': '#ffc107'}
+        banner_color = color_map.get(severity, '#6c757d')
+        text_color = '#000' if severity == 'medium' else '#fff'
+
+        if alert_type == 'ssl_expiry':
+            subject_tag = f'[{severity.upper()}] SSL Certificate Expiring: {domain}'
+            heading = 'SSL Certificate Expiry Alert'
+            detail_label = 'Certificate expires'
+            action = 'Renew your SSL certificate through your hosting provider or certificate authority.'
+        else:
+            subject_tag = f'[{severity.upper()}] Domain Registration Expiring: {domain}'
+            heading = 'Domain Registration Expiry Alert'
+            detail_label = 'Registration expires'
+            action = 'Log in to your domain registrar and renew your domain registration immediately.'
+
+        if days_remaining <= 0:
+            expiry_text = '<strong>already expired</strong>'
+        elif days_remaining == 1:
+            expiry_text = 'in <strong>1 day</strong>'
+        else:
+            expiry_text = f'in <strong>{days_remaining} days</strong>'
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:{banner_color};padding:20px 24px;">
+      <h2 style="color:{text_color};margin:0;font-size:18px;">{heading}</h2>
+    </div>
+    <div style="padding:24px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#333;">
+        <strong>Domain:</strong> {domain}
+      </p>
+      <p style="margin:0 0 12px;font-size:15px;color:#333;">
+        <strong>{detail_label}:</strong> {expiry_text}
+      </p>
+      <p style="margin:0 0 20px;font-size:15px;color:#555;">{action}</p>
+      <a href="https://securelinkapp.com/attack-surface"
+         style="display:inline-block;background:#0d6efd;color:#fff;padding:10px 20px;
+                border-radius:6px;text-decoration:none;font-size:14px;">
+        View Attack Surface Dashboard
+      </a>
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;font-size:12px;color:#888;text-align:center;">
+      SecureLink Security Platform &mdash; <a href="https://securelinkapp.com" style="color:#888;">securelinkapp.com</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject_tag
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')
+            msg['To'] = recipient
+            msg.attach(MIMEText(html_body, 'html'))
+
+            smtp_host = getattr(self.config, 'SMTP_HOST', 'email-smtp.us-east-2.amazonaws.com')
+            smtp_port = int(getattr(self.config, 'SMTP_PORT', 587))
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+
+            logger.info(f"Expiry alert email sent to {recipient} for {domain} ({alert_type})")
+        except Exception as e:
+            logger.error(f"Failed to send expiry alert email to {recipient}: {e}")
 
 
 def run_single_scan(domain: str, monitored_domain_id: int, user_id: int,

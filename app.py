@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from functools import wraps
 from datetime import datetime, timedelta
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -29,6 +29,7 @@ from cyber_news import get_cyber_news
 from admin import get_admin_manager, EmployeeRole
 from support_email_monitor import start_support_email_monitor
 from attack_surface_routes import attack_surface_bp, init_attack_surface
+from compliance_routes import compliance_bp, init_compliance
 from scan_scheduler import get_scan_scheduler
 from features import (
     get_ai_threat_explanation, check_password_breach, check_email_breach,
@@ -168,6 +169,10 @@ oauth = init_oauth(app, config)
 # Initialize Attack Surface Monitoring
 init_attack_surface(config, auth_manager)
 app.register_blueprint(attack_surface_bp)
+
+# Initialize Compliance Center
+init_compliance(config, auth_manager)
+app.register_blueprint(compliance_bp)
 
 # Initialize Dark Web Monitor
 dark_web_monitor = get_dark_web_monitor(config)
@@ -1338,9 +1343,9 @@ def resolve_dark_web_alert(alert_id):
 
 @app.route('/api/dark-web/password-check', methods=['POST'])
 @limiter.limit("10 per minute")
-@require_auth
+@require_pro
 def check_password_dark_web():
-    """Check if a password has appeared in data breaches"""
+    """Check if a password has appeared in data breaches (Pro and Enterprise only)"""
     data = request.get_json() or {}
     password = data.get('password', '')
     if not password:
@@ -1702,50 +1707,54 @@ def verify_link():
 
 @app.route('/api/scan-file', methods=['POST'])
 @limiter.limit("10 per minute")
+@require_pro
 def scan_file():
-    """API endpoint to scan a file for security threats"""
+    """API endpoint to scan a file for security threats (Pro and Enterprise only)"""
     import re
     import hashlib
-    
+
+    user = request.current_user
+    user_id = user.get('id')
+    tier = user.get('subscription_tier', 'free')
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
-    # Check file size (max 200MB)
-    file.seek(0, 2)  # Seek to end
+
+    # Enforce tier-based file size limits
+    tier_size_limits = {
+        'pro':        50  * 1024 * 1024,   # 50 MB
+        'enterprise': 200 * 1024 * 1024,   # 200 MB
+    }
+    max_size = tier_size_limits.get(tier, 50 * 1024 * 1024)
+
+    file.seek(0, 2)
     file_size = file.tell()
-    file.seek(0)  # Seek back to start
-    
-    max_size = 200 * 1024 * 1024  # 200MB
+    file.seek(0)
+
     if file_size > max_size:
-        return jsonify({'error': 'File size exceeds 200MB limit'}), 400
-    
+        limit_mb = max_size // (1024 * 1024)
+        return jsonify({'error': f'File size exceeds the {limit_mb}MB limit for your plan'}), 400
+
     # Get file extension
     filename = file.filename.lower()
     extension = '.' + filename.split('.')[-1] if '.' in filename else ''
-    
+
     allowed_extensions = ['.txt', '.html', '.htm', '.js', '.css', '.json', '.xml', '.csv', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.eml', '.msg']
     if extension not in allowed_extensions:
         return jsonify({'error': 'File type not supported'}), 400
-    
-    # Check auth for scan limits (optional)
-    token = get_token_from_request()
-    user_id = None
-    
-    if token:
-        user_data = auth_manager.validate_token(token)
-        if user_data:
-            user_id = user_data['user']['id']
-            limit_check = auth_manager.check_scan_limit(user_id)
-            if not limit_check.get('allowed'):
-                return jsonify({
-                    'error': 'Daily scan limit reached',
-                    'limit': limit_check.get('limit'),
-                    'used': limit_check.get('used')
-                }), 429
+
+    # Check scan limits
+    limit_check = auth_manager.check_scan_limit(user_id)
+    if not limit_check.get('allowed'):
+        return jsonify({
+            'error': 'Daily scan limit reached',
+            'limit': limit_check.get('limit'),
+            'used': limit_check.get('used')
+        }), 429
     
     try:
         # Read file content
@@ -2161,6 +2170,221 @@ def update_report_preferences():
     })
     
     return jsonify(result)
+
+
+@app.route('/api/reports/security-report-pdf')
+@require_auth
+def generate_security_report_pdf():
+    """Generate and download a PDF security posture report (Enterprise only)."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from attack_surface_db import AttackSurfaceDB
+
+    user = request.current_user
+    if user.get('subscription_tier') != 'enterprise':
+        return jsonify({'error': 'PDF reports require an Enterprise plan'}), 403
+
+    user_id = user['id']
+    user_name = user.get('display_name') or user.get('username') or user['email'].split('@')[0]
+    user_email = user['email']
+    generated_at = datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')
+
+    # Gather data
+    stats = report_generator.get_user_weekly_stats(user_id, days=30)
+    as_db = AttackSurfaceDB(config)
+    domains = as_db.get_user_domains(user_id)
+    dw_assets = auth_manager.get_monitored_assets(user_id)
+    dw_counts = auth_manager.get_dark_web_alert_count(user_id)
+
+    # ── Build PDF ──
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            leftMargin=0.75 * inch, rightMargin=0.75 * inch,
+                            topMargin=0.75 * inch, bottomMargin=0.75 * inch)
+
+    styles = getSampleStyleSheet()
+    brand_blue = colors.HexColor('#0d6efd')
+    dark       = colors.HexColor('#1a1a2e')
+    muted      = colors.HexColor('#6c757d')
+    danger     = colors.HexColor('#dc3545')
+    success    = colors.HexColor('#198754')
+    warning    = colors.HexColor('#ffc107')
+
+    h1 = ParagraphStyle('h1', parent=styles['Normal'], fontSize=24, textColor=brand_blue,
+                         spaceAfter=4, fontName='Helvetica-Bold')
+    h2 = ParagraphStyle('h2', parent=styles['Normal'], fontSize=13, textColor=dark,
+                         spaceAfter=6, spaceBefore=14, fontName='Helvetica-Bold')
+    body = ParagraphStyle('body', parent=styles['Normal'], fontSize=10, textColor=dark, leading=14)
+    muted_style = ParagraphStyle('muted', parent=styles['Normal'], fontSize=9, textColor=muted, leading=12)
+
+    BASE_STYLE = [
+        ('BACKGROUND',    (0, 0), (-1, 0), brand_blue),
+        ('TEXTCOLOR',     (0, 0), (-1, 0), colors.white),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE',      (0, 0), (-1, -1), 10),
+        ('ALIGN',         (0, 0), (-1, -1), 'LEFT'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
+        ('TOPPADDING',    (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('ROWBACKGROUNDS',(0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white]),
+        ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]
+
+    def two_col_table(data, extra_cmds=None):
+        """Build a standard two-column info table."""
+        t = Table(data, colWidths=[3.5 * inch, 3.5 * inch])
+        t.setStyle(TableStyle(BASE_STYLE + (extra_cmds or [])))
+        return t
+
+    story = []
+
+    # ── Header ──
+    story.append(Paragraph('SecureLink', h1))
+    story.append(Paragraph('Security Posture Report',
+                            ParagraphStyle('sub', parent=styles['Normal'], fontSize=16,
+                                           textColor=dark, fontName='Helvetica-Bold', spaceAfter=2)))
+    story.append(Paragraph(f'Prepared for: <b>{user_name}</b> ({user_email})', body))
+    story.append(Paragraph(f'Generated: {generated_at} &nbsp;|&nbsp; Period: Last 30 days', muted_style))
+    story.append(Paragraph('Plan: <b>Enterprise</b>', muted_style))
+    story.append(HRFlowable(width='100%', thickness=1.5, color=brand_blue, spaceAfter=12, spaceBefore=8))
+
+    # ── Security Summary ──
+    summary    = stats.get('summary', {})
+    risk       = stats.get('overall_risk', {})
+    total      = summary.get('total_scans', 0)
+    safe       = summary.get('safe_count', 0)
+    unsafe     = summary.get('unsafe_count', 0)
+    safe_pct   = summary.get('safe_percentage', 0)
+    risk_level = risk.get('level', 'unknown').upper()
+
+    risk_color_map = {
+        'CRITICAL': danger,
+        'HIGH':     colors.HexColor('#fd7e14'),
+        'MEDIUM':   warning,
+        'LOW':      colors.HexColor('#20c997'),
+        'SAFE':     success,
+        'UNKNOWN':  muted,
+    }
+    rl_color = risk_color_map.get(risk_level, muted)
+
+    story.append(Paragraph('Security Summary', h2))
+    story.append(two_col_table(
+        [
+            ['Metric',               'Value'],
+            ['Total Scans (30 days)', str(total)],
+            ['Safe Links',           f'{safe} ({safe_pct:.1f}%)'],
+            ['Threats Detected',     str(unsafe)],
+            ['Overall Risk Level',   risk_level],
+        ],
+        extra_cmds=[
+            ('TEXTCOLOR', (1, 4), (1, 4), rl_color),
+            ('FONTNAME',  (1, 4), (1, 4), 'Helvetica-Bold'),
+        ]
+    ))
+
+    # ── Risk Breakdown ──
+    story.append(Paragraph('Risk Breakdown', h2))
+    rb = stats.get('risk_breakdown', {})
+    rb_entries = [
+        (colors.HexColor('#dc3545'), 'Critical'),
+        (colors.HexColor('#fd7e14'), 'High'),
+        (colors.HexColor('#ffc107'), 'Medium'),
+        (colors.HexColor('#20c997'), 'Low'),
+        (colors.HexColor('#198754'), 'Safe'),
+    ]
+    rb_data = [['Risk Level', 'Count']] + [
+        [label, str(rb.get(label.lower(), 0))] for _, label in rb_entries
+    ]
+    rb_extra = []
+    for i, (c, _) in enumerate(rb_entries):
+        rb_extra += [
+            ('TEXTCOLOR', (0, i + 1), (0, i + 1), c),
+            ('FONTNAME',  (0, i + 1), (0, i + 1), 'Helvetica-Bold'),
+        ]
+    story.append(two_col_table(rb_data, extra_cmds=rb_extra))
+
+    # ── Recent Threats ──
+    story.append(Paragraph('Recent Threats Detected', h2))
+    threats = stats.get('recent_threats', [])
+    if threats:
+        t_data = [['URL', 'Risk', 'Source', 'Detected']]
+        small = ParagraphStyle('sm', fontSize=8, leading=10)
+        for t in threats:
+            detected = ''
+            if t.get('detected_at'):
+                try:
+                    detected = datetime.fromisoformat(t['detected_at']).strftime('%Y-%m-%d')
+                except Exception:
+                    detected = str(t['detected_at'])[:10]
+            t_data.append([
+                Paragraph(t.get('url', '')[:70], small),
+                t.get('risk_level', '').upper(),
+                t.get('source', ''),
+                detected,
+            ])
+        t_table = Table(t_data, colWidths=[3.0 * inch, 1.0 * inch, 0.9 * inch, 1.1 * inch])
+        t_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, 0), brand_blue),
+            ('TEXTCOLOR',     (0, 0), (-1, 0), colors.white),
+            ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE',      (0, 0), (-1, -1), 9),
+            ('ALIGN',         (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+            ('TOPPADDING',    (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('ROWBACKGROUNDS',(0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white]),
+            ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ]))
+        story.append(t_table)
+    else:
+        story.append(Paragraph('No high or critical threats detected in the past 30 days.', body))
+
+    # ── Dark Web Monitoring ──
+    story.append(Paragraph('Dark Web Monitoring', h2))
+    dw_email_count    = len([a for a in dw_assets if a.get('asset_type') == 'email'])
+    dw_total_breaches = dw_counts.get('total', 0) if isinstance(dw_counts, dict) else 0
+    dw_unread         = dw_counts.get('unread', 0) if isinstance(dw_counts, dict) else 0
+    story.append(two_col_table([
+        ['Metric',                    'Value'],
+        ['Monitored Email Addresses', str(dw_email_count)],
+        ['Total Breach Alerts',       str(dw_total_breaches)],
+        ['Unread Alerts',             str(dw_unread)],
+    ]))
+
+    # ── Attack Surface Overview ──
+    story.append(Paragraph('Attack Surface Overview', h2))
+    scores    = [d.get('latest_score') for d in domains if d.get('latest_score') is not None]
+    avg_score = f'{round(sum(scores) / len(scores), 1)}/100' if scores else 'N/A'
+    grades    = [d.get('latest_grade', '') for d in domains if d.get('latest_grade')]
+    story.append(two_col_table([
+        ['Metric',                 'Value'],
+        ['Monitored Domains',      str(len(domains))],
+        ['Average Security Score', avg_score],
+        ['Domains Graded D or F',  str(sum(1 for g in grades if g in ('D', 'F')))],
+    ]))
+
+    # ── Footer ──
+    story.append(Spacer(1, 20))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=muted, spaceBefore=8))
+    story.append(Paragraph(
+        'This report is confidential and intended solely for the named recipient. '
+        'Generated by <b>SecureLink</b> &mdash; securelinkapp.com',
+        ParagraphStyle('footer', parent=styles['Normal'], fontSize=8,
+                       textColor=muted, alignment=1, spaceBefore=6)
+    ))
+
+    doc.build(story)
+    buffer.seek(0)
+    filename = f'securelink-report-{datetime.utcnow().strftime("%Y%m%d")}.pdf'
+    return send_file(buffer, mimetype='application/pdf',
+                     as_attachment=True, download_name=filename)
 
 
 # ==================== Admin Panel Routes ====================
