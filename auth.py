@@ -112,7 +112,7 @@ class User(Base):
         """Get feature limits based on subscription tier"""
         limits = {
             SubscriptionTier.FREE.value: {
-                'daily_scans': 25,
+                'daily_scans': -1,  # Unlimited
                 'dark_web_monitoring': False,
                 'max_monitored_assets': 0,
                 'api_access': False,

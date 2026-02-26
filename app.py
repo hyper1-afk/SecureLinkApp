@@ -736,11 +736,11 @@ extension_scan_counts = {}
 def get_scan_limit(subscription_tier):
     """Get daily scan limit based on subscription tier"""
     limits = {
-        'free': 50,      # Increased from 10
-        'pro': 500,
-        'enterprise': float('inf')  # Unlimited
+        'free': float('inf'),
+        'pro': float('inf'),
+        'enterprise': float('inf')
     }
-    return limits.get(subscription_tier, 50)
+    return limits.get(subscription_tier, float('inf'))
 
 @app.route('/api/extension/auth', methods=['POST'])
 def extension_auth():
@@ -1651,6 +1651,65 @@ def stripe_webhook():
 # Track anonymous website scan counts (in production, use Redis)
 website_anonymous_scans = {}
 
+# Track anonymous public breach check counts (in production, use Redis)
+public_breach_checks = {}
+
+
+@app.route('/api/public/breach-check', methods=['POST'])
+@limiter.limit("5 per minute")
+def public_breach_check():
+    """Public email breach check — returns count/risk only, no breach names."""
+    from datetime import date
+    import re
+
+    data = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip().lower()
+    if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return jsonify({'error': 'A valid email address is required'}), 400
+
+    today = date.today().isoformat()
+    ip_key = f"{_get_client_ip()}:{today}"
+    checks_today = public_breach_checks.get(ip_key, 0)
+    if checks_today >= 3:
+        return jsonify({
+            'error': 'Daily limit reached',
+            'message': 'Create a free account to check more emails.',
+            'checks_remaining': 0,
+            'limit_reached': True
+        }), 429
+
+    try:
+        breaches, error = dark_web_monitor.check_email_breaches(email)
+    except Exception as e:
+        logger.error(f"Public breach check error: {e}")
+        return jsonify({'error': 'Breach database temporarily unavailable'}), 503
+
+    # Increment counter only after a successful API call
+    public_breach_checks[ip_key] = checks_today + 1
+
+    if error:
+        public_breach_checks[ip_key] = checks_today  # roll back on API error
+        return jsonify({'error': error}), 503
+
+    breach_count = len(breaches)
+    if breach_count == 0:
+        risk_level = 'none'
+    elif breach_count <= 2:
+        risk_level = 'low'
+    elif breach_count <= 5:
+        risk_level = 'medium'
+    else:
+        risk_level = 'high'
+
+    return jsonify({
+        'has_breaches': breach_count > 0,
+        'breach_count': breach_count,
+        'risk_level': risk_level,
+        'checks_remaining': max(0, 3 - (checks_today + 1)),
+        'is_public': True
+    })
+
+
 @app.route('/api/scan-status', methods=['GET'])
 def get_scan_status():
     """Get current scan count for anonymous users"""
@@ -1740,9 +1799,9 @@ def verify_link():
 
 @app.route('/api/scan-file', methods=['POST'])
 @limiter.limit("10 per minute")
-@require_pro
+@require_auth
 def scan_file():
-    """API endpoint to scan a file for security threats (Pro and Enterprise only)"""
+    """API endpoint to scan a file for security threats (all authenticated tiers)"""
     import re
     import hashlib
 
@@ -1759,10 +1818,11 @@ def scan_file():
 
     # Enforce tier-based file size limits
     tier_size_limits = {
+        'free':       25  * 1024 * 1024,   # 25 MB
         'pro':        50  * 1024 * 1024,   # 50 MB
         'enterprise': 200 * 1024 * 1024,   # 200 MB
     }
-    max_size = tier_size_limits.get(tier, 50 * 1024 * 1024)
+    max_size = tier_size_limits.get(tier, 25 * 1024 * 1024)
 
     file.seek(0, 2)
     file_size = file.tell()
