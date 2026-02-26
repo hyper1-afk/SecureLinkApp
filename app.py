@@ -3939,8 +3939,10 @@ if __name__ == '__main__':
     ╚═══════════════════════════════════════════════════════════╝
     """)
     
+    # Bind to localhost only — in production, gunicorn sits behind nginx on 0.0.0.0.
+    # The dev server should never be directly internet-facing.
     app.run(
-        host='0.0.0.0',
+        host='127.0.0.1',
         port=5000,
         debug=config.DEBUG
     )
