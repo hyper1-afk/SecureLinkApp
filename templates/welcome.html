@@ -569,49 +569,20 @@
             <p>Scan a link for threats or check an email for data breaches right now.</p>
         </div>
 
-        <div class="tool-tabs">
-            <button class="tool-tab active" id="tab-link" onclick="switchToolTab('link')">
-                <i class="bi bi-link-45deg"></i> Check a Link
-            </button>
-            <button class="tool-tab" id="tab-breach" onclick="switchToolTab('breach')">
-                <i class="bi bi-envelope-exclamation"></i> Check Your Email
-            </button>
-        </div>
-
-        <!-- Panel: Link Checker -->
-        <div class="tool-panel active" id="panel-link">
-            <div class="tool-card">
-                <div class="tool-input-row">
-                    <input type="url" id="linkInput" class="tool-input"
-                        placeholder="https://example.com/suspicious-link" autocomplete="off">
-                    <button class="tool-btn" id="linkBtn" onclick="runLinkScan()">
-                        <i class="bi bi-search"></i> Scan
-                    </button>
-                </div>
-                <div class="quota-bar">
-                    <div class="quota-dot" id="linkQuotaDot"></div>
-                    <span id="linkQuotaText">15 free scans per day &mdash; no account needed</span>
-                </div>
-                <div class="tool-result" id="linkResult"></div>
+        <!-- Link Scanner -->
+        <div class="tool-card">
+            <div class="tool-input-row">
+                <input type="url" id="linkInput" class="tool-input"
+                    placeholder="https://example.com/suspicious-link" autocomplete="off">
+                <button class="tool-btn" id="linkBtn" onclick="runLinkScan()">
+                    <i class="bi bi-search"></i> Scan
+                </button>
             </div>
-        </div>
-
-        <!-- Panel: Breach Checker -->
-        <div class="tool-panel" id="panel-breach">
-            <div class="tool-card">
-                <div class="tool-input-row">
-                    <input type="email" id="breachInput" class="tool-input"
-                        placeholder="you@example.com" autocomplete="off">
-                    <button class="tool-btn" id="breachBtn" onclick="runBreachCheck()">
-                        <i class="bi bi-shield-exclamation"></i> Check
-                    </button>
-                </div>
-                <div class="quota-bar">
-                    <div class="quota-dot" id="breachQuotaDot"></div>
-                    <span id="breachQuotaText">3 free checks per day &mdash; no account needed</span>
-                </div>
-                <div class="tool-result" id="breachResult"></div>
+            <div class="quota-bar">
+                <div class="quota-dot" id="linkQuotaDot"></div>
+                <span id="linkQuotaText">15 free scans per day &mdash; no account needed</span>
             </div>
+            <div class="tool-result" id="linkResult"></div>
         </div>
     </div>
     <!-- ===== End Public Tool Widget ===== -->
@@ -635,9 +606,9 @@
                 <p>Monitor the dark web for leaked credentials and personal data. Get instant alerts when your information appears in breaches.</p>
             </div>
             <div class="feature-card fade-up">
-                <div class="f-icon purple"><i class="bi bi-hdd-network-fill"></i></div>
+                <div class="f-icon purple"><i class="bi bi-radar"></i></div>
                 <h3>Attack Surface Monitoring <span class="feature-badge badge-enterprise">Enterprise</span></h3>
-                <p>Register your domains for continuous monitoring. Get graded security reports with DNS, SSL, port, and header analysis.</p>
+                <p>Continuous domain monitoring with graded security reports, intrusion detection, DNS/SSL/port analysis, and automated alerts when anything changes.</p>
             </div>
             <div class="feature-card fade-up">
                 <div class="f-icon orange"><i class="bi bi-puzzle-fill"></i></div>
@@ -668,9 +639,10 @@
                     <li><div class="check"><i class="bi bi-check2"></i></div> DNS, SSL & TLS configuration analysis</li>
                     <li><div class="check"><i class="bi bi-check2"></i></div> Open port & service detection</li>
                     <li><div class="check"><i class="bi bi-check2"></i></div> HTTP security header auditing</li>
-                    <li><div class="check"><i class="bi bi-check2"></i></div> Automated hourly scans with grading</li>
+                    <li><div class="check"><i class="bi bi-check2"></i></div> Intrusion detection — port, SSL, DNS & content change alerts</li>
+                    <li><div class="check"><i class="bi bi-check2"></i></div> Automated scans with A–F security grading</li>
                     <li><div class="check"><i class="bi bi-check2"></i></div> AI-powered remediation recommendations</li>
-                    <li><div class="check"><i class="bi bi-check2"></i></div> Historical trend tracking & alerts</li>
+                    <li><div class="check"><i class="bi bi-check2"></i></div> Historical trend tracking & email alerts</li>
                 </ul>
             </div>
             <div class="showcase-visual fade-up">
@@ -782,9 +754,9 @@
                     <li><i class="bi bi-check-circle-fill"></i> Everything in Pro</li>
                     <li><i class="bi bi-check-circle-fill"></i> Attack Surface Monitoring</li>
                     <li><i class="bi bi-check-circle-fill"></i> 25 domains, hourly scans</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Intrusion detection (IDS)</li>
                     <li><i class="bi bi-check-circle-fill"></i> Unlimited dark web monitoring</li>
                     <li><i class="bi bi-check-circle-fill"></i> AI remediation advice</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Team management</li>
                     <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Go Enterprise</a>
@@ -886,13 +858,6 @@
 
         // ===== Public Tool Widget =====
 
-        function switchToolTab(tab) {
-            document.getElementById('panel-link').classList.toggle('active', tab === 'link');
-            document.getElementById('panel-breach').classList.toggle('active', tab === 'breach');
-            document.getElementById('tab-link').classList.toggle('active', tab === 'link');
-            document.getElementById('tab-breach').classList.toggle('active', tab === 'breach');
-        }
-
         // --- Link Scanner ---
         async function fetchLinkQuota() {
             try {
@@ -967,96 +932,6 @@
             }
         }
         document.getElementById('linkInput').addEventListener('keydown', e => { if (e.key==='Enter') runLinkScan(); });
-
-        // --- Breach Checker ---
-        function updateBreachQuota(remaining) {
-            const dot = document.getElementById('breachQuotaDot');
-            const txt = document.getElementById('breachQuotaText');
-            if (remaining === 0) {
-                dot.className = 'quota-dot empty';
-                txt.textContent = 'Daily limit reached — sign up to check more';
-                document.getElementById('breachBtn').disabled = true;
-            } else {
-                dot.className = remaining === 1 ? 'quota-dot warn' : 'quota-dot';
-                txt.textContent = `${remaining} of 3 free checks remaining today`;
-            }
-        }
-
-        async function runBreachCheck() {
-            const email = document.getElementById('breachInput').value.trim();
-            if (!email) return;
-            const btn = document.getElementById('breachBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
-            const resultEl = document.getElementById('breachResult');
-            resultEl.classList.remove('show');
-            resultEl.innerHTML = '';
-            try {
-                const r = await fetch('/api/public/breach-check', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                const d = await r.json();
-                if (r.status === 429) {
-                    resultEl.innerHTML = `
-                        <div class="result-badge badge-info"><i class="bi bi-info-circle-fill"></i> Limit Reached</div>
-                        <p style="font-size:.9rem;color:var(--text-secondary);margin:0 0 14px;">You've used all 3 free checks for today.</p>
-                        <div class="tool-cta-strip">
-                            <p><strong style="color:var(--text-primary)">Create a free account</strong> to see full breach details</p>
-                            <a href="/login?tab=register">Sign Up Free</a>
-                        </div>`;
-                    resultEl.classList.add('show');
-                    updateBreachQuota(0);
-                    return;
-                }
-                if (!r.ok) {
-                    resultEl.innerHTML = `<p style="color:#ef4444;font-size:.9rem;">${d.error || 'Service temporarily unavailable. Please try again.'}</p>`;
-                    resultEl.classList.add('show');
-                    return;
-                }
-                if (d.checks_remaining !== undefined) updateBreachQuota(d.checks_remaining);
-                const riskMap = {
-                    none:   { cls:'badge-safe',   icon:'bi-shield-check-fill',       label:'No Breaches Found' },
-                    low:    { cls:'badge-warn',   icon:'bi-exclamation-triangle-fill', label:'Low Risk' },
-                    medium: { cls:'badge-warn',   icon:'bi-exclamation-triangle-fill', label:'Medium Risk' },
-                    high:   { cls:'badge-danger', icon:'bi-shield-x-fill',            label:'High Risk' }
-                };
-                const rc = riskMap[d.risk_level] || riskMap.low;
-                const placeholderNames = ['CompanyBreachXX','DataLeakSite99','ServiceHack20XX','PasswordDB2023','ForumBreachZZ'];
-                const placeholderDates = ['Jan 2023','Aug 2022','Mar 2024','Nov 2021','Jun 2023'];
-                let rowsHTML = '';
-                if (d.has_breaches) {
-                    const visible = Math.min(d.breach_count, 5);
-                    for (let i = 0; i < visible; i++) {
-                        rowsHTML += `<div class="breach-row">
-                            <span class="breach-row-name">${placeholderNames[i%5]}</span>
-                            <span class="breach-row-date">${placeholderDates[i%5]}</span>
-                        </div>`;
-                    }
-                    if (d.breach_count > 5) rowsHTML += `<div style="text-align:center;font-size:.78rem;color:var(--text-muted);padding:6px 0;">+ ${d.breach_count-5} more breaches hidden</div>`;
-                }
-                const countText = d.has_breaches
-                    ? `Found in <strong style="color:#ef4444">${d.breach_count} breach${d.breach_count!==1?'es':''}</strong>`
-                    : 'This email was not found in any known breaches.';
-                resultEl.innerHTML = `
-                    <div class="result-badge ${rc.cls}"><i class="bi ${rc.icon}"></i> ${rc.label}</div>
-                    <p style="font-size:.9rem;color:var(--text-secondary);margin:0 0 10px;">${countText}</p>
-                    ${d.has_breaches ? `<div class="breach-rows">${rowsHTML}</div>
-                    <div class="tool-cta-strip">
-                        <p>Create your free account to see <strong style="color:var(--text-primary)">which breaches</strong> and what data was exposed</p>
-                        <a href="/login?tab=register">See Full Details Free</a>
-                    </div>` : ''}`;
-                resultEl.classList.add('show');
-            } catch(e) {
-                resultEl.innerHTML = `<p style="color:#ef4444;font-size:.9rem;">Error reaching breach database. Please try again.</p>`;
-                resultEl.classList.add('show');
-            } finally {
-                btn.innerHTML = '<i class="bi bi-shield-exclamation"></i> Check';
-                if (document.getElementById('breachBtn').disabled === false) btn.disabled = false;
-            }
-        }
-        document.getElementById('breachInput').addEventListener('keydown', e => { if (e.key==='Enter') runBreachCheck(); });
 
         // Load link quota on page load
         fetchLinkQuota();
