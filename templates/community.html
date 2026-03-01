@@ -678,6 +678,23 @@
             return faToBI[key] || 'bi-folder';
         }
 
+        // Auth guard — redirect to login if not authenticated
+        (async function() {
+            const token = localStorage.getItem('authToken') || localStorage.getItem('auth_token');
+            if (!token) { window.location.replace('/login'); return; }
+            try {
+                const res = await fetch('/api/auth/validate', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!data.valid) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('authToken');
+                    window.location.replace('/login');
+                }
+            } catch(e) { /* network error — allow page to continue */ }
+        })();
+
         // ==================== SHARED STATE ====================
         const token = localStorage.getItem('authToken') || localStorage.getItem('auth_token');
         const userDataStr = localStorage.getItem('userData');
