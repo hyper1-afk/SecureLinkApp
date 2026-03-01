@@ -353,7 +353,7 @@ def send_ticket_notification(ticket_data: dict, config: Config = None):
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = config.SMTP_USERNAME
+        msg['From'] = config.SMTP_FROM_EMAIL
         msg['To'] = config.SUPPORT_EMAIL
         
         msg.attach(MIMEText(plain_text, 'plain'))
@@ -483,7 +483,7 @@ def send_ticket_closure_notification(ticket_data: dict, config: Config = None):
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = email_subject
-        msg['From'] = config.SMTP_USERNAME
+        msg['From'] = config.SMTP_FROM_EMAIL
         msg['To'] = customer_email
         
         msg.attach(MIMEText(plain_text, 'plain'))
