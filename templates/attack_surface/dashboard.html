@@ -325,6 +325,12 @@
                     <div class="stat-label">Unread Alerts</div>
                 </div>
             </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value text-danger" id="statIdsAlerts">-</div>
+                    <div class="stat-label">IDS Alerts</div>
+                </div>
+            </div>
         </div>
 
         <div class="row g-4">
@@ -475,6 +481,7 @@
                 document.getElementById('statAvgScore').textContent = data.average_score != null ? data.average_score : '-';
                 document.getElementById('statFindings').textContent = data.findings_last_7_days || 0;
                 document.getElementById('statAlerts').textContent = data.unread_alerts || 0;
+                document.getElementById('statIdsAlerts').textContent = data.ids_alert_count || 0;
 
                 renderDomains(data.domains || []);
             } catch(e) {

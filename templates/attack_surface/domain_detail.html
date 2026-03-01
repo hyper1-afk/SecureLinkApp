@@ -253,6 +253,7 @@
             <li><a class="nav-link" href="#" onclick="switchTab('tech',this)">Technology</a></li>
             <li><a class="nav-link" href="#" onclick="switchTab('trend',this)">Trend</a></li>
             <li><a class="nav-link" href="#" onclick="switchTab('ai',this)">AI Advice</a></li>
+            <li><a class="nav-link" href="#" onclick="switchTab('ids',this)"><i class="bi bi-radar me-1"></i>IDS</a></li>
         </ul>
 
         <!-- Tab Content -->
@@ -352,7 +353,7 @@
             else document.querySelector(`#detailTabs .nav-link`).classList.add('active');
 
             const content = document.getElementById('tabContent');
-            if (!latestScan && tab !== 'trend' && tab !== 'ai') {
+            if (!latestScan && tab !== 'trend' && tab !== 'ai' && tab !== 'ids') {
                 content.innerHTML = '<div class="card p-4 text-center text-muted">No scan data yet. Click "Rescan" to run the first scan.</div>';
                 return;
             }
@@ -365,6 +366,7 @@
                 case 'tech': renderTech(content); break;
                 case 'trend': loadTrend(content); break;
                 case 'ai': loadAIAdvice(content); break;
+                case 'ids': loadIDS(content); break;
             }
         }
 
@@ -530,6 +532,87 @@
                 }
             } catch(e) {
                 el.innerHTML = '<div class="card p-4 text-danger">Failed to generate AI advice.</div>';
+            }
+        }
+
+        // ============ IDS ============
+        async function loadIDS(el) {
+            el.innerHTML = '<div class="text-center py-4"><div class="loading-spinner"></div><p class="text-muted mt-2">Loading IDS data...</p></div>';
+            try {
+                const res = await fetch(`${API_BASE}/domains/${DOMAIN_ID}/ids-alerts`, { headers: headers() });
+                const data = await res.json();
+                const dom = data.domain || {};
+                const alerts = data.alerts || [];
+                const ports = (latestScan?.port_info?.open_ports) || [];
+                const DANGEROUS = new Set([22, 23, 445, 3306, 3389, 5432, 5900, 6379, 27017]);
+
+                const baselineHtml = `
+                <div class="card p-4 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="bi bi-bullseye me-2" style="color:var(--accent-color)"></i>IDS Baseline</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetBaseline()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Baseline
+                        </button>
+                    </div>
+                    ${dom.baseline_set_at
+                        ? `<div class="info-row"><span class="info-label">Established</span><span class="info-value">${new Date(dom.baseline_set_at).toLocaleString()}</span></div>`
+                        : '<p class="text-muted small">No baseline set yet. A baseline is automatically created on the first scheduled scan.</p>'}
+                    ${dom.baseline_ports != null ? `<div class="info-row"><span class="info-label">Baseline Ports</span><span class="info-value">${dom.baseline_ports.length ? dom.baseline_ports.map(p => `<span class="tech-badge">${p}</span>`).join(' ') : '<span class="text-muted">None open</span>'}</span></div>` : ''}
+                    ${dom.baseline_ssl_issuer ? `<div class="info-row"><span class="info-label">SSL Issuer</span><span class="info-value">${escHtml(dom.baseline_ssl_issuer)}</span></div>` : ''}
+                    ${dom.baseline_dns?.A?.length ? `<div class="info-row"><span class="info-label">A Records</span><span class="info-value">${dom.baseline_dns.A.map(r => escHtml(r)).join(', ')}</span></div>` : ''}
+                    ${dom.baseline_content_hash ? `<div class="info-row"><span class="info-label">Content Hash</span><span class="info-value"><code>${dom.baseline_content_hash.slice(0,16)}…</code></span></div>` : ''}
+                </div>`;
+
+                const portsHtml = `
+                <div class="card p-4 mb-3">
+                    <h5><i class="bi bi-hdd-network me-2"></i>Current Open Ports</h5>
+                    ${ports.length
+                        ? ports.map(p => {
+                            const danger = DANGEROUS.has(p);
+                            return `<span class="tech-badge ${danger ? 'text-danger border-danger' : ''}" style="${danger ? 'background:rgba(220,53,69,.1)' : ''}">
+                                ${danger ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : ''}${p}
+                            </span>`;
+                          }).join(' ')
+                        : '<p class="text-muted small">No open ports detected (or scan pending).</p>'}
+                </div>`;
+
+                const alertsHtml = `
+                <div class="card p-0 mb-3">
+                    <div class="p-4 border-bottom"><h5 class="mb-0"><i class="bi bi-bell me-2 text-warning"></i>IDS Alerts</h5></div>
+                    ${alerts.length
+                        ? alerts.map(a => `
+                            <div class="finding-card">
+                                <span class="severity-badge severity-${a.severity}">${a.severity}</span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">${escHtml(a.title)}</div>
+                                    <p class="text-muted small mb-0">${escHtml(a.message)}</p>
+                                    <small class="text-muted">${new Date(a.created_at).toLocaleString()}</small>
+                                </div>
+                            </div>`).join('')
+                        : `<div class="p-4 text-center text-muted">
+                                <i class="bi bi-check-circle text-success" style="font-size:2rem"></i>
+                                <p class="mt-2 mb-0">No IDS alerts — all baselines are clear.</p>
+                           </div>`}
+                </div>`;
+
+                el.innerHTML = baselineHtml + portsHtml + alertsHtml;
+            } catch(e) {
+                el.innerHTML = '<div class="card p-4 text-danger">Failed to load IDS data.</div>';
+            }
+        }
+
+        async function resetBaseline() {
+            if (!confirm('Reset the IDS baseline to the current scan state? This will clear existing baseline comparisons.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/domains/${DOMAIN_ID}/reset-baseline`, {
+                    method: 'POST', headers: headers()
+                });
+                const data = await res.json();
+                if (data.error) { alert('Error: ' + data.error); return; }
+                const content = document.getElementById('tabContent');
+                loadIDS(content);
+            } catch(e) {
+                alert('Failed to reset baseline.');
             }
         }
 

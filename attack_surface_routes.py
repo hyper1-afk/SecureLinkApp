@@ -401,6 +401,34 @@ Provide a prioritized action plan (max 5 items) for the domain owner. Be specifi
 
 
 # ================================================================
+#  API: IDS Alerts
+# ================================================================
+
+@attack_surface_bp.route('/api/attack-surface/domains/<int:domain_id>/ids-alerts', methods=['GET'])
+@require_auth_as
+def get_ids_alerts(domain_id, user_data=None):
+    """Get IDS-specific alerts for a monitored domain"""
+    domain_info = _db.get_domain(domain_id, user_data['user_id'])
+    if not domain_info:
+        return jsonify({'error': 'Domain not found'}), 404
+    alerts = _db.get_ids_alerts(domain_id)
+    return jsonify({'alerts': alerts, 'domain': domain_info})
+
+
+@attack_surface_bp.route('/api/attack-surface/domains/<int:domain_id>/reset-baseline', methods=['POST'])
+@require_auth_as
+def reset_baseline(domain_id, user_data=None):
+    """Reset IDS baseline from the latest scan"""
+    latest_scan = _db.get_latest_scan(domain_id)
+    if not latest_scan:
+        return jsonify({'error': 'No scan found to use as baseline'}), 404
+    updated = _db.reset_baseline_from_scan_record(domain_id, user_data['user_id'], latest_scan)
+    if not updated:
+        return jsonify({'error': 'Domain not found'}), 404
+    return jsonify({'message': 'Baseline reset', 'baseline_set_at': updated.get('baseline_set_at')})
+
+
+# ================================================================
 #  Helpers
 # ================================================================
 

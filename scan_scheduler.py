@@ -16,7 +16,7 @@ from typing import Optional
 import schedule
 
 from config import Config
-from domain_scanner import DomainScanner
+from domain_scanner import DomainScanner, DANGEROUS_PORTS
 from attack_surface_db import AttackSurfaceDB
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,8 @@ class ScanScheduler:
         scan_id = self.db.save_scan(
             monitored_domain_id=domain_id,
             user_id=user_id,
-            scan_result=result
+            scan_result=result,
+            scan_source='scheduled'
         )
 
         # Check for alert conditions
@@ -207,6 +208,106 @@ class ScanScheduler:
                     severity='high'
                 )
 
+        # ---- IDS Block 1: New open port ----
+        baseline_ports = domain_info.get('baseline_ports')
+        current_ports = (result.port_info or {}).get('open_ports', [])
+        if baseline_ports is not None:
+            for port in sorted(set(current_ports) - set(baseline_ports)):
+                if self.db.has_recent_ids_alert(domain_id, 'new_port_detected', str(port)):
+                    continue
+                severity = 'high' if port in DANGEROUS_PORTS else 'medium'
+                self.db.create_alert(
+                    monitored_domain_id=domain_id,
+                    user_id=user_id,
+                    alert_type='new_port_detected',
+                    title=f'New open port detected on {domain}: port {port}',
+                    message=f'Port {port} is now open on {domain} but was not present in the baseline. '
+                            f'Verify this service is intentional.',
+                    severity=severity
+                )
+                if severity == 'high':
+                    self._send_ids_alert_email(user_id, domain, 'new_port_detected',
+                                               f'Port {port}', severity)
+
+        # ---- IDS Block 2: SSL certificate change ----
+        baseline_fp = domain_info.get('baseline_ssl_fingerprint')
+        current_fp = (result.ssl_info or {}).get('fingerprint')
+        if baseline_fp and current_fp and baseline_fp != current_fp:
+            if not self.db.has_recent_ids_alert(domain_id, 'ssl_cert_changed', domain):
+                self.db.create_alert(
+                    monitored_domain_id=domain_id,
+                    user_id=user_id,
+                    alert_type='ssl_cert_changed',
+                    title=f'SSL certificate changed for {domain}',
+                    message=f'The SSL certificate fingerprint for {domain} has changed since the baseline. '
+                            f'Verify this renewal or re-issue was authorized.',
+                    severity='high'
+                )
+                self._send_ids_alert_email(user_id, domain, 'ssl_cert_changed',
+                                           'Certificate fingerprint mismatch', 'high')
+
+        # ---- IDS Block 3: DNS record change ----
+        baseline_dns = domain_info.get('baseline_dns') or {}
+        current_dns = result.dns_info or {}
+
+        def _dns_list(records, key='host'):
+            out = []
+            for r in (records or []):
+                out.append(r[key] if isinstance(r, dict) else str(r))
+            return out
+
+        current_dns_norm = {
+            'A':   [r if isinstance(r, str) else r.get('address', str(r))
+                    for r in current_dns.get('a_records', [])],
+            'MX':  _dns_list(current_dns.get('mx_records', []), 'host'),
+            'NS':  _dns_list(current_dns.get('ns_records', []), 'host'),
+            'TXT': [r if isinstance(r, str) else r.get('text', str(r))
+                    for r in current_dns.get('txt_records', [])],
+        }
+        for rtype in ('A', 'NS', 'MX', 'TXT'):
+            base_set = set(baseline_dns.get(rtype, []))
+            curr_set = set(current_dns_norm.get(rtype, []))
+            if base_set and base_set != curr_set:
+                if self.db.has_recent_ids_alert(domain_id, 'dns_record_changed', rtype):
+                    continue
+                severity = 'high' if rtype in ('A', 'NS') else 'medium'
+                added   = curr_set - base_set
+                removed = base_set - curr_set
+                detail  = []
+                if added:
+                    detail.append(f'Added: {", ".join(sorted(added))}')
+                if removed:
+                    detail.append(f'Removed: {", ".join(sorted(removed))}')
+                self.db.create_alert(
+                    monitored_domain_id=domain_id,
+                    user_id=user_id,
+                    alert_type='dns_record_changed',
+                    title=f'DNS {rtype} record changed for {domain}',
+                    message=f'The {rtype} DNS records for {domain} differ from the baseline. '
+                            + ' '.join(detail),
+                    severity=severity
+                )
+                if severity == 'high':
+                    self._send_ids_alert_email(user_id, domain, 'dns_record_changed',
+                                               f'{rtype} record change', severity)
+
+        # ---- IDS Block 4: Content integrity (defacement) ----
+        baseline_hash = domain_info.get('baseline_content_hash')
+        current_hash = getattr(result, 'content_hash', None)
+        if baseline_hash and current_hash and baseline_hash != current_hash:
+            if not self.db.has_recent_ids_alert(domain_id, 'content_changed', domain):
+                self.db.create_alert(
+                    monitored_domain_id=domain_id,
+                    user_id=user_id,
+                    alert_type='content_changed',
+                    title=f'Website content changed for {domain}',
+                    message=f'The homepage content hash for {domain} has changed since the baseline. '
+                            f'Review for unauthorized modifications or defacement.',
+                    severity='high'
+                )
+                self._send_ids_alert_email(user_id, domain, 'content_changed',
+                                           'Content hash mismatch', 'high')
+
 
     def _send_expiry_alert_email(self, user_id: int, domain: str, alert_type: str,
                                     days_remaining: int, severity: str):
@@ -302,6 +403,88 @@ class ScanScheduler:
             logger.info(f"Expiry alert email sent to {recipient} for {domain} ({alert_type})")
         except Exception as e:
             logger.error(f"Failed to send expiry alert email to {recipient}: {e}")
+
+
+    def _send_ids_alert_email(self, user_id: int, domain: str, alert_type: str,
+                              detail: str, severity: str):
+        """Send an IDS detection alert email to the domain owner."""
+        try:
+            from auth import AuthManager, User
+            auth = AuthManager(self.config)
+            session = auth.Session()
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                session.close()
+                return
+            if not getattr(user, 'email_notifications', True):
+                session.close()
+                return
+            recipient = str(getattr(user, 'notification_email', None) or user.email)
+            session.close()
+        except Exception as e:
+            logger.error(f"Failed to look up user for IDS alert email: {e}")
+            return
+
+        smtp_user = getattr(self.config, 'EMAIL_USERNAME', None)
+        smtp_pass = getattr(self.config, 'EMAIL_PASSWORD', None)
+        if not smtp_user or not smtp_pass:
+            logger.warning("SMTP credentials not configured — skipping IDS alert email")
+            return
+
+        color_map = {'critical': '#dc3545', 'high': '#fd7e14', 'medium': '#ffc107'}
+        banner_color = color_map.get(severity, '#6c757d')
+        text_color = '#000' if severity == 'medium' else '#fff'
+
+        type_labels = {
+            'new_port_detected': ('New Open Port Detected', 'A port that was not in the security baseline is now open.'),
+            'ssl_cert_changed':  ('SSL Certificate Changed', 'The SSL certificate has changed since the baseline was established.'),
+            'dns_record_changed': ('DNS Record Changed', 'DNS records have changed since the baseline was established.'),
+            'content_changed':   ('Website Content Changed', 'The homepage content has changed — possible defacement detected.'),
+        }
+        heading, description = type_labels.get(alert_type, ('IDS Alert', 'A security change was detected.'))
+        subject = f'[{severity.upper()}] {heading}: {domain}'
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:{banner_color};padding:20px 24px;">
+      <h2 style="color:{text_color};margin:0;font-size:18px;">{heading}</h2>
+    </div>
+    <div style="padding:24px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#333;"><strong>Domain:</strong> {domain}</p>
+      <p style="margin:0 0 12px;font-size:15px;color:#333;"><strong>Detail:</strong> {detail}</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#555;">{description}</p>
+      <a href="https://securelinkapp.com/attack-surface"
+         style="display:inline-block;background:#0d6efd;color:#fff;padding:10px 20px;
+                border-radius:6px;text-decoration:none;font-size:14px;">
+        View Attack Surface Dashboard
+      </a>
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;font-size:12px;color:#888;text-align:center;">
+      SecureLink IDS &mdash; <a href="https://securelinkapp.com" style="color:#888;">securelinkapp.com</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')
+            msg['To'] = recipient
+            msg.attach(MIMEText(html_body, 'html'))
+
+            smtp_host = getattr(self.config, 'SMTP_HOST', 'email-smtp.us-east-2.amazonaws.com')
+            smtp_port = int(getattr(self.config, 'SMTP_PORT', 587))
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+
+            logger.info(f"IDS alert email sent to {recipient} for {domain} ({alert_type})")
+        except Exception as e:
+            logger.error(f"Failed to send IDS alert email to {recipient}: {e}")
 
 
 def run_single_scan(domain: str, monitored_domain_id: int, user_id: int,

@@ -99,6 +99,8 @@ class DomainScanResult:
     whois_info: Dict = field(default_factory=dict)
     technology_info: Dict = field(default_factory=dict)
     breach_info: Dict = field(default_factory=dict)
+    port_info: Dict = field(default_factory=dict)
+    content_hash: Optional[str] = None
     scan_duration_ms: int = 0
     scanned_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -115,6 +117,7 @@ class DomainScanResult:
             'whois_info': self.whois_info,
             'technology_info': self.technology_info,
             'breach_info': self.breach_info,
+            'port_info': self.port_info,
             'scan_duration_ms': self.scan_duration_ms,
             'scanned_at': self.scanned_at.isoformat() if self.scanned_at else None
         }
@@ -230,6 +233,11 @@ TECH_FINGERPRINTS = {
     }
 }
 
+# IDS port scanning constants
+DANGEROUS_PORTS = {22, 23, 445, 3306, 3389, 5432, 5900, 6379, 27017}
+IDS_SCAN_PORTS  = [21, 22, 23, 25, 53, 80, 443, 445,
+                   3306, 3389, 5432, 5900, 6379, 8080, 8443, 8888, 27017]
+
 
 class DomainScanner:
     """
@@ -269,12 +277,14 @@ class DomainScanner:
         breach_info = {}
 
         # Run independent checks in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            ssl_future = executor.submit(self._check_ssl, domain)
+        port_info = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+            ssl_future     = executor.submit(self._check_ssl, domain)
             headers_future = executor.submit(self._check_headers, domain)
-            dns_future = executor.submit(self._check_dns, domain)
-            whois_future = executor.submit(self._check_whois, domain)
-            breach_future = executor.submit(self._check_breaches, domain)
+            dns_future     = executor.submit(self._check_dns, domain)
+            whois_future   = executor.submit(self._check_whois, domain)
+            breach_future  = executor.submit(self._check_breaches, domain)
+            port_future    = executor.submit(self._check_ports, domain)
 
             ssl_info, ssl_findings = ssl_future.result()
             findings.extend(ssl_findings)
@@ -291,6 +301,10 @@ class DomainScanner:
 
             breach_info, breach_findings = breach_future.result()
             findings.extend(breach_findings)
+
+            port_info = port_future.result()
+
+        content_hash = self._compute_content_hash(domain)
 
         # Calculate score and grade
         score = self._calculate_score(findings)
@@ -309,6 +323,8 @@ class DomainScanner:
             whois_info=whois_info,
             technology_info=technology_info,
             breach_info=breach_info,
+            port_info=port_info,
+            content_hash=content_hash,
             scan_duration_ms=elapsed_ms,
             scanned_at=datetime.utcnow()
         )
@@ -333,6 +349,8 @@ class DomainScanner:
             with socket.create_connection((host, 443), timeout=10) as sock:
                 with context.wrap_socket(sock, server_hostname=host) as ssock:
                     cert = ssock.getpeercert()
+                    raw_cert = ssock.getpeercert(binary_form=True)
+                    fingerprint = hashlib.sha256(raw_cert).hexdigest() if raw_cert else None
                     protocol_version = ssock.version()
                     cipher = ssock.cipher()
 
@@ -360,6 +378,7 @@ class DomainScanner:
                         'not_before': not_before.isoformat(),
                         'not_after': not_after.isoformat(),
                         'days_until_expiry': days_until_expiry,
+                        'fingerprint': fingerprint,
                     }
 
                     # Findings
@@ -833,6 +852,53 @@ class DomainScanner:
             logger.warning(f"Breach check error for {domain}: {e}")
 
         return info, findings
+
+    # ================================================================
+    #  IDS Checks
+    # ================================================================
+
+    def _check_ports(self, domain: str) -> Dict:
+        """Probe IDS_SCAN_PORTS and return list of open ports."""
+        host = domain.split(':')[0]
+
+        def probe(port):
+            try:
+                with socket.create_connection((host, port), timeout=2):
+                    return port
+            except Exception:
+                return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
+            results = ex.map(probe, IDS_SCAN_PORTS)
+
+        open_ports = sorted(p for p in results if p is not None)
+        return {'open_ports': open_ports}
+
+    def _compute_content_hash(self, domain: str) -> Optional[str]:
+        """Hash stable page elements (title, h1, meta description) for defacement detection."""
+        import re
+        for scheme in ('https', 'http'):
+            try:
+                resp = requests.get(
+                    f'{scheme}://{domain}',
+                    timeout=10,
+                    allow_redirects=True,
+                    headers={'User-Agent': 'SecureLink-IDS/1.0'},
+                    verify=False
+                )
+                html = resp.text
+                title_m = re.search(r'<title[^>]*>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
+                h1_m    = re.search(r'<h1[^>]*>(.*?)</h1>',    html, re.IGNORECASE | re.DOTALL)
+                desc_m  = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']',
+                                    html, re.IGNORECASE)
+                t  = re.sub(r'<[^>]+>', '', title_m.group(1)).strip() if title_m else ''
+                h1 = re.sub(r'<[^>]+>', '', h1_m.group(1)).strip()   if h1_m    else ''
+                d  = desc_m.group(1).strip()                          if desc_m  else ''
+                payload = f'TITLE:{t}|H1:{h1}|DESC:{d}'.encode()
+                return hashlib.sha256(payload).hexdigest()
+            except Exception:
+                continue
+        return None
 
     # ================================================================
     #  Scoring & Grading

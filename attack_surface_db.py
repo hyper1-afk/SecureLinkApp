@@ -54,6 +54,14 @@ class MonitoredDomain(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # IDS Baseline (auto-set on first scan, user-resettable)
+    baseline_ports           = Column(JSON,        nullable=True)
+    baseline_ssl_fingerprint = Column(String(128), nullable=True)
+    baseline_ssl_issuer      = Column(String(255), nullable=True)
+    baseline_dns             = Column(JSON,        nullable=True)
+    baseline_content_hash    = Column(String(64),  nullable=True)
+    baseline_set_at          = Column(DateTime,    nullable=True)
+
     # Relationships
     scan_results = relationship("DomainScanRecord", back_populates="monitored_domain",
                                 cascade="all, delete-orphan", order_by="desc(DomainScanRecord.created_at)")
@@ -80,6 +88,12 @@ class MonitoredDomain(Base):
             'notes': self.notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'baseline_ports': self.baseline_ports,
+            'baseline_ssl_fingerprint': self.baseline_ssl_fingerprint,
+            'baseline_ssl_issuer': self.baseline_ssl_issuer,
+            'baseline_dns': self.baseline_dns,
+            'baseline_content_hash': self.baseline_content_hash,
+            'baseline_set_at': self.baseline_set_at.isoformat() if self.baseline_set_at else None,
         }
 
     def generate_verification_token(self) -> str:
@@ -119,6 +133,7 @@ class DomainScanRecord(Base):
     whois_info = Column(JSON, default=dict)
     technology_info = Column(JSON, default=dict)
     breach_info = Column(JSON, default=dict)
+    port_info = Column(JSON, default=dict)
 
     # Performance
     scan_duration_ms = Column(Integer, default=0)
@@ -155,6 +170,7 @@ class DomainScanRecord(Base):
             'whois_info': self.whois_info,
             'technology_info': self.technology_info,
             'breach_info': self.breach_info,
+            'port_info': self.port_info,
             'ai_summary': self.ai_summary,
             'scan_duration_ms': self.scan_duration_ms,
             'scan_source': self.scan_source,
@@ -240,6 +256,35 @@ class DomainAlert(Base):
         }
 
 
+def _set_baseline(domain_obj: MonitoredDomain, scan_result) -> None:
+    """Populate IDS baseline fields from a live DomainScanResult."""
+    port_info = getattr(scan_result, 'port_info', {}) or {}
+    domain_obj.baseline_ports = port_info.get('open_ports', [])
+
+    ssl_info = scan_result.ssl_info or {}
+    domain_obj.baseline_ssl_fingerprint = ssl_info.get('fingerprint')
+    domain_obj.baseline_ssl_issuer = ssl_info.get('issuer')
+
+    dns_info = scan_result.dns_info or {}
+    def _extract(records, key='host'):
+        out = []
+        for r in (records or []):
+            out.append(r[key] if isinstance(r, dict) else str(r))
+        return out
+
+    domain_obj.baseline_dns = {
+        'A':   [r if isinstance(r, str) else r.get('address', str(r))
+                for r in dns_info.get('a_records', [])],
+        'MX':  _extract(dns_info.get('mx_records', []), 'host'),
+        'NS':  _extract(dns_info.get('ns_records', []), 'host'),
+        'TXT': [r if isinstance(r, str) else r.get('text', str(r))
+                for r in dns_info.get('txt_records', [])],
+    }
+
+    domain_obj.baseline_content_hash = getattr(scan_result, 'content_hash', None)
+    domain_obj.baseline_set_at = datetime.utcnow()
+
+
 # ============== Database Manager ==============
 
 class AttackSurfaceDB:
@@ -252,6 +297,44 @@ class AttackSurfaceDB:
         self.engine = get_database_engine(self.config)
         safe_create_tables(Base.metadata, self.engine)
         self.Session = sessionmaker(bind=self.engine)
+        self._run_ids_migration()
+
+    def _run_ids_migration(self):
+        """Idempotent ALTER TABLE migration for IDS columns."""
+        import sqlalchemy
+        insp = sqlalchemy.inspect(self.engine)
+
+        md_cols = {c['name'] for c in insp.get_columns('monitored_domains')}
+        new_md_cols = {
+            'baseline_ports':           'TEXT',
+            'baseline_ssl_fingerprint': 'VARCHAR(128)',
+            'baseline_ssl_issuer':      'VARCHAR(255)',
+            'baseline_dns':             'TEXT',
+            'baseline_content_hash':    'VARCHAR(64)',
+            'baseline_set_at':          'DATETIME',
+        }
+        with self.engine.connect() as conn:
+            for col, col_type in new_md_cols.items():
+                if col not in md_cols:
+                    try:
+                        conn.execute(sqlalchemy.text(
+                            f'ALTER TABLE monitored_domains ADD COLUMN {col} {col_type}'
+                        ))
+                    except Exception:
+                        pass
+
+            sr_cols = {c['name'] for c in insp.get_columns('domain_scan_records')}
+            if 'port_info' not in sr_cols:
+                try:
+                    conn.execute(sqlalchemy.text(
+                        'ALTER TABLE domain_scan_records ADD COLUMN port_info TEXT'
+                    ))
+                except Exception:
+                    pass
+            try:
+                conn.commit()
+            except Exception:
+                pass
 
     def get_session(self):
         return self.Session()
@@ -385,7 +468,8 @@ class AttackSurfaceDB:
 
     # ---------- Scan Records ----------
 
-    def save_scan(self, monitored_domain_id: int, user_id: int, scan_result) -> int:
+    def save_scan(self, monitored_domain_id: int, user_id: int, scan_result,
+                  scan_source: str = 'manual') -> int:
         """Save a scan result. Accepts a DomainScanResult dataclass."""
         session = self.get_session()
         try:
@@ -411,15 +495,28 @@ class AttackSurfaceDB:
                 whois_info=scan_result.whois_info,
                 technology_info=scan_result.technology_info,
                 breach_info=scan_result.breach_info,
+                port_info=getattr(scan_result, 'port_info', {}),
                 scan_duration_ms=scan_result.scan_duration_ms,
-                scan_source='manual',
+                scan_source=scan_source,
             )
             session.add(record)
+            session.flush()  # get record.id before commit
+
+            # Auto-set IDS baseline on first scan
+            domain_obj = session.query(MonitoredDomain).filter(
+                MonitoredDomain.id == monitored_domain_id
+            ).first()
+            if domain_obj and domain_obj.baseline_set_at is None:
+                _set_baseline(domain_obj, scan_result)
+
+            # Update the monitored domain's latest score (within same session)
+            if domain_obj:
+                domain_obj.previous_score = domain_obj.latest_score
+                domain_obj.latest_score = scan_result.score
+                domain_obj.latest_grade = scan_result.grade
+                domain_obj.latest_scan_at = datetime.utcnow()
+
             session.commit()
-
-            # Update the monitored domain's latest score
-            self.update_domain_score(monitored_domain_id, scan_result.score, scan_result.grade)
-
             return record.id
         finally:
             session.close()
@@ -533,6 +630,77 @@ class AttackSurfaceDB:
         finally:
             session.close()
 
+    # ---------- IDS ----------
+
+    def get_ids_alerts(self, domain_id: int, limit: int = 20) -> List[Dict]:
+        """Return IDS-specific alerts for a monitored domain."""
+        IDS_TYPES = ('new_port_detected', 'ssl_cert_changed', 'dns_record_changed', 'content_changed')
+        session = self.get_session()
+        try:
+            alerts = session.query(DomainAlert).filter(
+                DomainAlert.monitored_domain_id == domain_id,
+                DomainAlert.alert_type.in_(IDS_TYPES)
+            ).order_by(DomainAlert.created_at.desc()).limit(limit).all()
+            return [a.to_dict() for a in alerts]
+        finally:
+            session.close()
+
+    def has_recent_ids_alert(self, domain_id: int, alert_type: str,
+                             title_fragment: str, hours: int = 24) -> bool:
+        """Return True if a matching IDS alert was already fired within `hours`."""
+        session = self.get_session()
+        try:
+            since = datetime.utcnow() - timedelta(hours=hours)
+            return session.query(DomainAlert).filter(
+                DomainAlert.monitored_domain_id == domain_id,
+                DomainAlert.alert_type == alert_type,
+                DomainAlert.title.contains(title_fragment),
+                DomainAlert.created_at >= since
+            ).first() is not None
+        finally:
+            session.close()
+
+    def reset_baseline_from_scan_record(self, domain_id: int, user_id: int,
+                                        scan_dict: Dict) -> Optional[Dict]:
+        """Reset IDS baseline from a saved scan record dict. Returns updated domain dict."""
+        session = self.get_session()
+        try:
+            domain_obj = session.query(MonitoredDomain).filter(
+                MonitoredDomain.id == domain_id,
+                MonitoredDomain.user_id == user_id
+            ).first()
+            if not domain_obj:
+                return None
+
+            ssl_info = scan_dict.get('ssl_info') or {}
+            dns_info = scan_dict.get('dns_info') or {}
+            port_info = scan_dict.get('port_info') or {}
+
+            def _extract(records, key='host'):
+                out = []
+                for r in (records or []):
+                    out.append(r[key] if isinstance(r, dict) else str(r))
+                return out
+
+            domain_obj.baseline_ports = port_info.get('open_ports', [])
+            domain_obj.baseline_ssl_fingerprint = ssl_info.get('fingerprint')
+            domain_obj.baseline_ssl_issuer = ssl_info.get('issuer')
+            domain_obj.baseline_dns = {
+                'A':   [r if isinstance(r, str) else r.get('address', str(r))
+                        for r in dns_info.get('a_records', [])],
+                'MX':  _extract(dns_info.get('mx_records', []), 'host'),
+                'NS':  _extract(dns_info.get('ns_records', []), 'host'),
+                'TXT': [r if isinstance(r, str) else r.get('text', str(r))
+                        for r in dns_info.get('txt_records', [])],
+            }
+            # content_hash is re-established on the next live scan
+            domain_obj.baseline_content_hash = None
+            domain_obj.baseline_set_at = datetime.utcnow()
+            session.commit()
+            return domain_obj.to_dict()
+        finally:
+            session.close()
+
     # ---------- Dashboard Stats ----------
 
     def get_dashboard_stats(self, user_id: int) -> Dict:
@@ -567,6 +735,13 @@ class AttackSurfaceDB:
                 DomainAlert.is_read == False
             ).count()
 
+            IDS_TYPES = ('new_port_detected', 'ssl_cert_changed', 'dns_record_changed', 'content_changed')
+            ids_alert_count = session.query(DomainAlert).filter(
+                DomainAlert.user_id == user_id,
+                DomainAlert.is_read == False,
+                DomainAlert.alert_type.in_(IDS_TYPES)
+            ).count()
+
             return {
                 'total_domains': total_domains,
                 'average_score': avg_score,
@@ -574,6 +749,7 @@ class AttackSurfaceDB:
                 'findings_last_7_days': total_findings,
                 'critical_findings_last_7_days': critical_findings,
                 'unread_alerts': unread_alerts,
+                'ids_alert_count': ids_alert_count,
                 'domains': [d.to_dict() for d in domains],
             }
         finally:
