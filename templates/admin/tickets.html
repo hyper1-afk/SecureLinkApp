@@ -3,153 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Tickets - SecureLink Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Support Tickets — SecureLink Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #0ea5e9;
-            --primary-dark: #0284c7;
-            --accent-color: #8b5cf6;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-sidebar: #111827;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.15);
-        }
-        
-        * { font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
-        
-        /* Sidebar */
-        .sidebar {
-            position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
-            background: var(--bg-sidebar); border-right: 1px solid var(--border-color);
-            padding: 20px 0; overflow-y: auto; z-index: 100;
-        }
-        .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-        .sidebar-logo h5 { color: var(--primary-color); font-weight: 700; margin: 0; }
-        .sidebar-logo small { color: var(--text-secondary); font-size: 0.75rem; }
-        .nav-section { padding: 0 12px; margin-bottom: 24px; }
-        .nav-section-title { color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 12px; margin-bottom: 8px; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-secondary); text-decoration: none; border-radius: 10px; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; }
-        .nav-link:hover { background: rgba(14, 165, 233, 0.1); color: var(--text-primary); }
-        .nav-link.active { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: white; }
-        .nav-link i { font-size: 1.1rem; width: 24px; }
-        .nav-link .badge { margin-left: auto; font-size: 0.7rem; }
-        
-        /* Main Content */
-        .main-content { margin-left: 260px; padding: 24px; min-height: 100vh; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .page-title { font-size: 1.5rem; font-weight: 700; margin: 0; }
-        
-        /* Card */
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; }
-        .card-header { background: transparent; border-bottom: 1px solid var(--border-color); padding: 16px 20px; }
-        .card-body { padding: 20px; }
-        
-        /* Table */
-        .table { color: var(--text-primary); margin: 0; }
-        .table thead th { background: rgba(0, 0, 0, 0.2); color: var(--text-secondary); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; border: none; padding: 12px 16px; }
-        .table tbody td { border-color: var(--border-color); padding: 14px 16px; vertical-align: middle; }
-        .table tbody tr:hover { background: rgba(14, 165, 233, 0.05); cursor: pointer; }
-        
-        /* Badges */
-        .badge { padding: 5px 10px; font-weight: 500; font-size: 0.75rem; border-radius: 6px; }
-        .badge-open { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
-        .badge-in-progress { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .badge-waiting-customer { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .badge-resolved { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        .badge-closed { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .badge-low { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .badge-medium { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
-        .badge-high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .badge-urgent { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-        
-        /* Forms */
-        .form-control, .form-select { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; }
-        .form-control:focus, .form-select:focus { background: var(--bg-dark); border-color: var(--primary-color); color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-        
-        /* Buttons */
-        .btn { border-radius: 8px; font-weight: 500; font-size: 0.85rem; padding: 8px 16px; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border: none; }
-        .btn-outline-secondary { border-color: var(--border-color); color: var(--text-secondary); }
-        .btn-outline-secondary:hover { background: var(--bg-card); border-color: var(--primary-color); color: var(--text-primary); }
-        
-        /* Filter Bar */
-        .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-        .filter-bar .form-select, .filter-bar .form-control { width: auto; min-width: 140px; }
-        
-        /* Pagination */
-        .pagination { justify-content: center; margin-top: 20px; }
-        .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-primary); }
-        .page-link:hover { background: var(--bg-dark); border-color: var(--primary-color); color: var(--primary-color); }
-        .page-item.active .page-link { background: var(--primary-color); border-color: var(--primary-color); }
-        .page-item.disabled .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-secondary); }
-        
-        /* User info */
-        .user-menu { display: flex; align-items: center; gap: 12px; }
-        .user-info { text-align: right; }
-        .user-name { font-weight: 600; font-size: 0.9rem; }
-        .user-role { color: var(--text-secondary); font-size: 0.75rem; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; }
-        
-        .ticket-meta { font-size: 0.8rem; color: var(--text-secondary); }
-    </style>
+    <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-logo">
-            <h5><i class="bi bi-shield-lock me-2"></i>SecureLink</h5>
-            <small>Admin Panel</small>
-        </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Overview</div>
-            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-        </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Support</div>
-            <a href="/admin/tickets" class="nav-link" id="navAllTickets"><i class="bi bi-ticket-detailed"></i>All Tickets</a>
-            <a href="/admin/tickets?status=open" class="nav-link" id="navOpenTickets"><i class="bi bi-inbox"></i>Open Tickets</a>
-            <a href="/admin/tickets?status=in_progress" class="nav-link" id="navInProgress"><i class="bi bi-clock-history"></i>In Progress</a>
-        </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Management</div>
-            <a href="/admin/customers" class="nav-link"><i class="bi bi-people"></i>Customers</a>
-            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge"></i>Employees</a>
-        </div>
-        <div class="nav-section">
-            <div class="nav-section-title">System</div>
-            <a href="/admin/database" class="nav-link"><i class="bi bi-database"></i>Database Monitor</a>
-        </div>
-        <div class="nav-section" style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
-            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i>Logout</a>
-        </div>
-    </nav>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">Support Tickets</h1>
-            <div class="user-menu">
-                <div class="user-info">
-                    <div class="user-name" id="employeeName">Loading...</div>
-                    <div class="user-role" id="employeeRole">-</div>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
                 </div>
-                <div class="user-avatar" id="employeeAvatar">?</div>
             </div>
         </div>
-        
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link" id="navAllTickets">
+                <i class="bi bi-ticket-detailed-fill"></i> All Tickets
+            </a>
+            <a href="/admin/tickets?status=open" class="nav-link" id="navOpenTickets">
+                <i class="bi bi-inbox-fill"></i> Open
+            </a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link" id="navInProgress">
+                <i class="bi bi-clock-history"></i> In Progress
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge-fill"></i> Employees</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/database" class="nav-link"><i class="bi bi-database-fill"></i> Database</a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title">Support Tickets</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <div class="filter-bar">
             <select class="form-select" id="filterStatus">
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
                 <option value="waiting_customer">Waiting Customer</option>
@@ -157,7 +87,7 @@
                 <option value="closed">Closed</option>
             </select>
             <select class="form-select" id="filterPriority">
-                <option value="">All Priority</option>
+                <option value="">All Priorities</option>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -173,196 +103,188 @@
                 <option value="bug_report">Bug Report</option>
                 <option value="complaint">Complaint</option>
             </select>
-            <input type="text" class="form-control" id="filterSearch" placeholder="Search tickets...">
-            <button class="btn btn-primary" onclick="loadTickets()"><i class="bi bi-search me-2"></i>Search</button>
+            <input type="text" class="form-control" id="filterSearch" placeholder="Search tickets…">
+            <button class="btn btn-primary" onclick="loadTickets()">
+                <i class="bi bi-search"></i> Search
+            </button>
         </div>
-        
+
         <!-- Tickets Table -->
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Ticket #</th>
-                                <th>Customer</th>
-                                <th>Subject</th>
-                                <th>Category</th>
-                                <th>Priority</th>
-                                <th>Status</th>
-                                <th>Assigned To</th>
-                                <th>Created</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ticketsBody">
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                                    Loading...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="panel">
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Customer</th>
+                            <th>Subject</th>
+                            <th>Category</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketsBody">
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <p>Loading tickets…</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        
+
         <!-- Pagination -->
-        <nav id="paginationNav" style="display: none;">
-            <ul class="pagination" id="pagination"></ul>
-        </nav>
+        <div id="paginationNav" style="display:none;">
+            <div class="pagi" id="pagination"></div>
+        </div>
     </main>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         let currentPage = 1;
-        const perPage = 20;
-        
-        function getAdminToken() { return localStorage.getItem('admin_token'); }
+        const perPage   = 20;
+
+        function getAdminToken()  { return localStorage.getItem('admin_token'); }
         function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}` }; }
-        
-        // Highlight active navigation based on URL
+
+        function updateClock() {
+            const el = document.getElementById('currentTime');
+            if (el) el.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateClock(); setInterval(updateClock, 30000);
+
         function updateNavHighlight() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const status = urlParams.get('status');
-            
-            // Remove active from all nav links in support section
+            const status = new URLSearchParams(window.location.search).get('status');
             document.getElementById('navAllTickets').classList.remove('active');
             document.getElementById('navOpenTickets').classList.remove('active');
             document.getElementById('navInProgress').classList.remove('active');
-            
-            // Add active to the correct one
-            if (status === 'open') {
-                document.getElementById('navOpenTickets').classList.add('active');
-            } else if (status === 'in_progress') {
-                document.getElementById('navInProgress').classList.add('active');
-            } else {
-                document.getElementById('navAllTickets').classList.add('active');
-            }
+            if (status === 'open')        document.getElementById('navOpenTickets').classList.add('active');
+            else if (status === 'in_progress') document.getElementById('navInProgress').classList.add('active');
+            else                          document.getElementById('navAllTickets').classList.add('active');
         }
-        
-        // Call on page load
         updateNavHighlight();
-        
+
         async function checkAuth() {
             const token = getAdminToken();
             if (!token) { window.location.href = '/admin/login'; return; }
-            
             try {
-                const response = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
-                if (!response.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
-                const data = await response.json();
+                const res  = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+                if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+                const data = await res.json();
                 if (data.valid && data.employee) {
                     document.getElementById('employeeName').textContent = data.employee.full_name;
-                    document.getElementById('employeeRole').textContent = data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
-                    document.getElementById('employeeAvatar').textContent = data.employee.full_name.charAt(0).toUpperCase();
+                    document.getElementById('employeeRole').textContent =
+                        data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                    document.getElementById('employeeAvatar').textContent =
+                        data.employee.full_name.charAt(0).toUpperCase();
                     window.currentEmployee = data.employee;
-                    
-                    // Check URL params for filters
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('status')) document.getElementById('filterStatus').value = urlParams.get('status');
-                    if (urlParams.get('priority')) document.getElementById('filterPriority').value = urlParams.get('priority');
-                    if (urlParams.get('category')) document.getElementById('filterCategory').value = urlParams.get('category');
-                    
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get('status'))   document.getElementById('filterStatus').value   = params.get('status');
+                    if (params.get('priority')) document.getElementById('filterPriority').value = params.get('priority');
+                    if (params.get('category')) document.getElementById('filterCategory').value = params.get('category');
+                    if (params.get('search'))   document.getElementById('filterSearch').value   = params.get('search');
                     loadTickets();
                 }
-            } catch (error) { window.location.href = '/admin/login'; }
+            } catch (e) { window.location.href = '/admin/login'; }
         }
-        
+
         async function loadTickets(page = 1) {
             currentPage = page;
-            const status = document.getElementById('filterStatus').value;
+            const status   = document.getElementById('filterStatus').value;
             const priority = document.getElementById('filterPriority').value;
             const category = document.getElementById('filterCategory').value;
-            const search = document.getElementById('filterSearch').value;
-            
+            const search   = document.getElementById('filterSearch').value;
+
             let url = `/admin/api/tickets?page=${page}&per_page=${perPage}`;
-            if (status) url += `&status=${status}`;
+            if (status)   url += `&status=${status}`;
             if (priority) url += `&priority=${priority}`;
             if (category) url += `&category=${category}`;
-            if (search) url += `&search=${encodeURIComponent(search)}`;
-            
+            if (search)   url += `&search=${encodeURIComponent(search)}`;
+
             try {
-                const response = await fetch(url, { headers: getAuthHeaders() });
-                const data = await response.json();
+                const res  = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
                 renderTickets(data.tickets || []);
                 renderPagination(data.total || 0, data.page || 1, data.pages || 1);
-            } catch (error) {
-                console.error('Error loading tickets:', error);
-            }
+            } catch (e) { console.error('Error loading tickets:', e); }
         }
-        
+
         function renderTickets(tickets) {
             const tbody = document.getElementById('ticketsBody');
-            if (tickets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-secondary"><i class="bi bi-inbox me-2"></i>No tickets found</td></tr>';
+            if (!tickets.length) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox"></i><p>No tickets found</p></div></td></tr>`;
                 return;
             }
-            
-            tbody.innerHTML = tickets.map(ticket => `
-                <tr onclick="window.location.href='/admin/tickets/${ticket.id}'">
-                    <td><code>${ticket.ticket_number}</code></td>
+            tbody.innerHTML = tickets.map(t => `
+                <tr onclick="window.location.href='/admin/tickets/${t.id}'">
+                    <td><span class="ticket-id">${escapeHtml(t.ticket_number)}</span></td>
                     <td>
-                        <div>${ticket.customer_name || 'Unknown'}</div>
-                        <div class="ticket-meta">${ticket.customer_email}</div>
+                        <div class="cell-primary">${escapeHtml(t.customer_name || 'Unknown')}</div>
+                        <div class="cell-secondary">${escapeHtml(t.customer_email || '')}</div>
                     </td>
-                    <td>${escapeHtml(ticket.subject.substring(0, 40))}${ticket.subject.length > 40 ? '...' : ''}</td>
-                    <td><span class="badge bg-secondary">${formatCategory(ticket.category)}</span></td>
-                    <td><span class="badge badge-${ticket.priority}">${ticket.priority}</span></td>
-                    <td><span class="badge badge-${ticket.status.replace('_', '-')}">${formatStatus(ticket.status)}</span></td>
-                    <td class="ticket-meta">${ticket.assigned_to_name || 'Unassigned'}</td>
-                    <td class="ticket-meta">${formatDate(ticket.created_at)}</td>
+                    <td style="max-width:220px">
+                        <span class="truncate" style="display:block;font-size:.875rem">
+                            ${escapeHtml(t.subject.substring(0, 50))}${t.subject.length > 50 ? '…' : ''}
+                        </span>
+                    </td>
+                    <td><span class="pill pill-medium" style="text-transform:capitalize">${formatCategory(t.category)}</span></td>
+                    <td><span class="pill pill-${t.priority}"><span class="pill-dot"></span>${t.priority}</span></td>
+                    <td><span class="pill pill-${t.status.replace(/_/g,'-')}"><span class="pill-dot"></span>${formatStatus(t.status)}</span></td>
+                    <td style="font-size:.82rem;color:var(--text-secondary)">${escapeHtml(t.assigned_to_name || 'Unassigned')}</td>
+                    <td style="font-size:.78rem;color:var(--text-secondary);white-space:nowrap">${formatDate(t.created_at)}</td>
                 </tr>
             `).join('');
         }
-        
+
         function renderPagination(total, page, pages) {
             const nav = document.getElementById('paginationNav');
-            const pagination = document.getElementById('pagination');
-            
+            const pagi = document.getElementById('pagination');
             if (pages <= 1) { nav.style.display = 'none'; return; }
-            nav.style.display = 'block';
-            
-            let html = '';
-            html += `<li class="page-item ${page === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadTickets(${page - 1})">Previous</a></li>`;
-            
+            nav.style.display = '';
+            let html = `<button class="pagi-btn ${page === 1 ? 'disabled' : ''}" onclick="loadTickets(${page - 1})">‹ Prev</button>`;
             for (let i = 1; i <= pages; i++) {
                 if (i === 1 || i === pages || (i >= page - 2 && i <= page + 2)) {
-                    html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="loadTickets(${i})">${i}</a></li>`;
+                    html += `<button class="pagi-btn ${i === page ? 'active' : ''}" onclick="loadTickets(${i})">${i}</button>`;
                 } else if (i === page - 3 || i === page + 3) {
-                    html += '<li class="page-item disabled"><a class="page-link">...</a></li>';
+                    html += '<span class="pagi-btn disabled" style="pointer-events:none">…</span>';
                 }
             }
-            
-            html += `<li class="page-item ${page === pages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadTickets(${page + 1})">Next</a></li>`;
-            pagination.innerHTML = html;
+            html += `<button class="pagi-btn ${page === pages ? 'disabled' : ''}" onclick="loadTickets(${page + 1})">Next ›</button>`;
+            pagi.innerHTML = html;
         }
-        
-        function formatStatus(status) { return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }
-        function formatCategory(cat) { return cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            const now = new Date();
-            const diff = now - date;
-            if (diff < 60000) return 'Just now';
-            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+
+        function formatStatus(s)  { return s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }
+        function formatCategory(c) { return (c || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }
+        function formatDate(str) {
+            if (!str) return '—';
+            const d = new Date(str), now = new Date(), diff = now - d;
+            if (diff < 60000)    return 'Just now';
+            if (diff < 3600000)  return Math.floor(diff / 60000) + 'm ago';
             if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-            return date.toLocaleDateString();
+            return d.toLocaleDateString();
         }
-        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
+        }
         function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() }).finally(() => {
-                localStorage.removeItem('admin_token');
-                window.location.href = '/admin/login';
-            });
+            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
+                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
         }
-        
-        // Enter key search
-        document.getElementById('filterSearch').addEventListener('keypress', function(e) {
+
+        document.getElementById('filterSearch').addEventListener('keypress', e => {
             if (e.key === 'Enter') loadTickets();
         });
-        
+
         checkAuth();
     </script>
 </body>

@@ -3,230 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Details - SecureLink Admin</title>
+    <title>Ticket Details — SecureLink Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #0ea5e9;
-            --primary-dark: #0284c7;
-            --accent-color: #8b5cf6;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-sidebar: #111827;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.15);
-        }
-        
-        * { font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
-        
-        /* Sidebar */
-        .sidebar {
-            position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
-            background: var(--bg-sidebar); border-right: 1px solid var(--border-color);
-            padding: 20px 0; overflow-y: auto; z-index: 100;
-        }
-        .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-        .sidebar-logo h5 { color: var(--primary-color); font-weight: 700; margin: 0; }
-        .sidebar-logo small { color: var(--text-secondary); font-size: 0.75rem; }
-        .nav-section { padding: 0 12px; margin-bottom: 24px; }
-        .nav-section-title { color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 12px; margin-bottom: 8px; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-secondary); text-decoration: none; border-radius: 10px; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; }
-        .nav-link:hover { background: rgba(14, 165, 233, 0.1); color: var(--text-primary); }
-        .nav-link.active { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: white; }
-        .nav-link i { font-size: 1.1rem; width: 24px; }
-        
-        /* Main Content */
-        .main-content { margin-left: 260px; padding: 24px; min-height: 100vh; }
-        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .ticket-number { color: var(--primary-color); font-family: monospace; }
-        
-        /* Cards */
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; margin-bottom: 20px; }
-        .card-header { background: transparent; border-bottom: 1px solid var(--border-color); padding: 16px 20px; }
-        .card-title { font-weight: 600; font-size: 1rem; margin: 0; }
-        .card-body { padding: 20px; }
-        
-        /* Badges */
-        .badge { padding: 5px 10px; font-weight: 500; font-size: 0.75rem; border-radius: 6px; }
-        .badge-open { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
-        .badge-in-progress { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .badge-waiting-customer { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .badge-resolved { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        .badge-closed { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .badge-low { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .badge-medium { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
-        .badge-high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .badge-urgent { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-        
-        /* Forms */
-        .form-control, .form-select { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px 14px; }
-        .form-control:focus, .form-select:focus { background: var(--bg-dark); border-color: var(--primary-color); color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-        .form-label { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
-        
-        /* Buttons */
-        .btn { border-radius: 8px; font-weight: 500; font-size: 0.85rem; padding: 10px 16px; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border: none; }
-        .btn-outline-secondary { border-color: var(--border-color); color: var(--text-secondary); }
-        .btn-outline-secondary:hover { background: var(--bg-card); border-color: var(--primary-color); color: var(--text-primary); }
-        .btn-success { background: var(--success-color); border: none; }
-        .btn-warning { background: var(--warning-color); border: none; color: #000; }
-        .btn-danger { background: var(--danger-color); border: none; }
-        
-        /* Ticket Info Grid */
-        .ticket-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .info-item { }
-        .info-label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
-        .info-value { font-weight: 500; }
-        
-        /* Conversation */
-        .conversation { max-height: 500px; overflow-y: auto; padding: 16px; }
-        .message { margin-bottom: 16px; }
-        .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .message-author { font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .message-author .badge { font-size: 0.65rem; padding: 3px 6px; }
-        .message-time { color: var(--text-secondary); font-size: 0.8rem; }
-        .message-content { background: var(--bg-dark); border-radius: 12px; padding: 14px 16px; line-height: 1.6; white-space: pre-wrap; }
-        .message.staff .message-content { background: rgba(14, 165, 233, 0.1); border-left: 3px solid var(--primary-color); }
-        .message.internal .message-content { background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--warning-color); }
-        .message.internal .message-header::after { content: '(Internal Note)'; color: var(--warning-color); font-size: 0.75rem; font-weight: 500; margin-left: 8px; }
-        
-        /* Reply Box */
-        .reply-box { border-top: 1px solid var(--border-color); padding-top: 20px; }
-        .reply-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-        .reply-tab { padding: 8px 16px; border-radius: 8px; background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
-        .reply-tab.active { background: var(--primary-color); border-color: var(--primary-color); color: white; }
-        .reply-tab:hover:not(.active) { border-color: var(--primary-color); color: var(--text-primary); }
-        
-        /* Two column layout */
-        .ticket-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
-        @media (max-width: 1200px) { .ticket-layout { grid-template-columns: 1fr; } }
-        
-        /* User menu */
-        .user-menu { display: flex; align-items: center; gap: 12px; }
-        .user-info { text-align: right; }
-        .user-name { font-weight: 600; font-size: 0.9rem; }
-        .user-role { color: var(--text-secondary); font-size: 0.75rem; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; }
-        
-        /* Loading */
-        .loading { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-    </style>
+    <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-logo">
-            <h5><i class="bi bi-shield-lock me-2"></i>SecureLink</h5>
-            <small>Admin Panel</small>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
+                </div>
+            </div>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Overview</div>
-            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Support</div>
-            <a href="/admin/tickets" class="nav-link active"><i class="bi bi-ticket-detailed"></i>All Tickets</a>
-            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox"></i>Open Tickets</a>
-            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i>In Progress</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link active">
+                <i class="bi bi-ticket-detailed-fill"></i> All Tickets
+            </a>
+            <a href="/admin/tickets?status=open" class="nav-link">
+                <i class="bi bi-inbox-fill"></i> Open
+            </a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link">
+                <i class="bi bi-clock-history"></i> In Progress
+            </a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Management</div>
-            <a href="/admin/customers" class="nav-link"><i class="bi bi-people"></i>Customers</a>
-            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge"></i>Employees</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge-fill"></i> Employees</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">System</div>
-            <a href="/admin/database" class="nav-link"><i class="bi bi-database"></i>Database Monitor</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/database" class="nav-link"><i class="bi bi-database-fill"></i> Database</a>
         </div>
-        <div class="nav-section" style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
-            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i>Logout</a>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
         </div>
     </nav>
-    
+
     <!-- Main Content -->
     <main class="main-content">
-        <div class="page-header">
-            <div>
-                <a href="/admin/tickets" class="btn btn-outline-secondary btn-sm mb-2"><i class="bi bi-arrow-left me-2"></i>Back to Tickets</a>
-                <h1 class="page-title">
-                    <span class="ticket-number" id="ticketNumber">Loading...</span>
-                    <span id="ticketSubject"></span>
-                </h1>
-            </div>
-            <div class="user-menu">
-                <div class="user-info">
-                    <div class="user-name" id="employeeName">Loading...</div>
-                    <div class="user-role" id="employeeRole">-</div>
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div>
+                    <a href="/admin/tickets" class="back-link">
+                        <i class="bi bi-arrow-left"></i> Back to Tickets
+                    </a>
+                    <h1 class="page-title" style="margin-top:2px">
+                        <span style="color:var(--primary-light);font-family:monospace" id="ticketNumber">Loading…</span>
+                        <span id="ticketSubject" style="font-weight:500;color:var(--text-primary)"></span>
+                    </h1>
                 </div>
-                <div class="user-avatar" id="employeeAvatar">?</div>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div id="loadingState" class="loading">
-            <div class="spinner-border text-primary mb-3"></div>
-            <div>Loading ticket...</div>
+
+        <!-- Loading -->
+        <div id="loadingState" class="loading-state">
+            <div class="spinner-border spin mb-3" role="status"></div>
+            <div>Loading ticket…</div>
         </div>
-        
-        <div id="ticketContent" style="display: none;">
+
+        <!-- Ticket Content -->
+        <div id="ticketContent" style="display:none;">
             <div class="ticket-layout">
                 <!-- Main Column -->
                 <div>
                     <!-- Original Message -->
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="card-title">Original Request</h5>
-                            <small class="text-secondary" id="ticketCreatedAt"></small>
+                    <div class="panel mb-4">
+                        <div class="panel-header">
+                            <h5 class="panel-title"><i class="bi bi-envelope-open"></i> Original Request</h5>
+                            <span style="font-size:.78rem;color:var(--text-muted)" id="ticketCreatedAt"></span>
                         </div>
-                        <div class="card-body">
-                            <p id="ticketDescription" style="white-space: pre-wrap; line-height: 1.7;"></p>
+                        <div style="padding:18px 20px;">
+                            <p id="ticketDescription" style="white-space:pre-wrap;line-height:1.75;margin:0;font-size:.875rem;color:var(--text-primary)"></p>
                         </div>
                     </div>
-                    
+
                     <!-- Conversation -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title">Conversation</h5>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h5 class="panel-title"><i class="bi bi-chat-dots-fill"></i> Conversation</h5>
                         </div>
-                        <div class="card-body">
+                        <div style="padding:0 0 0;">
                             <div class="conversation" id="conversationList">
-                                <div class="text-center text-secondary py-4">No responses yet</div>
+                                <div style="text-align:center;color:var(--text-muted);padding:24px 0;font-size:.875rem">No responses yet</div>
                             </div>
-                            
-                            <!-- Reply Form -->
-                            <div class="reply-box">
+
+                            <!-- Reply Box -->
+                            <div class="reply-box" style="padding:18px 20px;">
                                 <div class="reply-tabs">
-                                    <button class="reply-tab active" data-internal="false" onclick="setReplyType(this)">Reply to Customer</button>
-                                    <button class="reply-tab" data-internal="true" onclick="setReplyType(this)">Internal Note</button>
+                                    <button class="reply-tab active" data-internal="false" onclick="setReplyType(this)">
+                                        <i class="bi bi-reply"></i> Reply to Customer
+                                    </button>
+                                    <button class="reply-tab" data-internal="true" onclick="setReplyType(this)">
+                                        <i class="bi bi-lock"></i> Internal Note
+                                    </button>
                                 </div>
-                                <textarea class="form-control mb-3" id="replyMessage" rows="4" placeholder="Type your response..."></textarea>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button class="btn btn-primary" onclick="sendReply()"><i class="bi bi-send me-2"></i>Send Response</button>
-                                    <button class="btn btn-outline-secondary" onclick="sendAndResolve()"><i class="bi bi-check-circle me-2"></i>Send & Resolve</button>
+                                <textarea class="form-control mb-3" id="replyMessage" rows="4" placeholder="Type your response…"></textarea>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <button class="btn btn-primary" onclick="sendReply()">
+                                        <i class="bi bi-send"></i> Send Response
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="sendAndResolve()">
+                                        <i class="bi bi-check-circle"></i> Send &amp; Resolve
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Sidebar Column -->
-                <div>
-                    <!-- Ticket Info -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title">Ticket Details</h5>
+                <div style="display:flex;flex-direction:column;gap:16px">
+                    <!-- Ticket Details -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h5 class="panel-title"><i class="bi bi-info-circle"></i> Ticket Details</h5>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
+                        <div style="padding:16px 18px;">
+                            <div class="info-item">
                                 <div class="info-label">Status</div>
-                                <select class="form-select form-select-sm" id="ticketStatus" onchange="updateTicket()">
+                                <select class="form-select" id="ticketStatus" onchange="updateTicket()">
                                     <option value="open">Open</option>
                                     <option value="in_progress">In Progress</option>
                                     <option value="waiting_customer">Waiting Customer</option>
@@ -234,421 +159,389 @@
                                     <option value="closed">Closed</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
+                            <div class="info-item">
                                 <div class="info-label">Priority</div>
-                                <select class="form-select form-select-sm" id="ticketPriority" onchange="updateTicket()">
+                                <select class="form-select" id="ticketPriority" onchange="updateTicket()">
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
                                     <option value="urgent">Urgent</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
+                            <div class="info-item">
                                 <div class="info-label">Category</div>
-                                <div class="info-value" id="ticketCategory">-</div>
+                                <div class="info-value" id="ticketCategory">—</div>
                             </div>
-                            <div class="mb-3">
+                            <div class="info-item">
                                 <div class="info-label">Assigned To</div>
-                                <select class="form-select form-select-sm" id="ticketAssignee" onchange="updateTicket()">
+                                <select class="form-select" id="ticketAssignee" onchange="updateTicket()">
                                     <option value="">Unassigned</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Customer Info -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title">Customer</h5>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h5 class="panel-title"><i class="bi bi-person-circle"></i> Customer</h5>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
+                        <div style="padding:16px 18px;">
+                            <div class="info-item">
                                 <div class="info-label">Name</div>
-                                <div class="info-value" id="customerName">-</div>
+                                <div class="info-value" id="customerName">—</div>
                             </div>
-                            <div class="mb-3">
+                            <div class="info-item">
                                 <div class="info-label">Email</div>
-                                <div class="info-value" id="customerEmail">-</div>
+                                <div class="info-value" id="customerEmail" style="word-break:break-all">—</div>
                             </div>
-                            <div>
+                            <div class="info-item">
                                 <div class="info-label">Member Since</div>
-                                <div class="info-value" id="customerSince">-</div>
+                                <div class="info-value" id="customerSince">—</div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Quick Actions -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title">Quick Actions</h5>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h5 class="panel-title"><i class="bi bi-lightning-fill"></i> Quick Actions</h5>
                         </div>
-                        <div class="card-body">
-                            <button class="btn btn-outline-secondary w-100 mb-2" onclick="assignToMe()"><i class="bi bi-person-check me-2"></i>Assign to Me</button>
-                            <button class="btn btn-success w-100 mb-2" onclick="markResolved()"><i class="bi bi-check-circle me-2"></i>Mark Resolved</button>
-                            <button class="btn btn-danger w-100" onclick="openCloseTicketModal()"><i class="bi bi-x-circle me-2"></i>Close Ticket</button>
+                        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px">
+                            <button class="btn btn-secondary w-full" onclick="assignToMe()">
+                                <i class="bi bi-person-check"></i> Assign to Me
+                            </button>
+                            <button class="btn btn-success w-full" onclick="markResolved()">
+                                <i class="bi bi-check-circle"></i> Mark Resolved
+                            </button>
+                            <button class="btn btn-danger w-full" onclick="openCloseTicketModal()">
+                                <i class="bi bi-x-circle"></i> Close Ticket
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-    
+
     <!-- Close Ticket Modal -->
     <div class="modal fade" id="closeTicketModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
-                <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 20px 24px;">
-                    <h5 class="modal-title" style="font-weight: 600;">
-                        <i class="bi bi-x-circle text-danger me-2"></i>Close Ticket
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle" style="color:var(--danger);margin-right:8px"></i>Close Ticket
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" style="padding: 24px;">
-                    <!-- Auto-filled Technician Info -->
-                    <div class="mb-3 p-3" style="background: rgba(14, 165, 233, 0.1); border-radius: 10px; border-left: 3px solid var(--primary-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Closing Technician</div>
-                        <div style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                            <span class="user-avatar" style="width: 32px; height: 32px; font-size: 0.85rem;" id="closeTechAvatar">?</span>
+                <div class="modal-body">
+                    <!-- Technician Info -->
+                    <div class="mb-3" style="padding:12px 14px;background:rgba(14,165,233,0.08);border-radius:10px;border-left:3px solid var(--primary)">
+                        <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:700">Closing Technician</div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div class="avatar avatar-sm" id="closeTechAvatar">?</div>
                             <div>
-                                <div id="closeTechName">Loading...</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary);" id="closeTechRole">-</div>
+                                <div style="font-weight:600;font-size:.875rem;color:var(--text-white)" id="closeTechName">Loading…</div>
+                                <div style="font-size:.75rem;color:var(--text-muted)" id="closeTechRole">—</div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Resolution Type -->
                     <div class="mb-3">
                         <label class="form-label">Resolution Type</label>
                         <select class="form-select" id="closeResolutionType">
-                            <option value="resolved">Resolved - Issue fixed</option>
+                            <option value="resolved">Resolved — Issue fixed</option>
                             <option value="no_issue">No Issue Found</option>
                             <option value="user_cancelled">User Cancelled Request</option>
                             <option value="duplicate">Duplicate Ticket</option>
                             <option value="unable_to_resolve">Unable to Resolve</option>
                         </select>
                     </div>
-                    
-                    <!-- Work Notes / Resolution Notes -->
+
+                    <!-- Work Notes -->
                     <div class="mb-3">
-                        <label class="form-label">Work Notes / Resolution Summary <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="closeWorkNotes" rows="4" placeholder="Describe the work performed, solution applied, or reason for closing..." required></textarea>
-                        <small class="text-secondary">This will be saved with the ticket and sent to the customer.</small>
+                        <label class="form-label">
+                            Work Notes / Resolution Summary
+                            <span style="color:var(--danger)">*</span>
+                        </label>
+                        <textarea class="form-control" id="closeWorkNotes" rows="4"
+                            placeholder="Describe the work performed, solution applied, or reason for closing…"></textarea>
+                        <div class="form-text">This note is saved internally with the ticket.</div>
                     </div>
-                    
-                    <!-- Response to Customer -->
+
+                    <!-- Send to customer -->
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="closeSendResponse" checked>
-                            <label class="form-check-label" for="closeSendResponse">
-                                Send closing response to customer
-                            </label>
+                            <label class="form-check-label" for="closeSendResponse">Send closing message to customer</label>
                         </div>
                     </div>
-                    
+
                     <div id="closeCustomerMessageWrapper">
                         <label class="form-label">Message to Customer</label>
-                        <textarea class="form-control" id="closeCustomerMessage" rows="3" placeholder="Thank you for contacting IT support. Your issue has been resolved..."></textarea>
+                        <textarea class="form-control" id="closeCustomerMessage" rows="3"
+                            placeholder="Thank you for contacting support…"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid var(--border-color); padding: 16px 24px;">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="submitCloseTicket()">
-                        <i class="bi bi-x-circle me-2"></i>Close Ticket
+                        <i class="bi bi-x-circle"></i> Close Ticket
                     </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let ticketId = null;
+        let ticketId      = null;
         let currentTicket = null;
-        let isInternal = false;
-        
-        function getAdminToken() { return localStorage.getItem('admin_token'); }
+        let isInternal    = false;
+
+        function getAdminToken()  { return localStorage.getItem('admin_token'); }
         function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' }; }
-        
+
+        function updateClock() {
+            const el = document.getElementById('currentTime');
+            if (el) el.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateClock(); setInterval(updateClock, 30000);
+
         async function checkAuth() {
             const token = getAdminToken();
             if (!token) { window.location.href = '/admin/login'; return; }
-            
             try {
-                const response = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
-                if (!response.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
-                const data = await response.json();
+                const res  = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+                if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+                const data = await res.json();
                 if (data.valid && data.employee) {
                     document.getElementById('employeeName').textContent = data.employee.full_name;
-                    document.getElementById('employeeRole').textContent = data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
-                    document.getElementById('employeeAvatar').textContent = data.employee.full_name.charAt(0).toUpperCase();
+                    document.getElementById('employeeRole').textContent =
+                        data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                    document.getElementById('employeeAvatar').textContent =
+                        data.employee.full_name.charAt(0).toUpperCase();
                     window.currentEmployee = data.employee;
-                    
-                    // Get ticket ID from URL
-                    const pathParts = window.location.pathname.split('/');
-                    ticketId = pathParts[pathParts.length - 1];
-                    
+                    const parts = window.location.pathname.split('/');
+                    ticketId = parts[parts.length - 1];
                     loadEmployees();
                     loadTicket();
                 }
-            } catch (error) { window.location.href = '/admin/login'; }
+            } catch (e) { window.location.href = '/admin/login'; }
         }
-        
+
         async function loadEmployees() {
             try {
-                const response = await fetch('/admin/api/employees', { headers: getAuthHeaders() });
-                const employees = await response.json();
-                const select = document.getElementById('ticketAssignee');
-                select.innerHTML = '<option value="">Unassigned</option>' + 
-                    employees.map(e => `<option value="${e.id}">${e.full_name}</option>`).join('');
-            } catch (error) {
-                console.error('Error loading employees:', error);
-            }
+                const res  = await fetch('/admin/api/employees', { headers: getAuthHeaders() });
+                const emps = await res.json();
+                const sel  = document.getElementById('ticketAssignee');
+                sel.innerHTML = '<option value="">Unassigned</option>' +
+                    emps.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)}</option>`).join('');
+            } catch (e) { console.error('Error loading employees:', e); }
         }
-        
+
         async function loadTicket() {
             try {
-                const response = await fetch(`/admin/api/tickets/${ticketId}`, { headers: getAuthHeaders() });
-                if (!response.ok) throw new Error('Ticket not found');
-                
-                currentTicket = await response.json();
+                const res = await fetch(`/admin/api/tickets/${ticketId}`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('Ticket not found');
+                currentTicket = await res.json();
                 renderTicket(currentTicket);
-                
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('ticketContent').style.display = 'block';
-            } catch (error) {
-                console.error('Error loading ticket:', error);
+            } catch (e) {
+                console.error('Error loading ticket:', e);
                 alert('Error loading ticket. Redirecting to tickets list.');
                 window.location.href = '/admin/tickets';
             }
         }
-        
+
         function renderTicket(ticket) {
-            document.getElementById('ticketNumber').textContent = ticket.ticket_number;
-            document.getElementById('ticketSubject').textContent = ' - ' + ticket.subject;
+            document.getElementById('ticketNumber').textContent   = ticket.ticket_number;
+            document.getElementById('ticketSubject').textContent  = ' — ' + ticket.subject;
             document.getElementById('ticketDescription').textContent = ticket.description;
-            document.getElementById('ticketCreatedAt').textContent = formatDateTime(ticket.created_at);
-            document.getElementById('ticketCategory').textContent = formatCategory(ticket.category);
-            
-            document.getElementById('ticketStatus').value = ticket.status;
+            document.getElementById('ticketCreatedAt').textContent   = formatDateTime(ticket.created_at);
+            document.getElementById('ticketCategory').textContent    = formatCategory(ticket.category);
+
+            document.getElementById('ticketStatus').value   = ticket.status;
             document.getElementById('ticketPriority').value = ticket.priority;
             document.getElementById('ticketAssignee').value = ticket.assigned_to || '';
-            
-            document.getElementById('customerName').textContent = ticket.customer_name || 'Unknown';
+
+            document.getElementById('customerName').textContent  = ticket.customer_name || 'Unknown';
             document.getElementById('customerEmail').textContent = ticket.customer_email;
-            document.getElementById('customerSince').textContent = ticket.customer_created_at ? formatDate(ticket.customer_created_at) : '-';
-            
+            document.getElementById('customerSince').textContent = ticket.customer_created_at
+                ? formatDate(ticket.customer_created_at) : '—';
+
             renderConversation(ticket.responses || []);
         }
-        
+
         function renderConversation(responses) {
             const container = document.getElementById('conversationList');
-            
-            if (responses.length === 0) {
-                container.innerHTML = '<div class="text-center text-secondary py-4">No responses yet</div>';
+            if (!responses.length) {
+                container.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:24px 0;font-size:.875rem">No responses yet</div>`;
                 return;
             }
-            
-            container.innerHTML = responses.map(r => `
-                <div class="message ${r.is_staff_reply ? 'staff' : ''} ${r.is_internal_note ? 'internal' : ''}">
-                    <div class="message-header">
-                        <div class="message-author">
-                            ${r.responder_name || 'Customer'}
-                            ${r.is_staff_reply ? '<span class="badge bg-primary">Staff</span>' : ''}
+            container.innerHTML = responses.map(r => {
+                const cls = r.is_staff_reply ? 'staff' : '';
+                const intCls = r.is_internal_note ? 'internal' : '';
+                const badge = r.is_staff_reply
+                    ? (r.is_internal_note
+                        ? '<span class="internal-badge">Internal</span>'
+                        : '<span class="staff-badge">Staff</span>')
+                    : '';
+                return `
+                    <div class="message ${cls} ${intCls}">
+                        <div class="message-header">
+                            <div class="message-author">
+                                ${escapeHtml(r.responder_name || 'Customer')}
+                                ${badge}
+                            </div>
+                            <div class="message-time">${formatDateTime(r.created_at)}</div>
                         </div>
-                        <div class="message-time">${formatDateTime(r.created_at)}</div>
+                        <div class="message-body">${escapeHtml(r.message)}</div>
                     </div>
-                    <div class="message-content">${escapeHtml(r.message)}</div>
-                </div>
-            `).join('');
-            
+                `;
+            }).join('');
             container.scrollTop = container.scrollHeight;
         }
-        
+
         function setReplyType(btn) {
             document.querySelectorAll('.reply-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             isInternal = btn.dataset.internal === 'true';
-            document.getElementById('replyMessage').placeholder = isInternal ? 'Type internal note (not visible to customer)...' : 'Type your response...';
+            document.getElementById('replyMessage').placeholder = isInternal
+                ? 'Type internal note (not visible to customer)…'
+                : 'Type your response…';
         }
-        
+
         async function sendReply(resolve = false) {
             const message = document.getElementById('replyMessage').value.trim();
             if (!message) { alert('Please enter a message'); return; }
-            
             try {
-                const response = await fetch(`/admin/api/tickets/${ticketId}/respond`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        message: message,
-                        is_internal_note: isInternal,
-                        resolve: resolve
-                    })
+                const res = await fetch(`/admin/api/tickets/${ticketId}/respond`, {
+                    method: 'POST', headers: getAuthHeaders(),
+                    body: JSON.stringify({ message, is_internal_note: isInternal, resolve })
                 });
-                
-                if (!response.ok) throw new Error('Failed to send response');
-                
+                if (!res.ok) throw new Error('Failed to send response');
                 document.getElementById('replyMessage').value = '';
                 loadTicket();
-            } catch (error) {
-                console.error('Error sending response:', error);
-                alert('Error sending response. Please try again.');
-            }
+            } catch (e) { alert('Error sending response. Please try again.'); }
         }
-        
-        function sendAndResolve() {
-            sendReply(true);
-        }
-        
+
+        function sendAndResolve() { sendReply(true); }
+
         async function updateTicket() {
             try {
-                const response = await fetch(`/admin/api/tickets/${ticketId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
+                const res = await fetch(`/admin/api/tickets/${ticketId}`, {
+                    method: 'PUT', headers: getAuthHeaders(),
                     body: JSON.stringify({
-                        status: document.getElementById('ticketStatus').value,
-                        priority: document.getElementById('ticketPriority').value,
+                        status:      document.getElementById('ticketStatus').value,
+                        priority:    document.getElementById('ticketPriority').value,
                         assigned_to: document.getElementById('ticketAssignee').value || null
                     })
                 });
-                
-                if (!response.ok) throw new Error('Failed to update ticket');
-            } catch (error) {
-                console.error('Error updating ticket:', error);
-                alert('Error updating ticket. Please try again.');
-                loadTicket();
-            }
+                if (!res.ok) throw new Error('Failed to update ticket');
+            } catch (e) { alert('Error updating ticket. Please try again.'); loadTicket(); }
         }
-        
+
         function assignToMe() {
             document.getElementById('ticketAssignee').value = window.currentEmployee.id;
             updateTicket();
         }
-        
+
         function markResolved() {
             document.getElementById('ticketStatus').value = 'resolved';
             updateTicket();
         }
-        
+
         let closeTicketModal = null;
-        
+
         function openCloseTicketModal() {
-            // Initialize modal if needed
-            if (!closeTicketModal) {
-                closeTicketModal = new bootstrap.Modal(document.getElementById('closeTicketModal'));
-            }
-            
-            // Auto-fill technician info
+            if (!closeTicketModal) closeTicketModal = new bootstrap.Modal(document.getElementById('closeTicketModal'));
             if (window.currentEmployee) {
                 document.getElementById('closeTechName').textContent = window.currentEmployee.full_name;
-                document.getElementById('closeTechRole').textContent = window.currentEmployee.role.charAt(0).toUpperCase() + window.currentEmployee.role.slice(1);
-                document.getElementById('closeTechAvatar').textContent = window.currentEmployee.full_name.charAt(0).toUpperCase();
+                document.getElementById('closeTechRole').textContent =
+                    window.currentEmployee.role.charAt(0).toUpperCase() + window.currentEmployee.role.slice(1);
+                document.getElementById('closeTechAvatar').textContent =
+                    window.currentEmployee.full_name.charAt(0).toUpperCase();
             }
-            
-            // Reset form
             document.getElementById('closeResolutionType').value = 'resolved';
             document.getElementById('closeWorkNotes').value = '';
             document.getElementById('closeSendResponse').checked = true;
-            document.getElementById('closeCustomerMessage').value = 'Thank you for contacting IT support. Your issue has been resolved. If you have any further questions or the issue persists, please don\'t hesitate to submit a new ticket.';
+            document.getElementById('closeCustomerMessage').value =
+                "Thank you for contacting SecureLink support. Your issue has been resolved. If the problem persists, please don't hesitate to submit a new ticket.";
             document.getElementById('closeCustomerMessageWrapper').style.display = 'block';
-            
             closeTicketModal.show();
         }
-        
-        // Toggle customer message visibility
-        document.getElementById('closeSendResponse').addEventListener('change', function() {
+
+        document.getElementById('closeSendResponse').addEventListener('change', function () {
             document.getElementById('closeCustomerMessageWrapper').style.display = this.checked ? 'block' : 'none';
         });
-        
+
         async function submitCloseTicket() {
-            const workNotes = document.getElementById('closeWorkNotes').value.trim();
-            const resolutionType = document.getElementById('closeResolutionType').value;
+            const workNotes    = document.getElementById('closeWorkNotes').value.trim();
+            const resolution   = document.getElementById('closeResolutionType').value;
             const sendResponse = document.getElementById('closeSendResponse').checked;
-            const customerMessage = document.getElementById('closeCustomerMessage').value.trim();
-            
-            if (!workNotes) {
-                alert('Please enter work notes / resolution summary');
-                return;
-            }
-            
+            const custMessage  = document.getElementById('closeCustomerMessage').value.trim();
+
+            if (!workNotes) { alert('Please enter work notes / resolution summary'); return; }
+
             try {
-                // If sending response to customer, add the message first
-                if (sendResponse && customerMessage) {
+                if (sendResponse && custMessage) {
                     await fetch(`/admin/api/tickets/${ticketId}/respond`, {
-                        method: 'POST',
-                        headers: getAuthHeaders(),
-                        body: JSON.stringify({
-                            message: customerMessage,
-                            is_internal_note: false,
-                            resolve: false
-                        })
+                        method: 'POST', headers: getAuthHeaders(),
+                        body: JSON.stringify({ message: custMessage, is_internal_note: false, resolve: false })
                     });
                 }
-                
-                // Add internal work notes with technician info
                 const techName = window.currentEmployee ? window.currentEmployee.full_name : 'Unknown';
                 const techRole = window.currentEmployee ? window.currentEmployee.role : 'technician';
-                const internalNote = `[TICKET CLOSED]\nResolution Type: ${formatResolutionType(resolutionType)}\nClosed By: ${techName} (${techRole})\nDate: ${new Date().toLocaleString()}\n\nWork Notes:\n${workNotes}`;
-                
+                const note = `[TICKET CLOSED]\nResolution Type: ${formatResolutionType(resolution)}\nClosed By: ${techName} (${techRole})\nDate: ${new Date().toLocaleString()}\n\nWork Notes:\n${workNotes}`;
+
                 await fetch(`/admin/api/tickets/${ticketId}/respond`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        message: internalNote,
-                        is_internal_note: true,
-                        resolve: false
-                    })
+                    method: 'POST', headers: getAuthHeaders(),
+                    body: JSON.stringify({ message: note, is_internal_note: true, resolve: false })
                 });
-                
-                // Update ticket status to closed and add resolution notes
                 await fetch(`/admin/api/tickets/${ticketId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
+                    method: 'PUT', headers: getAuthHeaders(),
                     body: JSON.stringify({
                         status: 'closed',
-                        resolution_notes: `${formatResolutionType(resolutionType)}: ${workNotes}`
+                        resolution_notes: `${formatResolutionType(resolution)}: ${workNotes}`
                     })
                 });
-                
                 closeTicketModal.hide();
                 loadTicket();
-                
-            } catch (error) {
-                console.error('Error closing ticket:', error);
-                alert('Error closing ticket. Please try again.');
-            }
+            } catch (e) { alert('Error closing ticket. Please try again.'); }
         }
-        
+
         function formatResolutionType(type) {
-            const types = {
-                'resolved': 'Issue Resolved',
-                'no_issue': 'No Issue Found',
-                'user_cancelled': 'User Cancelled',
-                'duplicate': 'Duplicate Ticket',
-                'unable_to_resolve': 'Unable to Resolve'
+            const map = {
+                resolved: 'Issue Resolved', no_issue: 'No Issue Found',
+                user_cancelled: 'User Cancelled', duplicate: 'Duplicate Ticket',
+                unable_to_resolve: 'Unable to Resolve'
             };
-            return types[type] || type;
+            return map[type] || type;
         }
-        
-        function closeTicket() {
-            openCloseTicketModal();
-        }
-        
-        function formatCategory(cat) { return cat ? cat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-'; }
-        function formatDate(dateStr) { return dateStr ? new Date(dateStr).toLocaleDateString() : '-'; }
-        function formatDateTime(dateStr) { 
-            if (!dateStr) return '-';
-            const d = new Date(dateStr);
+
+        function formatCategory(c) { return c ? c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '—'; }
+        function formatDate(s)     { return s ? new Date(s).toLocaleDateString() : '—'; }
+        function formatDateTime(s) {
+            if (!s) return '—';
+            const d = new Date(s);
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-        function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() }).finally(() => {
-                localStorage.removeItem('admin_token');
-                window.location.href = '/admin/login';
-            });
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
         }
-        
+        function logout() {
+            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
+                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
+        }
+
         checkAuth();
     </script>
 </body>

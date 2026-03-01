@@ -3,164 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employees - SecureLink Admin</title>
+    <title>Employees — SecureLink Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #0ea5e9;
-            --primary-dark: #0284c7;
-            --accent-color: #8b5cf6;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-sidebar: #111827;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.15);
-        }
-        
-        * { font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
-        
-        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); padding: 20px 0; overflow-y: auto; z-index: 100; }
-        .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-        .sidebar-logo h5 { color: var(--primary-color); font-weight: 700; margin: 0; }
-        .sidebar-logo small { color: var(--text-secondary); font-size: 0.75rem; }
-        .nav-section { padding: 0 12px; margin-bottom: 24px; }
-        .nav-section-title { color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 12px; margin-bottom: 8px; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-secondary); text-decoration: none; border-radius: 10px; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; }
-        .nav-link:hover { background: rgba(14, 165, 233, 0.1); color: var(--text-primary); }
-        .nav-link.active { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: white; }
-        .nav-link i { font-size: 1.1rem; width: 24px; }
-        
-        .main-content { margin-left: 260px; padding: 24px; min-height: 100vh; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .page-title { font-size: 1.5rem; font-weight: 700; margin: 0; }
-        
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; }
-        .card-header { background: transparent; border-bottom: 1px solid var(--border-color); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .card-title { font-weight: 600; font-size: 1rem; margin: 0; }
-        .card-body { padding: 20px; }
-        
-        .table { color: var(--text-primary); margin: 0; }
-        .table thead th { background: rgba(0, 0, 0, 0.2); color: var(--text-secondary); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; border: none; padding: 12px 16px; }
-        .table tbody td { border-color: var(--border-color); padding: 14px 16px; vertical-align: middle; }
-        .table tbody tr:hover { background: rgba(14, 165, 233, 0.05); }
-        
-        .badge { padding: 5px 10px; font-weight: 500; font-size: 0.75rem; border-radius: 6px; }
-        .badge-admin { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-        .badge-manager { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .badge-support { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
-        .badge-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        .badge-inactive { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        
-        .form-control, .form-select { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px 14px; }
-        .form-control:focus, .form-select:focus { background: var(--bg-dark); border-color: var(--primary-color); color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-        .form-label { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
-        
-        .btn { border-radius: 8px; font-weight: 500; font-size: 0.85rem; padding: 8px 16px; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border: none; }
-        .btn-outline-secondary { border-color: var(--border-color); color: var(--text-secondary); }
-        .btn-outline-secondary:hover { background: var(--bg-card); border-color: var(--primary-color); color: var(--text-primary); }
-        .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
-        
-        .modal-content { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; }
-        .modal-header { border-bottom: 1px solid var(--border-color); }
-        .modal-footer { border-top: 1px solid var(--border-color); }
-        .btn-close { filter: invert(1); }
-        
-        .user-menu { display: flex; align-items: center; gap: 12px; }
-        .user-info { text-align: right; }
-        .user-name { font-weight: 600; font-size: 0.9rem; }
-        .user-role { color: var(--text-secondary); font-size: 0.75rem; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; }
-        
-        .employee-avatar { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; font-size: 0.85rem; }
-    </style>
+    <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-logo">
-            <h5><i class="bi bi-shield-lock me-2"></i>SecureLink</h5>
-            <small>Admin Panel</small>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
+                </div>
+            </div>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Overview</div>
-            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Support</div>
-            <a href="/admin/tickets" class="nav-link"><i class="bi bi-ticket-detailed"></i>All Tickets</a>
-            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox"></i>Open Tickets</a>
-            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i>In Progress</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link"><i class="bi bi-ticket-detailed-fill"></i> All Tickets</a>
+            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox-fill"></i> Open</a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i> In Progress</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Management</div>
-            <a href="/admin/customers" class="nav-link"><i class="bi bi-people"></i>Customers</a>
-            <a href="/admin/employees" class="nav-link active"><i class="bi bi-person-badge"></i>Employees</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="/admin/employees" class="nav-link active"><i class="bi bi-person-badge-fill"></i> Employees</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">System</div>
-            <a href="/admin/database" class="nav-link"><i class="bi bi-database"></i>Database Monitor</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/database" class="nav-link"><i class="bi bi-database-fill"></i> Database</a>
         </div>
-        <div class="nav-section" style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
-            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i>Logout</a>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
         </div>
     </nav>
-    
+
     <!-- Main Content -->
     <main class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">Employee Management</h1>
-            <div class="d-flex gap-3 align-items-center">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal" onclick="openNewEmployeeModal()">
-                    <i class="bi bi-person-plus me-2"></i>Add Employee
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
                 </button>
-                <div class="user-menu">
-                    <div class="user-info">
-                        <div class="user-name" id="employeeName">Loading...</div>
-                        <div class="user-role" id="employeeRole">-</div>
+                <h1 class="page-title">Employees</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#employeeModal"
+                    onclick="openNewEmployeeModal()">
+                    <i class="bi bi-person-plus"></i> Add Employee
+                </button>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
                     </div>
-                    <div class="user-avatar" id="employeeAvatar">?</div>
                 </div>
             </div>
         </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">All Employees</h5>
+
+        <!-- Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <h5 class="panel-title"><i class="bi bi-person-badge-fill"></i> All Employees</h5>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Tickets Assigned</th>
-                                <th>Last Login</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="employeesBody">
-                            <tr><td colspan="7" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div style="overflow-x:auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Assigned Tickets</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeesBody">
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <p>Loading employees…</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
-    
+
     <!-- Employee Modal -->
     <div class="modal fade" id="employeeModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="employeeModalTitle">Add Employee</h5>
@@ -170,20 +120,22 @@
                     <input type="hidden" id="employeeId">
                     <div class="mb-3">
                         <label class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="empFullName" required>
+                        <input type="text" class="form-control" id="empFullName" placeholder="Jane Smith">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-control" id="empEmail" required>
+                        <input type="email" class="form-control" id="empEmail" placeholder="jane@securelinkapp.com">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Username</label>
-                        <input type="text" class="form-control" id="empUsername" required>
+                        <input type="text" class="form-control" id="empUsername" placeholder="jsmith">
                     </div>
                     <div class="mb-3" id="passwordField">
                         <label class="form-label">Password</label>
-                        <input type="password" class="form-control" id="empPassword">
-                        <small class="text-secondary">Leave blank to keep current password (edit mode)</small>
+                        <input type="password" class="form-control" id="empPassword" placeholder="••••••••">
+                        <div class="form-text" id="passwordHint" style="display:none">
+                            Leave blank to keep the current password
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Role</label>
@@ -194,190 +146,180 @@
                         </select>
                     </div>
                     <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="empActive" checked>
-                        <label class="form-check-label" for="empActive">Active</label>
+                        <input class="form-check-input" type="checkbox" id="empActive" checked>
+                        <label class="form-check-label" for="empActive">Account is active</label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEmployee()">
+                        <i class="bi bi-check-lg"></i> Save Employee
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function getAdminToken() { return localStorage.getItem('admin_token'); }
+        function getAdminToken()  { return localStorage.getItem('admin_token'); }
         function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' }; }
-        
+
+        function updateClock() {
+            const el = document.getElementById('currentTime');
+            if (el) el.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateClock(); setInterval(updateClock, 30000);
+
         async function checkAuth() {
             const token = getAdminToken();
             if (!token) { window.location.href = '/admin/login'; return; }
-            
             try {
-                const response = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
-                if (!response.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
-                const data = await response.json();
+                const res  = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+                if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+                const data = await res.json();
                 if (data.valid && data.employee) {
                     document.getElementById('employeeName').textContent = data.employee.full_name;
-                    document.getElementById('employeeRole').textContent = data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
-                    document.getElementById('employeeAvatar').textContent = data.employee.full_name.charAt(0).toUpperCase();
+                    document.getElementById('employeeRole').textContent =
+                        data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                    document.getElementById('employeeAvatar').textContent =
+                        data.employee.full_name.charAt(0).toUpperCase();
                     window.currentEmployee = data.employee;
-                    
-                    // Only admins and managers can manage employees
                     if (!['admin', 'manager'].includes(data.employee.role)) {
                         alert('You do not have permission to access this page.');
                         window.location.href = '/admin/dashboard';
                         return;
                     }
-                    
                     loadEmployees();
                 }
-            } catch (error) { window.location.href = '/admin/login'; }
+            } catch (e) { window.location.href = '/admin/login'; }
         }
-        
+
         async function loadEmployees() {
             try {
-                const response = await fetch('/admin/api/employees', { headers: getAuthHeaders() });
-                const employees = await response.json();
-                renderEmployees(employees);
-            } catch (error) {
-                console.error('Error loading employees:', error);
-            }
+                const res  = await fetch('/admin/api/employees', { headers: getAuthHeaders() });
+                const emps = await res.json();
+                renderEmployees(emps);
+            } catch (e) { console.error('Error loading employees:', e); }
         }
-        
+
         function renderEmployees(employees) {
             const tbody = document.getElementById('employeesBody');
-            if (employees.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-secondary">No employees found</td></tr>';
+            if (!employees.length) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="bi bi-people"></i><p>No employees found</p></div></td></tr>`;
                 return;
             }
-            
             tbody.innerHTML = employees.map(emp => `
                 <tr>
                     <td>
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="employee-avatar">${emp.full_name.charAt(0).toUpperCase()}</div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div class="avatar avatar-md">${emp.full_name.charAt(0).toUpperCase()}</div>
                             <div>
-                                <div class="fw-semibold">${escapeHtml(emp.full_name)}</div>
-                                <small class="text-secondary">@${escapeHtml(emp.username)}</small>
+                                <div class="cell-primary">${escapeHtml(emp.full_name)}</div>
+                                <div class="cell-secondary">@${escapeHtml(emp.username)}</div>
                             </div>
                         </div>
                     </td>
-                    <td>${escapeHtml(emp.email)}</td>
-                    <td><span class="badge badge-${emp.role}">${emp.role.charAt(0).toUpperCase() + emp.role.slice(1)}</span></td>
-                    <td><span class="badge badge-${emp.is_active ? 'active' : 'inactive'}">${emp.is_active ? 'Active' : 'Inactive'}</span></td>
-                    <td>${emp.assigned_tickets || 0}</td>
-                    <td class="text-secondary">${emp.last_login ? formatDate(emp.last_login) : 'Never'}</td>
+                    <td style="font-size:.875rem">${escapeHtml(emp.email)}</td>
+                    <td><span class="pill pill-${emp.role}">${emp.role.charAt(0).toUpperCase() + emp.role.slice(1)}</span></td>
+                    <td><span class="pill pill-${emp.is_active ? 'active' : 'inactive'}">${emp.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td style="font-size:.875rem">${emp.assigned_tickets || 0}</td>
+                    <td style="font-size:.78rem;color:var(--text-secondary)">${emp.last_login ? formatDate(emp.last_login) : 'Never'}</td>
                     <td>
-                        <button class="btn btn-outline-secondary btn-sm me-1" onclick="editEmployee(${emp.id})"><i class="bi bi-pencil"></i></button>
-                        ${emp.id !== window.currentEmployee.id ? `<button class="btn btn-outline-secondary btn-sm" onclick="deleteEmployee(${emp.id})"><i class="bi bi-trash"></i></button>` : ''}
+                        <div style="display:flex;gap:6px">
+                            <button class="btn btn-secondary btn-sm" onclick="editEmployee(${emp.id})" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            ${emp.id !== window.currentEmployee?.id ? `
+                            <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id})" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>` : ''}
+                        </div>
                     </td>
                 </tr>
             `).join('');
         }
-        
+
         function openNewEmployeeModal() {
             document.getElementById('employeeModalTitle').textContent = 'Add Employee';
-            document.getElementById('employeeId').value = '';
-            document.getElementById('empFullName').value = '';
-            document.getElementById('empEmail').value = '';
-            document.getElementById('empUsername').value = '';
-            document.getElementById('empPassword').value = '';
-            document.getElementById('empRole').value = 'support';
-            document.getElementById('empActive').checked = true;
-            document.getElementById('passwordField').querySelector('small').style.display = 'none';
+            document.getElementById('employeeId').value      = '';
+            document.getElementById('empFullName').value     = '';
+            document.getElementById('empEmail').value        = '';
+            document.getElementById('empUsername').value     = '';
+            document.getElementById('empPassword').value     = '';
+            document.getElementById('empRole').value         = 'support';
+            document.getElementById('empActive').checked     = true;
+            document.getElementById('passwordHint').style.display = 'none';
         }
-        
+
         async function editEmployee(id) {
             try {
-                const response = await fetch(`/admin/api/employees/${id}`, { headers: getAuthHeaders() });
-                const emp = await response.json();
-                
+                const res = await fetch(`/admin/api/employees/${id}`, { headers: getAuthHeaders() });
+                const emp = await res.json();
                 document.getElementById('employeeModalTitle').textContent = 'Edit Employee';
-                document.getElementById('employeeId').value = emp.id;
-                document.getElementById('empFullName').value = emp.full_name;
-                document.getElementById('empEmail').value = emp.email;
-                document.getElementById('empUsername').value = emp.username;
-                document.getElementById('empPassword').value = '';
-                document.getElementById('empRole').value = emp.role;
-                document.getElementById('empActive').checked = emp.is_active;
-                document.getElementById('passwordField').querySelector('small').style.display = 'block';
-                
+                document.getElementById('employeeId').value    = emp.id;
+                document.getElementById('empFullName').value   = emp.full_name;
+                document.getElementById('empEmail').value      = emp.email;
+                document.getElementById('empUsername').value   = emp.username;
+                document.getElementById('empPassword').value   = '';
+                document.getElementById('empRole').value       = emp.role;
+                document.getElementById('empActive').checked   = emp.is_active;
+                document.getElementById('passwordHint').style.display = 'block';
                 new bootstrap.Modal(document.getElementById('employeeModal')).show();
-            } catch (error) {
-                console.error('Error loading employee:', error);
-                alert('Error loading employee details.');
-            }
+            } catch (e) { alert('Error loading employee details.'); }
         }
-        
+
         async function saveEmployee() {
             const id = document.getElementById('employeeId').value;
             const data = {
                 full_name: document.getElementById('empFullName').value,
-                email: document.getElementById('empEmail').value,
-                username: document.getElementById('empUsername').value,
-                role: document.getElementById('empRole').value,
+                email:     document.getElementById('empEmail').value,
+                username:  document.getElementById('empUsername').value,
+                role:      document.getElementById('empRole').value,
                 is_active: document.getElementById('empActive').checked
             };
-            
             const password = document.getElementById('empPassword').value;
             if (password) data.password = password;
-            
+
             try {
-                const url = id ? `/admin/api/employees/${id}` : '/admin/api/employees';
-                const method = id ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method: method,
+                const res = await fetch(id ? `/admin/api/employees/${id}` : '/admin/api/employees', {
+                    method: id ? 'PUT' : 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify(data)
                 });
-                
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'Failed to save employee');
-                }
-                
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to save'); }
                 bootstrap.Modal.getInstance(document.getElementById('employeeModal')).hide();
                 loadEmployees();
-            } catch (error) {
-                console.error('Error saving employee:', error);
-                alert(error.message);
-            }
+            } catch (e) { alert(e.message); }
         }
-        
+
         async function deleteEmployee(id) {
-            if (!confirm('Are you sure you want to delete this employee?')) return;
-            
+            if (!confirm('Delete this employee? This cannot be undone.')) return;
             try {
-                const response = await fetch(`/admin/api/employees/${id}`, {
-                    method: 'DELETE',
-                    headers: getAuthHeaders()
-                });
-                
-                if (!response.ok) throw new Error('Failed to delete employee');
+                const res = await fetch(`/admin/api/employees/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('Failed to delete');
                 loadEmployees();
-            } catch (error) {
-                console.error('Error deleting employee:', error);
-                alert('Error deleting employee.');
-            }
+            } catch (e) { alert('Error deleting employee.'); }
         }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const d = new Date(dateStr);
+
+        function formatDate(s) {
+            if (!s) return '—';
+            const d = new Date(s);
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-        function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() }).finally(() => {
-                localStorage.removeItem('admin_token');
-                window.location.href = '/admin/login';
-            });
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
         }
-        
+        function logout() {
+            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
+                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
+        }
+
         checkAuth();
     </script>
 </body>

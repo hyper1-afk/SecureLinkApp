@@ -3,329 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customers - SecureLink Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Customers — SecureLink Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #0ea5e9;
-            --primary-dark: #0284c7;
-            --accent-color: #8b5cf6;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-sidebar: #111827;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: rgba(148, 163, 184, 0.15);
-        }
-        
-        * { font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
-        
-        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); padding: 20px 0; overflow-y: auto; z-index: 100; }
-        .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-        .sidebar-logo h5 { color: var(--primary-color); font-weight: 700; margin: 0; }
-        .sidebar-logo small { color: var(--text-secondary); font-size: 0.75rem; }
-        .nav-section { padding: 0 12px; margin-bottom: 24px; }
-        .nav-section-title { color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 0 12px; margin-bottom: 8px; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-secondary); text-decoration: none; border-radius: 10px; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; }
-        .nav-link:hover { background: rgba(14, 165, 233, 0.1); color: var(--text-primary); }
-        .nav-link.active { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: white; }
-        .nav-link i { font-size: 1.1rem; width: 24px; }
-        
-        .main-content { margin-left: 260px; padding: 24px; min-height: 100vh; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .page-title { font-size: 1.5rem; font-weight: 700; margin: 0; }
-        
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; }
-        .card-header { background: transparent; border-bottom: 1px solid var(--border-color); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .card-title { font-weight: 600; font-size: 1rem; margin: 0; }
-        .card-body { padding: 20px; }
-        
-        .table { color: var(--text-primary); margin: 0; }
-        .table thead th { background: rgba(0, 0, 0, 0.2); color: var(--text-secondary); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; border: none; padding: 12px 16px; }
-        .table tbody td { border-color: var(--border-color); padding: 14px 16px; vertical-align: middle; }
-        .table tbody tr:hover { background: rgba(14, 165, 233, 0.05); }
-        
-        .badge { padding: 5px 10px; font-weight: 500; font-size: 0.75rem; border-radius: 6px; }
-        .badge-free { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .badge-pro { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-        .badge-enterprise { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        
-        .form-control, .form-select { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px 14px; }
-        .form-control:focus, .form-select:focus { background: var(--bg-dark); border-color: var(--primary-color); color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
-        
-        .btn { border-radius: 8px; font-weight: 500; font-size: 0.85rem; padding: 8px 16px; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); border: none; }
-        .btn-outline-secondary { border-color: var(--border-color); color: var(--text-secondary); }
-        .btn-outline-secondary:hover { background: var(--bg-card); border-color: var(--primary-color); color: var(--text-primary); }
-        
-        .search-bar { display: flex; gap: 12px; margin-bottom: 20px; }
-        .search-bar .form-control { flex: 1; max-width: 400px; }
-        
-        .pagination { justify-content: center; margin-top: 20px; }
-        .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-primary); }
-        .page-link:hover { background: var(--bg-dark); border-color: var(--primary-color); color: var(--primary-color); }
-        .page-item.active .page-link { background: var(--primary-color); border-color: var(--primary-color); }
-        .page-item.disabled .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-secondary); }
-        
-        .user-menu { display: flex; align-items: center; gap: 12px; }
-        .user-info { text-align: right; }
-        .user-name { font-weight: 600; font-size: 0.9rem; }
-        .user-role { color: var(--text-secondary); font-size: 0.75rem; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; }
-        
-        .customer-avatar { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; font-size: 0.85rem; }
-    </style>
+    <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
     <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-logo">
-            <h5><i class="bi bi-shield-lock me-2"></i>SecureLink</h5>
-            <small>Admin Panel</small>
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
+                </div>
+            </div>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Overview</div>
-            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2"></i>Dashboard</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Support</div>
-            <a href="/admin/tickets" class="nav-link"><i class="bi bi-ticket-detailed"></i>All Tickets</a>
-            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox"></i>Open Tickets</a>
-            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i>In Progress</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link"><i class="bi bi-ticket-detailed-fill"></i> All Tickets</a>
+            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox-fill"></i> Open</a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i> In Progress</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">Management</div>
-            <a href="/admin/customers" class="nav-link active"><i class="bi bi-people"></i>Customers</a>
-            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge"></i>Employees</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link active"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge-fill"></i> Employees</a>
         </div>
-        <div class="nav-section">
-            <div class="nav-section-title">System</div>
-            <a href="/admin/database" class="nav-link"><i class="bi bi-database"></i>Database Monitor</a>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/database" class="nav-link"><i class="bi bi-database-fill"></i> Database</a>
         </div>
-        <div class="nav-section" style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
-            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i>Logout</a>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
         </div>
     </nav>
-    
+
     <!-- Main Content -->
     <main class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">Customers</h1>
-            <div class="user-menu">
-                <div class="user-info">
-                    <div class="user-name" id="employeeName">Loading...</div>
-                    <div class="user-role" id="employeeRole">-</div>
-                </div>
-                <div class="user-avatar" id="employeeAvatar">?</div>
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title">Customers</h1>
             </div>
-        </div>
-        
-        <div class="search-bar">
-            <input type="text" class="form-control" id="searchInput" placeholder="Search customers by name or email...">
-            <button class="btn btn-primary" onclick="loadCustomers()"><i class="bi bi-search me-2"></i>Search</button>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">All Customers</h5>
-                <span class="text-secondary" id="totalCount">0 customers</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Email</th>
-                                <th>Subscription</th>
-                                <th>Verified Links</th>
-                                <th>Email Accounts</th>
-                                <th>Joined</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customersBody">
-                            <tr><td colspan="7" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>
-                        </tbody>
-                    </table>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <nav id="paginationNav" style="display: none;">
-            <ul class="pagination" id="pagination"></ul>
-        </nav>
+
+        <!-- Search -->
+        <div class="filter-bar">
+            <input type="text" class="form-control" id="searchInput" placeholder="Search by name or email…"
+                style="min-width:280px">
+            <button class="btn btn-primary" onclick="loadCustomers()">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <h5 class="panel-title"><i class="bi bi-people-fill"></i> All Customers</h5>
+                <span style="font-size:.82rem;color:var(--text-muted)" id="totalCount">0 customers</span>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Links Scanned</th>
+                            <th>Email Accounts</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersBody">
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <p>Loading customers…</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationNav" style="display:none;">
+            <div class="pagi" id="pagination"></div>
+        </div>
     </main>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         let currentPage = 1;
-        const perPage = 20;
-        
-        function getAdminToken() { return localStorage.getItem('admin_token'); }
+        const perPage   = 20;
+
+        function getAdminToken()  { return localStorage.getItem('admin_token'); }
         function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}` }; }
-        
+
+        function updateClock() {
+            const el = document.getElementById('currentTime');
+            if (el) el.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateClock(); setInterval(updateClock, 30000);
+
         async function checkAuth() {
             const token = getAdminToken();
             if (!token) { window.location.href = '/admin/login'; return; }
-            
             try {
-                const response = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
-                if (!response.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
-                const data = await response.json();
+                const res  = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+                if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+                const data = await res.json();
                 if (data.valid && data.employee) {
                     document.getElementById('employeeName').textContent = data.employee.full_name;
-                    document.getElementById('employeeRole').textContent = data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
-                    document.getElementById('employeeAvatar').textContent = data.employee.full_name.charAt(0).toUpperCase();
+                    document.getElementById('employeeRole').textContent =
+                        data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                    document.getElementById('employeeAvatar').textContent =
+                        data.employee.full_name.charAt(0).toUpperCase();
                     window.currentEmployee = data.employee;
                     loadCustomers();
                 }
-            } catch (error) { window.location.href = '/admin/login'; }
+            } catch (e) { window.location.href = '/admin/login'; }
         }
-        
+
         async function loadCustomers(page = 1) {
             currentPage = page;
             const search = document.getElementById('searchInput').value;
-            
             let url = `/admin/api/customers?page=${page}&per_page=${perPage}`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
-            
             try {
-                const response = await fetch(url, { headers: getAuthHeaders() });
-                const data = await response.json();
-                
+                const res  = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
                 document.getElementById('totalCount').textContent = `${data.total || 0} customers`;
                 renderCustomers(data.customers || []);
                 renderPagination(data.total || 0, data.page || 1, data.total_pages || 1);
-            } catch (error) {
-                console.error('Error loading customers:', error);
-            }
+            } catch (e) { console.error('Error loading customers:', e); }
         }
-        
+
         function renderCustomers(customers) {
             const tbody = document.getElementById('customersBody');
-            if (customers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-secondary">No customers found</td></tr>';
+            if (!customers.length) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="bi bi-people"></i><p>No customers found</p></div></td></tr>`;
                 return;
             }
-            
-            tbody.innerHTML = customers.map(c => `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="customer-avatar">${(c.full_name || c.username || c.email).charAt(0).toUpperCase()}</div>
-                            <div>
-                                <div class="fw-semibold">${escapeHtml(c.full_name || c.username || 'N/A')}</div>
-                                <small class="text-secondary">@${escapeHtml(c.username || 'N/A')}</small>
+            tbody.innerHTML = customers.map(c => {
+                const initChar = (c.full_name || c.username || c.email).charAt(0).toUpperCase();
+                const tier = (c.subscription_tier || 'free').toLowerCase();
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <div class="avatar avatar-md">${escapeHtml(initChar)}</div>
+                                <div>
+                                    <div class="cell-primary">${escapeHtml(c.full_name || c.username || 'N/A')}</div>
+                                    <div class="cell-secondary">@${escapeHtml(c.username || 'N/A')}</div>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td>${escapeHtml(c.email)}</td>
-                    <td><span class="badge badge-${c.subscription_tier || 'free'}">${(c.subscription_tier || 'free').toUpperCase()}</span></td>
-                    <td>${c.links_verified_today || 0} today</td>
-                    <td>${c.email_accounts_count || 0}</td>
-                    <td class="text-secondary">${formatDate(c.created_at)}</td>
-                    <td>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary btn-sm" onclick="viewCustomerTickets('${c.email}')" title="View Tickets">
-                                <i class="bi bi-ticket-detailed"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteCustomer(${c.id}, '${escapeHtml(c.email)}')" title="Delete Customer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+                        </td>
+                        <td style="font-size:.875rem">${escapeHtml(c.email)}</td>
+                        <td><span class="pill pill-${tier}">${tier.toUpperCase()}</span></td>
+                        <td style="font-size:.875rem">${c.links_verified_today || 0} today</td>
+                        <td style="font-size:.875rem">${c.email_accounts_count || 0}</td>
+                        <td style="font-size:.78rem;color:var(--text-secondary)">${formatDate(c.created_at)}</td>
+                        <td>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-secondary btn-sm" onclick="viewCustomerTickets('${escapeHtml(c.email)}')" title="View Tickets">
+                                    <i class="bi bi-ticket-detailed"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="confirmDeleteCustomer(${c.id}, '${escapeHtml(c.email)}')" title="Delete Customer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-        
+
         function renderPagination(total, page, pages) {
-            const nav = document.getElementById('paginationNav');
-            const pagination = document.getElementById('pagination');
-            
+            const nav  = document.getElementById('paginationNav');
+            const pagi = document.getElementById('pagination');
             if (pages <= 1) { nav.style.display = 'none'; return; }
-            nav.style.display = 'block';
-            
-            let html = '';
-            html += `<li class="page-item ${page === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadCustomers(${page - 1})">Previous</a></li>`;
-            
+            nav.style.display = '';
+            let html = `<button class="pagi-btn ${page === 1 ? 'disabled' : ''}" onclick="loadCustomers(${page - 1})">‹ Prev</button>`;
             for (let i = 1; i <= pages; i++) {
                 if (i === 1 || i === pages || (i >= page - 2 && i <= page + 2)) {
-                    html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="loadCustomers(${i})">${i}</a></li>`;
+                    html += `<button class="pagi-btn ${i === page ? 'active' : ''}" onclick="loadCustomers(${i})">${i}</button>`;
                 } else if (i === page - 3 || i === page + 3) {
-                    html += '<li class="page-item disabled"><a class="page-link">...</a></li>';
+                    html += '<span class="pagi-btn disabled">…</span>';
                 }
             }
-            
-            html += `<li class="page-item ${page === pages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadCustomers(${page + 1})">Next</a></li>`;
-            pagination.innerHTML = html;
+            html += `<button class="pagi-btn ${page === pages ? 'disabled' : ''}" onclick="loadCustomers(${page + 1})">Next ›</button>`;
+            pagi.innerHTML = html;
         }
-        
+
         function viewCustomerTickets(email) {
             window.location.href = `/admin/tickets?search=${encodeURIComponent(email)}`;
         }
-        
+
         function confirmDeleteCustomer(userId, email) {
-            if (confirm(`Are you sure you want to delete the customer account: ${email}?\n\nThis action cannot be undone.`)) {
-                const confirmation = prompt('Type DELETE to confirm:');
-                if (confirmation === 'DELETE') {
-                    deleteCustomer(userId, email);
-                } else if (confirmation !== null) {
-                    alert('Deletion cancelled. You must type DELETE to confirm.');
-                }
+            if (!confirm(`Delete account: ${email}?\n\nThis action cannot be undone.`)) return;
+            const input = prompt('Type DELETE to confirm:');
+            if (input === 'DELETE') {
+                deleteCustomer(userId, email);
+            } else if (input !== null) {
+                alert('Deletion cancelled. You must type DELETE to confirm.');
             }
         }
-        
+
         async function deleteCustomer(userId, email) {
             try {
-                const response = await fetch(`/admin/api/customers/${userId}`, {
-                    method: 'DELETE',
-                    headers: getAuthHeaders()
+                const res  = await fetch(`/admin/api/customers/${userId}`, {
+                    method: 'DELETE', headers: getAuthHeaders()
                 });
-                
-                const data = await response.json();
-                
+                const data = await res.json();
                 if (data.success) {
                     alert(`Customer ${email} has been deleted.`);
                     loadCustomers(currentPage);
                 } else {
                     alert('Error deleting customer: ' + (data.error || 'Unknown error'));
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error deleting customer. Please try again.');
-            }
+            } catch (e) { alert('Error deleting customer. Please try again.'); }
         }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            return new Date(dateStr).toLocaleDateString();
+
+        function formatDate(s) { return s ? new Date(s).toLocaleDateString() : '—'; }
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
         }
-        
-        function escapeHtml(text) { 
-            if (!text) return '';
-            const div = document.createElement('div'); 
-            div.textContent = text; 
-            return div.innerHTML; 
-        }
-        
         function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() }).finally(() => {
-                localStorage.removeItem('admin_token');
-                window.location.href = '/admin/login';
-            });
+            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
+                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
         }
-        
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+
+        document.getElementById('searchInput').addEventListener('keypress', e => {
             if (e.key === 'Enter') loadCustomers();
         });
-        
+
         checkAuth();
     </script>
 </body>
