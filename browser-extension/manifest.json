@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
   "name": "SecureLink",
-  "version": "1.1.0",
-  "description": "Automatically scans URLs you visit and warns you about potentially malicious sites. Sign in for more scans!",
+  "version": "1.2.0",
+  "description": "Automatically scans URLs you visit and warns you about malicious sites. Free for everyone.",
   "permissions": [
-    "tabs",
     "webNavigation",
     "storage"
   ],

@@ -1,6 +1,6 @@
 // SecureLink Browser Extension - Content Script
 
-const API_BASE = 'http://localhost:5000'; // Change to your production URL
+const API_BASE = 'https://securelinkapp.com';
 
 // Listen for messages from popup and background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
