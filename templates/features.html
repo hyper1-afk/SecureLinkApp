@@ -365,17 +365,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Update navbar for logged-in users
-        (function() {
+        // Update navbar for logged-in users (validates token server-side)
+        (async function() {
             const token = localStorage.getItem('auth_token');
-            if (token) {
+            if (!token) return;
+            try {
+                const res = await fetch('/api/auth/validate', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!data.valid) { localStorage.removeItem('auth_token'); return; }
                 const homeLink = document.getElementById('homeLink');
                 const brandLink = document.getElementById('brandLink');
                 const authLink = document.getElementById('authLink');
                 if (homeLink) homeLink.href = '/home';
                 if (brandLink) brandLink.href = '/home';
                 if (authLink) { authLink.href = '/profile'; authLink.textContent = 'Profile'; }
-            }
+            } catch(e) { /* network error — leave nav as-is */ }
         })();
     </script>
     <!-- Scroll animation observer -->
