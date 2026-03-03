@@ -31,6 +31,7 @@ from support_email_monitor import start_support_email_monitor
 from attack_surface_routes import attack_surface_bp, init_attack_surface
 from compliance_routes import compliance_bp, init_compliance
 from scan_scheduler import get_scan_scheduler
+from domain_scanner import DomainScanner
 from features import (
     get_ai_threat_explanation, check_password_breach, check_email_breach,
     send_slack_notification, send_discord_notification, send_teams_notification,
@@ -159,6 +160,7 @@ verifier = LinkVerifier(config)
 db = Database(config)
 notification_service = NotificationService(config)
 auth_manager = AuthManager(config)
+_domain_scanner = DomainScanner()
 report_generator = get_report_generator()
 payment_manager = get_payment_manager(config)
 admin_manager = get_admin_manager(config)
@@ -1648,29 +1650,29 @@ def stripe_webhook():
 
 # ============== Link Verification Routes ==============
 
-# Track anonymous website scan counts (in production, use Redis)
-website_anonymous_scans = {}
-
-# Track anonymous public breach check counts (in production, use Redis)
-public_breach_checks = {}
+# Anonymous quota tracking is DB-backed via Database.check_and_increment_anon_quota()
 
 
 @app.route('/api/public/breach-check', methods=['POST'])
 @limiter.limit("5 per minute")
 def public_breach_check():
     """Public email breach check — returns count/risk only, no breach names."""
-    from datetime import date
     import re
+    import uuid as _uuid
 
     data = request.get_json(silent=True) or {}
     email = data.get('email', '').strip().lower()
     if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         return jsonify({'error': 'A valid email address is required'}), 400
 
-    today = date.today().isoformat()
-    ip_key = f"{_get_client_ip()}:{today}"
-    checks_today = public_breach_checks.get(ip_key, 0)
-    if checks_today >= 3:
+    anon_id = request.cookies.get('sl_anon_id')
+    new_anon_id = None
+    if not anon_id:
+        anon_id = str(_uuid.uuid4())
+        new_anon_id = anon_id
+
+    remaining = db.get_anon_quota_remaining(anon_id, 'bc', 3)
+    if remaining <= 0:
         return jsonify({
             'error': 'Daily limit reached',
             'message': 'Create a free account to check more emails.',
@@ -1688,12 +1690,12 @@ def public_breach_check():
         logger.error(f"Public breach check error: {e}")
         return jsonify({'error': 'Breach database temporarily unavailable'}), 503
 
-    # Increment counter only after a successful API call
-    public_breach_checks[ip_key] = checks_today + 1
-
     if error:
-        public_breach_checks[ip_key] = checks_today  # roll back on API error
         return jsonify({'error': error}), 503
+
+    # Increment only after a successful API call
+    db.check_and_increment_anon_quota(anon_id, 'bc', 3)
+    remaining_after = max(0, remaining - 1)
 
     breach_count = len(breaches)
     if breach_count == 0:
@@ -1705,27 +1707,26 @@ def public_breach_check():
     else:
         risk_level = 'high'
 
-    return jsonify({
+    resp = jsonify({
         'has_breaches': breach_count > 0,
         'breach_count': breach_count,
         'risk_level': risk_level,
-        'checks_remaining': max(0, 3 - (checks_today + 1)),
+        'checks_remaining': remaining_after,
         'is_public': True
     })
+    if new_anon_id:
+        resp.set_cookie('sl_anon_id', new_anon_id, max_age=365*24*3600, httponly=True, samesite='Lax')
+    return resp
 
 
 @app.route('/api/scan-status', methods=['GET'])
 def get_scan_status():
     """Get current scan count for anonymous users"""
-    from datetime import date
-    today = date.today().isoformat()
-    ip_key = f"{_get_client_ip()}:{today}"
-    scans_today = website_anonymous_scans.get(ip_key, 0)
     limit = 15
-    remaining = max(0, limit - scans_today)
-    
+    anon_id = request.cookies.get('sl_anon_id', '')
+    remaining = db.get_anon_quota_remaining(anon_id, 'lnk', limit) if anon_id else limit
     return jsonify({
-        'scans_today': scans_today,
+        'scans_today': limit - remaining,
         'limit': limit,
         'remaining': remaining
     })
@@ -1760,29 +1761,26 @@ def verify_link():
                     'upgrade_url': '/pricing'
                 }), 429
     
-    # Rate limit for anonymous users (15 scans/day per IP)
+    # Rate limit for anonymous users (15 scans/day per browser cookie)
+    import uuid as _uuid
+    new_anon_id = None
     if is_anonymous:
-        from datetime import date
-        today = date.today().isoformat()
-        ip_key = f"{_get_client_ip()}:{today}"
-        scans_today = website_anonymous_scans.get(ip_key, 0)
-        
-        if scans_today >= 15:
+        anon_id = request.cookies.get('sl_anon_id')
+        if not anon_id:
+            anon_id = str(_uuid.uuid4())
+            new_anon_id = anon_id
+        if not db.check_and_increment_anon_quota(anon_id, 'lnk', 15):
             return jsonify({
                 'error': 'Daily scan limit reached',
                 'message': 'Create a free account to get 25 scans per day!',
                 'limit': 15,
-                'used': scans_today,
                 'signup_url': '/login'
             }), 429
-        
-        # Increment anonymous scan count
-        website_anonymous_scans[ip_key] = scans_today + 1
-    
+
     try:
         # Verify the link
         result = verifier.verify_link(url)
-        
+
         # Save to database with user_id if authenticated
         db.save_verification(result, source='manual', user_id=user_id)
         
@@ -1794,11 +1792,93 @@ def verify_link():
         if not result.is_safe:
             notification_service.notify(result)
         
-        return jsonify(result.to_dict())
-    
+        resp = jsonify(result.to_dict())
+        if new_anon_id:
+            resp.set_cookie('sl_anon_id', new_anon_id, max_age=365*24*3600, httponly=True, samesite='Lax')
+        return resp
+
     except Exception as e:
         logger.error(f"Error verifying link: {e}", exc_info=True)
         return jsonify({'error': 'An internal error occurred'}), 500
+
+
+@app.route('/api/health-check-quota', methods=['GET'])
+def health_check_quota():
+    limit = 3
+    anon_id = request.cookies.get('sl_anon_id', '')
+    remaining = db.get_anon_quota_remaining(anon_id, 'hc', limit) if anon_id else limit
+    return jsonify({'remaining': remaining, 'limit': limit})
+
+
+@app.route('/api/health-check', methods=['POST'])
+def domain_health_check():
+    """Domain health check — authenticated users get unlimited checks; anonymous limited to 3/day."""
+    import re
+    import uuid as _uuid
+    data = request.get_json() or {}
+    domain = data.get('domain', '').strip().lower()
+    domain = re.sub(r'^https?://', '', domain).split('/')[0].strip()
+    if not domain or '.' not in domain:
+        return jsonify({'error': 'Please enter a valid domain name'}), 400
+
+    # Authenticated users bypass the quota
+    token = get_token_from_request()
+    is_authenticated = False
+    if token:
+        user_data = auth_manager.validate_token(token)
+        if user_data:
+            is_authenticated = True
+
+    new_anon_id = None
+    if not is_authenticated:
+        anon_id = request.cookies.get('sl_anon_id')
+        if not anon_id:
+            anon_id = str(_uuid.uuid4())
+            new_anon_id = anon_id
+        if not db.check_and_increment_anon_quota(anon_id, 'hc', 3):
+            return jsonify({
+                'error': 'Daily limit reached. Create a free account for more checks.',
+                'limit_reached': True
+            }), 429
+
+    try:
+        result = _domain_scanner.scan_domain(domain)
+        r = result.to_dict()
+        ssl = r.get('ssl_info', {})
+        dns = r.get('dns_info', {})
+        headers = r.get('headers_info', {})
+        findings = r.get('findings', [])
+        resp = jsonify({
+            'domain': r.get('domain', domain),
+            'score': r.get('score', 0),
+            'grade': r.get('grade', 'F'),
+            'ssl': {
+                'valid': ssl.get('valid'),
+                'issuer': ssl.get('issuer'),
+                'days_remaining': ssl.get('days_remaining'),
+                'protocol': ssl.get('protocol'),
+            },
+            'dns': {
+                'has_spf': dns.get('has_spf'),
+                'has_dmarc': dns.get('has_dmarc'),
+                'has_dnssec': dns.get('has_dnssec'),
+            },
+            'headers': {
+                'missing': headers.get('headers_missing', []),
+            },
+            'findings_count': {
+                'critical': len([f for f in findings if f.get('severity') == 'critical']),
+                'high':     len([f for f in findings if f.get('severity') == 'high']),
+                'medium':   len([f for f in findings if f.get('severity') == 'medium']),
+            },
+            'scan_duration_ms': r.get('scan_duration_ms'),
+        })
+        if new_anon_id:
+            resp.set_cookie('sl_anon_id', new_anon_id, max_age=365*24*3600, httponly=True, samesite='Lax')
+        return resp
+    except Exception as e:
+        logger.error(f"Health check error for {domain}: {e}", exc_info=True)
+        return jsonify({'error': 'Unable to scan domain. Please try again.'}), 500
 
 
 @app.route('/api/scan-file', methods=['POST'])
@@ -4016,7 +4096,8 @@ if __name__ == '__main__':
     scan_scheduler.start()
     logger.info("Attack surface scan scheduler started")
     
-    print("""
+    try:
+        print("""
     ╔═══════════════════════════════════════════════════════════╗
     ║                 SecureLink - Starting Up                   ║
     ╠═══════════════════════════════════════════════════════════╣
@@ -4035,6 +4116,8 @@ if __name__ == '__main__':
     ║  New user? Visit http://localhost:5000/login              ║
     ╚═══════════════════════════════════════════════════════════╝
     """)
+    except UnicodeEncodeError:
+        print("SecureLink starting on http://localhost:5000")
     
     # Bind to localhost only — in production, gunicorn sits behind nginx on 0.0.0.0.
     # The dev server should never be directly internet-facing.

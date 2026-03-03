@@ -1937,6 +1937,27 @@
 
         </div><!-- /.scanner-layout -->
 
+        <!-- Domain Health Check Card -->
+        <div class="card mb-4" style="border:1px solid var(--border-color);border-radius:16px;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-heart-pulse" style="font-size:1.2rem;color:var(--primary-color);"></i>
+                    <h5 class="mb-0" style="font-weight:700;">Domain Health Check</h5>
+                </div>
+                <p class="text-secondary mb-3" style="font-size:0.85rem;">Scan any domain for SSL issues, missing security headers, SPF/DMARC config, and open port exposure.</p>
+                <div class="d-flex gap-2 mb-3">
+                    <input type="text" id="dashDomainInput" class="form-control url-input"
+                        placeholder="example.com" autocomplete="off"
+                        style="max-width:480px;"
+                        onkeydown="if(event.key==='Enter') runDashboardHealthCheck()">
+                    <button class="btn btn-primary" id="dashDomainBtn" onclick="runDashboardHealthCheck()" style="white-space:nowrap;">
+                        <i class="bi bi-heart-pulse me-1"></i>Check Health
+                    </button>
+                </div>
+                <div id="dashDomainResult"></div>
+            </div>
+        </div>
+
         <!-- Result Card (hidden initially) -->
         <div class="mb-4" id="resultSection" style="display: none;">
             <div class="card result-card p-4" id="resultCard">
@@ -3818,6 +3839,86 @@
             </div>
         </div>
     </footer>
+    <!-- Domain Health Check -->
+    <script>
+        async function runDashboardHealthCheck() {
+            let domain = document.getElementById('dashDomainInput').value.trim();
+            if (!domain) return;
+            domain = domain.replace(/^https?:\/\//i, '').split('/')[0].trim();
+            const btn = document.getElementById('dashDomainBtn');
+            const resultEl = document.getElementById('dashDomainResult');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning...';
+            resultEl.innerHTML = '';
+            try {
+                const res = await fetch('/api/health-check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                    },
+                    body: JSON.stringify({domain})
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    resultEl.innerHTML = `<div class="alert alert-warning py-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>${data.error || 'Scan failed'}</div>`;
+                    return;
+                }
+                const gradeColor = {'A+':'#22c55e','A':'#22c55e','B':'#84cc16','C':'#f59e0b','D':'#f97316','F':'#ef4444'}[data.grade] || '#94a3b8';
+                const scoreColor = data.score >= 80 ? '#22c55e' : data.score >= 60 ? '#f59e0b' : '#ef4444';
+                const ssl = data.ssl || {}, dns = data.dns || {}, headers = data.headers || {}, findings = data.findings_count || {};
+                const issueCount = (findings.critical||0) + (findings.high||0) + (findings.medium||0);
+                const daysMsg = ssl.days_remaining != null ? ` (${ssl.days_remaining}d left)` : '';
+                const missingHdrs = headers.missing || [];
+                resultEl.innerHTML = `
+                    <div class="row g-3 align-items-start mt-1">
+                        <div class="col-auto text-center" style="min-width:72px;">
+                            <div style="font-size:2rem;font-weight:800;color:${scoreColor};line-height:1;">${data.score}</div>
+                            <div style="font-size:0.7rem;color:#94a3b8;">/ 100</div>
+                            <div style="font-size:0.8rem;font-weight:700;color:${gradeColor};margin-top:2px;">${data.grade}</div>
+                        </div>
+                        <div class="col">
+                            <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px;">
+                                <div style="width:${data.score}%;height:100%;background:${scoreColor};border-radius:6px;"></div>
+                            </div>
+                            <div class="row g-2" style="font-size:0.83rem;">
+                                <div class="col-6 col-md-3">
+                                    <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                        <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-lock me-1"></i>SSL</div>
+                                        <div>${ssl.valid ? '✅ Valid'+daysMsg : '❌ Invalid'}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                        <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-envelope-check me-1"></i>SPF</div>
+                                        <div>${dns.has_spf ? '✅ Set' : '❌ Missing'}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                        <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-shield-check me-1"></i>DMARC</div>
+                                        <div>${dns.has_dmarc ? '✅ Set' : '⚠️ Missing'}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                        <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-shield me-1"></i>Headers</div>
+                                        <div>${missingHdrs.length ? '⚠️ '+missingHdrs.length+' missing' : '✅ All set'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${issueCount > 0 ? `<div class="mt-2" style="font-size:0.8rem;color:#94a3b8;">${issueCount} issue${issueCount!==1?'s':''} found &mdash; <a href="/attack-surface" style="color:var(--primary-color);">add to monitoring →</a></div>` : `<div class="mt-2" style="font-size:0.8rem;color:#22c55e;">No critical issues found</div>`}
+                        </div>
+                    </div>`;
+            } catch(e) {
+                resultEl.innerHTML = `<div class="alert alert-warning py-2 mb-0"><i class="bi bi-x-circle me-1"></i>Scan failed. Please try again.</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-heart-pulse me-1"></i>Check Health';
+            }
+        }
+    </script>
+
     <!-- Scroll animation observer -->
     <script>
         const fadeObserver = new IntersectionObserver((entries) => {

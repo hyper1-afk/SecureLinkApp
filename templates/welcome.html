@@ -442,7 +442,9 @@
         .fade-up.visible { opacity: 1; transform: translateY(0); }
 
         /* ===== Public Tool Widget ===== */
-        .tool-widget-section { padding: 80px 24px 40px; max-width: 860px; margin: 0 auto; }
+        .tool-widget-section { padding: 80px 24px 40px; max-width: 960px; margin: 0 auto; }
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        @media (max-width: 700px) { .tool-grid { grid-template-columns: 1fr; } }
         .tool-widget-header { text-align: center; margin-bottom: 40px; }
         .tool-widget-header h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 10px; }
         .tool-widget-header p { font-size: 1rem; color: var(--text-secondary); margin: 0; }
@@ -566,23 +568,43 @@
         <div class="tool-widget-header">
             <div class="section-label"><i class="bi bi-shield-check"></i> Try It Free &mdash; No Account Needed</div>
             <h2>See SecureLink in Action</h2>
-            <p>Scan a link for threats or check an email for data breaches right now.</p>
+            <p>Scan a link for threats or run a free domain health check &mdash; no account needed.</p>
         </div>
 
-        <!-- Link Scanner -->
-        <div class="tool-card">
-            <div class="tool-input-row">
-                <input type="url" id="linkInput" class="tool-input"
-                    placeholder="https://example.com/suspicious-link" autocomplete="off">
-                <button class="tool-btn" id="linkBtn" onclick="runLinkScan()">
-                    <i class="bi bi-search"></i> Scan
-                </button>
+        <div class="tool-grid">
+            <!-- Link Scanner -->
+            <div class="tool-card">
+                <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:var(--text-primary);"><i class="bi bi-search me-2" style="color:var(--primary);"></i>Link Scanner</h3>
+                <div class="tool-input-row">
+                    <input type="url" id="linkInput" class="tool-input"
+                        placeholder="https://example.com/suspicious-link" autocomplete="off">
+                    <button class="tool-btn" id="linkBtn" onclick="runLinkScan()">
+                        <i class="bi bi-search"></i> Scan
+                    </button>
+                </div>
+                <div class="quota-bar">
+                    <div class="quota-dot" id="linkQuotaDot"></div>
+                    <span id="linkQuotaText">15 free scans per day &mdash; no account needed</span>
+                </div>
+                <div class="tool-result" id="linkResult"></div>
             </div>
-            <div class="quota-bar">
-                <div class="quota-dot" id="linkQuotaDot"></div>
-                <span id="linkQuotaText">15 free scans per day &mdash; no account needed</span>
+
+            <!-- Domain Health Check -->
+            <div class="tool-card">
+                <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:var(--text-primary);"><i class="bi bi-heart-pulse me-2" style="color:var(--accent);"></i>Domain Health Check</h3>
+                <div class="tool-input-row">
+                    <input type="text" id="domainInput" class="tool-input"
+                        placeholder="example.com" autocomplete="off">
+                    <button class="tool-btn" id="domainBtn" onclick="runDomainCheck()">
+                        <i class="bi bi-heart-pulse"></i> Check
+                    </button>
+                </div>
+                <div class="quota-bar">
+                    <div class="quota-dot" id="domainQuotaDot"></div>
+                    <span id="domainQuotaText">3 free checks per day &mdash; no account needed</span>
+                </div>
+                <div class="tool-result" id="domainResult"></div>
             </div>
-            <div class="tool-result" id="linkResult"></div>
         </div>
     </div>
     <!-- ===== End Public Tool Widget ===== -->
@@ -935,6 +957,116 @@
 
         // Load link quota on page load
         fetchLinkQuota();
+
+        // ===== Domain Health Check =====
+        async function fetchHealthQuota() {
+            try {
+                const r = await fetch('/api/health-check-quota');
+                const d = await r.json();
+                const dot = document.getElementById('domainQuotaDot');
+                const txt = document.getElementById('domainQuotaText');
+                if (d.remaining === 0) {
+                    dot.className = 'quota-dot empty';
+                    txt.textContent = 'Daily limit reached — sign up free for more checks';
+                    document.getElementById('domainBtn').disabled = true;
+                } else {
+                    dot.className = d.remaining <= 1 ? 'quota-dot warn' : 'quota-dot';
+                    txt.textContent = `${d.remaining} of ${d.limit} free checks remaining today`;
+                }
+            } catch(e) { /* keep default text */ }
+        }
+
+        async function runDomainCheck() {
+            let domain = document.getElementById('domainInput').value.trim();
+            if (!domain) return;
+            domain = domain.replace(/^https?:\/\//i, '').split('/')[0].trim();
+            const btn = document.getElementById('domainBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Scanning...';
+            const resultEl = document.getElementById('domainResult');
+            resultEl.classList.remove('show');
+            resultEl.innerHTML = '';
+            try {
+                const res = await fetch('/api/health-check', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({domain})
+                });
+                const data = await res.json();
+                if (res.status === 429) {
+                    resultEl.innerHTML = `<div class="result-badge badge-threat"><i class="bi bi-exclamation-triangle"></i> Daily limit reached &mdash; <a href="/register" style="color:inherit;font-weight:600;">create a free account</a> for more checks</div>`;
+                    resultEl.classList.add('show');
+                    return;
+                }
+                if (!res.ok || data.error) {
+                    resultEl.innerHTML = `<div class="result-badge badge-medium"><i class="bi bi-x-circle"></i> ${data.error || 'Scan failed'}</div>`;
+                    resultEl.classList.add('show');
+                    return;
+                }
+                const gradeColor = {'A+':'#22c55e','A':'#22c55e','B':'#84cc16','C':'#f59e0b','D':'#f97316','F':'#ef4444'}[data.grade] || '#94a3b8';
+                const scoreColor = data.score >= 80 ? '#22c55e' : data.score >= 60 ? '#f59e0b' : '#ef4444';
+                const ssl = data.ssl || {};
+                const dns = data.dns || {};
+                const headers = data.headers || {};
+                const findings = data.findings_count || {};
+                const issueCount = (findings.critical || 0) + (findings.high || 0) + (findings.medium || 0);
+                const sslIcon = ssl.valid ? '✅' : '❌';
+                const spfIcon = dns.has_spf ? '✅' : '❌';
+                const dmarcIcon = dns.has_dmarc ? '✅' : '⚠️';
+                const missingHdrs = headers.missing || [];
+                const headersIcon = missingHdrs.length > 0 ? '⚠️' : '✅';
+                const daysMsg = ssl.days_remaining != null ? ` (${ssl.days_remaining}d left)` : '';
+                const missingLabel = missingHdrs.length ? `${missingHdrs.length} missing` : 'All present';
+                resultEl.innerHTML = `
+                    <div style="padding:4px 0;">
+                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+                            <div style="text-align:center;min-width:54px;">
+                                <div style="font-size:2.2rem;font-weight:800;color:${scoreColor};line-height:1">${data.score}</div>
+                                <div style="font-size:0.7rem;color:#94a3b8">/ 100</div>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:7px;overflow:hidden;">
+                                    <div style="width:${data.score}%;height:100%;background:${scoreColor};border-radius:6px;"></div>
+                                </div>
+                                <div style="margin-top:5px;font-size:0.85rem;color:#94a3b8">Grade: <strong style="color:${gradeColor}">${data.grade}</strong> &mdash; ${issueCount} issue${issueCount !== 1 ? 's' : ''} found</div>
+                            </div>
+                        </div>
+                        <div style="display:grid;gap:6px;font-size:0.85rem;">
+                            <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                <span style="color:#94a3b8"><i class="bi bi-lock me-1"></i>SSL</span>
+                                <span>${sslIcon} ${ssl.valid ? 'Valid' + daysMsg : 'Invalid or missing'}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                <span style="color:#94a3b8"><i class="bi bi-envelope-check me-1"></i>SPF</span>
+                                <span>${spfIcon} ${dns.has_spf ? 'Configured' : 'Missing — spoofing risk'}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                <span style="color:#94a3b8"><i class="bi bi-shield-check me-1"></i>DMARC</span>
+                                <span>${dmarcIcon} ${dns.has_dmarc ? 'Configured' : 'Missing — phishing risk'}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
+                                <span style="color:#94a3b8"><i class="bi bi-shield me-1"></i>Headers</span>
+                                <span>${headersIcon} ${missingLabel}</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:14px;padding:10px 14px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.18);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                            <span style="font-size:0.82rem;color:#94a3b8">Monitor <strong style="color:#e2e8f0">${data.domain}</strong> 24/7</span>
+                            <a href="/register" style="background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;padding:5px 13px;border-radius:7px;font-size:0.8rem;font-weight:600;text-decoration:none;">Start Free →</a>
+                        </div>
+                    </div>`;
+                resultEl.classList.add('show');
+                fetchHealthQuota();
+            } catch(e) {
+                resultEl.innerHTML = `<div class="result-badge badge-medium"><i class="bi bi-x-circle"></i> Scan failed. Please try again.</div>`;
+                resultEl.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-heart-pulse"></i> Check';
+            }
+        }
+
+        document.getElementById('domainInput').addEventListener('keydown', e => { if (e.key==='Enter') runDomainCheck(); });
+        fetchHealthQuota();
     </script>
     <script src="/static/js/inactivity-timeout.js"></script>
 </body>

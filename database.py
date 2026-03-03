@@ -346,13 +346,24 @@ class ForumComment(Base):
 class ForumVote(Base):
     """Votes on posts and comments"""
     __tablename__ = 'forum_votes'
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, nullable=False, index=True)
     post_id = Column(Integer, nullable=True, index=True)  # Either post_id or comment_id
     comment_id = Column(Integer, nullable=True, index=True)
     vote = Column(Integer, nullable=False)  # 1 = upvote, -1 = downvote
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AnonQuota(Base):
+    """Per-browser daily quota tracking for anonymous public tools."""
+    __tablename__ = 'anon_quotas'
+
+    id        = Column(Integer, primary_key=True, autoincrement=True)
+    anon_id   = Column(String(36), nullable=False, index=True)  # sl_anon_id cookie value
+    action    = Column(String(8),  nullable=False)              # 'lnk', 'hc', 'bc'
+    scan_date = Column(String(10), nullable=False)              # YYYY-MM-DD
+    count     = Column(Integer,    nullable=False, default=0)
 
 
 class Database:
@@ -369,6 +380,7 @@ class Database:
         safe_create_tables(Base.metadata, self.engine)
         self._migrate_database()
         self.Session = sessionmaker(bind=self.engine)
+        self._cleanup_old_quotas()
     
     def _migrate_database(self):
         """Add new columns if they don't exist (simple migration)"""
@@ -395,7 +407,62 @@ class Database:
     
     def get_session(self):
         return self.Session()
-    
+
+    # ── Anonymous quota (DB-backed, persists across restarts) ──────────────
+
+    def _cleanup_old_quotas(self):
+        """Delete quota rows from previous days — called once at startup."""
+        from datetime import date
+        today = date.today().isoformat()
+        session = self.Session()
+        try:
+            session.query(AnonQuota).filter(AnonQuota.scan_date < today).delete()
+            session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+
+    def get_anon_quota_remaining(self, anon_id: str, action: str, limit: int) -> int:
+        """Return how many uses remain for this browser today."""
+        from datetime import date
+        today = date.today().isoformat()
+        session = self.Session()
+        try:
+            row = session.query(AnonQuota).filter_by(
+                anon_id=anon_id, action=action, scan_date=today
+            ).first()
+            used = row.count if row else 0
+            return max(0, limit - used)
+        finally:
+            session.close()
+
+    def check_and_increment_anon_quota(self, anon_id: str, action: str, limit: int) -> bool:
+        """Atomically check quota and increment if under limit. Returns True if allowed."""
+        from datetime import date
+        today = date.today().isoformat()
+        session = self.Session()
+        try:
+            row = session.query(AnonQuota).filter_by(
+                anon_id=anon_id, action=action, scan_date=today
+            ).first()
+            if row:
+                if row.count >= limit:
+                    return False
+                row.count += 1
+            else:
+                row = AnonQuota(anon_id=anon_id, action=action, scan_date=today, count=1)
+                session.add(row)
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    # ───────────────────────────────────────────────────────────────────────
+
     def save_verification(self, result, source: str = 'manual', 
                          email_subject: str = None, email_from: str = None,
                          email_account: str = None, user_id: int = None):
