@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
-    <title>SecureLink - Cybersecurity Platform | Link Scanning & Attack Surface Monitoring</title>
-    <meta name="description" content="SecureLink protects you from malicious links, phishing attacks, and monitors your attack surface. AI-powered threat detection for individuals and businesses.">
+    <title>SecureLink - Domain Security Platform | Health Check & Attack Surface Monitoring</title>
+    <meta name="description" content="SecureLink checks your domain's security health — SSL, SPF, DMARC, security headers — and monitors your attack surface. Free domain health check, no account needed.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -232,7 +232,9 @@
             letter-spacing: 0.06em; padding: 3px 10px; border-radius: 6px; margin-left: 8px;
             vertical-align: middle;
         }
-        .badge-new { background: rgba(16,185,129,0.15); color: var(--success); }
+        .badge-free { background: rgba(16,185,129,0.15); color: var(--success); }
+        .badge-pro { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .badge-new { background: rgba(14,165,233,0.15); color: var(--primary); }
         .badge-enterprise { background: rgba(139,92,246,0.15); color: var(--accent); }
 
         /* ===== Attack Surface Showcase ===== */
@@ -442,9 +444,7 @@
         .fade-up.visible { opacity: 1; transform: translateY(0); }
 
         /* ===== Public Tool Widget ===== */
-        .tool-widget-section { padding: 80px 24px 40px; max-width: 960px; margin: 0 auto; }
-        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-        @media (max-width: 700px) { .tool-grid { grid-template-columns: 1fr; } }
+        .tool-widget-section { padding: 80px 24px 40px; max-width: 620px; margin: 0 auto; }
         .tool-widget-header { text-align: center; margin-bottom: 40px; }
         .tool-widget-header h2 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); margin-bottom: 10px; }
         .tool-widget-header p { font-size: 1rem; color: var(--text-secondary); margin: 0; }
@@ -520,8 +520,8 @@
             <i class="bi bi-circle-fill" style="color: var(--success); font-size: 6px;"></i>
             Now with Attack Surface Monitoring
         </div>
-        <h1>Cybersecurity Made<br><span class="gradient">Simple & Powerful</span></h1>
-        <p>Scan links for threats, monitor your attack surface, and protect your digital presence with AI-powered analysis trusted by security professionals.</p>
+        <h1>Domain Security Made<br><span class="gradient">Simple & Powerful</span></h1>
+        <p>Check your domain's security health, monitor your attack surface, and protect your online presence with AI-powered analysis trusted by security professionals.</p>
         <div class="hero-actions">
             <a href="/login?tab=register" class="btn-hero btn-hero-primary">
                 <i class="bi bi-rocket-takeoff-fill"></i> Start Free Account
@@ -568,27 +568,10 @@
         <div class="tool-widget-header">
             <div class="section-label"><i class="bi bi-shield-check"></i> Try It Free &mdash; No Account Needed</div>
             <h2>See SecureLink in Action</h2>
-            <p>Scan a link for threats or run a free domain health check &mdash; no account needed.</p>
+            <p>Check any domain's security health &mdash; SSL, SPF, DMARC, security headers &mdash; no account needed.</p>
         </div>
 
-        <div class="tool-grid">
-            <!-- Link Scanner -->
-            <div class="tool-card">
-                <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:var(--text-primary);"><i class="bi bi-search me-2" style="color:var(--primary);"></i>Link Scanner</h3>
-                <div class="tool-input-row">
-                    <input type="url" id="linkInput" class="tool-input"
-                        placeholder="https://example.com/suspicious-link" autocomplete="off">
-                    <button class="tool-btn" id="linkBtn" onclick="runLinkScan()">
-                        <i class="bi bi-search"></i> Scan
-                    </button>
-                </div>
-                <div class="quota-bar">
-                    <div class="quota-dot" id="linkQuotaDot"></div>
-                    <span id="linkQuotaText">15 free scans per day &mdash; no account needed</span>
-                </div>
-                <div class="tool-result" id="linkResult"></div>
-            </div>
-
+        <div>
             <!-- Domain Health Check -->
             <div class="tool-card">
                 <h3 style="margin:0 0 16px;font-size:1rem;font-weight:700;color:var(--text-primary);"><i class="bi bi-heart-pulse me-2" style="color:var(--accent);"></i>Domain Health Check</h3>
@@ -618,34 +601,34 @@
         </div>
         <div class="features-grid">
             <div class="feature-card fade-up">
-                <div class="f-icon blue"><i class="bi bi-search"></i></div>
-                <h3>AI Link Scanner</h3>
-                <p>Paste any URL and get an instant threat assessment powered by machine learning and multi-source intelligence.</p>
+                <div class="f-icon blue"><i class="bi bi-heart-pulse"></i></div>
+                <h3>Domain Health Check <span class="feature-badge badge-free">Free</span></h3>
+                <p>Instantly scan any domain for SSL issues, missing security headers, SPF/DMARC config, and get an overall security grade — no account needed.</p>
             </div>
             <div class="feature-card fade-up">
-                <div class="f-icon green"><i class="bi bi-envelope-check-fill"></i></div>
-                <h3>Dark Web Monitoring</h3>
-                <p>Monitor the dark web for leaked credentials and personal data. Get instant alerts when your information appears in breaches.</p>
+                <div class="f-icon green"><i class="bi bi-incognito"></i></div>
+                <h3>Dark Web Monitoring <span class="feature-badge badge-pro">Pro</span></h3>
+                <p>Register your emails and get automatic alerts when your credentials appear in new data breaches or dark web leaks.</p>
             </div>
             <div class="feature-card fade-up">
                 <div class="f-icon purple"><i class="bi bi-radar"></i></div>
                 <h3>Attack Surface Monitoring <span class="feature-badge badge-enterprise">Enterprise</span></h3>
-                <p>Continuous domain monitoring with graded security reports, intrusion detection, DNS/SSL/port analysis, and automated alerts when anything changes.</p>
+                <p>Continuous monitoring of up to 25 of your domains with hourly scans, A–F grading, intrusion detection, and automated change alerts.</p>
             </div>
             <div class="feature-card fade-up">
                 <div class="f-icon orange"><i class="bi bi-puzzle-fill"></i></div>
-                <h3>Browser Extension <span class="feature-badge badge-new">New</span></h3>
-                <p>Lightweight Chrome extension that silently checks every page you visit and blocks threats before they load.</p>
+                <h3>Browser Extension <span class="feature-badge badge-free">Free</span> <span class="feature-badge badge-new">New</span></h3>
+                <p>Lightweight Chrome extension that checks domains as you browse and alerts you to security issues before they become a problem.</p>
             </div>
             <div class="feature-card fade-up">
                 <div class="f-icon red"><i class="bi bi-bell-fill"></i></div>
-                <h3>Real-time Alerts</h3>
-                <p>Get instant desktop and email notifications whenever a threat is detected across any of your connected services.</p>
+                <h3>Real-time Alerts <span class="feature-badge badge-free">Free</span></h3>
+                <p>Get instant desktop and email notifications whenever a threat or security change is detected across your monitored services.</p>
             </div>
             <div class="feature-card fade-up">
                 <div class="f-icon pink"><i class="bi bi-bar-chart-fill"></i></div>
-                <h3>Reports & Analytics</h3>
-                <p>Track your security posture with detailed dashboards, trend charts, exportable reports, and scheduled summaries.</p>
+                <h3>Reports & Analytics <span class="feature-badge badge-pro">Pro</span></h3>
+                <p>Weekly PDF security reports, exportable scan history, detailed dashboards, and daily reports for Enterprise users.</p>
             </div>
         </div>
     </section>
@@ -720,7 +703,7 @@
             <div class="step-card fade-up">
                 <div class="step-num">2</div>
                 <h3>Start Scanning</h3>
-                <p>Paste URLs to scan, install the browser extension, or connect your email accounts for automatic link protection.</p>
+                <p>Run a free domain health check, install the browser extension, or sign up to start monitoring your domains continuously.</p>
             </div>
             <div class="step-card fade-up">
                 <div class="step-num">3</div>
@@ -743,28 +726,28 @@
                 <div class="price">$0</div>
                 <div class="price-desc">Free forever</div>
                 <ul class="price-features">
-                    <li><i class="bi bi-check-circle-fill"></i> 25 scans per day</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Basic threat detection</li>
-                    <li><i class="bi bi-check-circle-fill"></i> 7-day scan history</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Domain health check (3/day)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> SSL, SPF, DMARC &amp; header audit</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Dark web breach lookup</li>
                     <li><i class="bi bi-check-circle-fill"></i> Browser extension</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Desktop notifications</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Dark web monitoring</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Attack Surface Monitoring</li>
+                    <li><i class="bi bi-check-circle-fill"></i> 7-day scan history</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Dark web monitoring &amp; alerts</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Attack surface monitoring</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Get Started</a>
             </div>
             <div class="price-card featured fade-up">
                 <h3>Pro</h3>
                 <div class="price">$14.99 <span>/mo</span></div>
-                <div class="price-desc">For power users &amp; professionals</div>
+                <div class="price-desc">For professionals &amp; small teams</div>
                 <ul class="price-features">
-                    <li><i class="bi bi-check-circle-fill"></i> Unlimited scans</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Advanced threat detection</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Full scan history</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Monitor 3 email accounts</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Unlimited domain health checks</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Full scan &amp; check history</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Dark web monitoring &amp; alerts</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Weekly security reports (PDF)</li>
                     <li><i class="bi bi-check-circle-fill"></i> API access</li>
                     <li><i class="bi bi-check-circle-fill"></i> Export reports</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Attack Surface Monitoring</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Attack surface monitoring</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-primary">Upgrade to Pro</a>
             </div>
@@ -774,11 +757,12 @@
                 <div class="price-desc">For teams &amp; organizations</div>
                 <ul class="price-features">
                     <li><i class="bi bi-check-circle-fill"></i> Everything in Pro</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Attack Surface Monitoring</li>
-                    <li><i class="bi bi-check-circle-fill"></i> 25 domains, hourly scans</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Monitor up to 25 of your domains</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Hourly scans with A–F security grade</li>
                     <li><i class="bi bi-check-circle-fill"></i> Intrusion detection (IDS)</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Unlimited dark web monitoring</li>
-                    <li><i class="bi bi-check-circle-fill"></i> AI remediation advice</li>
+                    <li><i class="bi bi-check-circle-fill"></i> DNS, SSL &amp; port change alerts</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Daily security reports (PDF)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> AI remediation recommendations</li>
                     <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Go Enterprise</a>
@@ -790,7 +774,7 @@
     <section class="final-cta">
         <div class="cta-box fade-up">
             <h2>Ready to Secure Your Digital World?</h2>
-            <p>Join SecureLink today and start scanning links, monitoring your attack surface, and staying ahead of threats.</p>
+            <p>Join SecureLink today and start checking your domain's security, monitoring your attack surface, and staying ahead of threats.</p>
             <a href="/login?tab=register" class="btn-hero btn-hero-primary">
                 <i class="bi bi-shield-lock-fill"></i> Create Free Account
             </a>
@@ -805,7 +789,7 @@
                     <div class="brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
                     <span class="brand-text">SecureLink</span>
                 </a>
-                <p>AI-powered cybersecurity platform for link scanning, email protection, and attack surface monitoring.</p>
+                <p>AI-powered domain security platform — health checks, attack surface monitoring, and breach detection.</p>
             </div>
             <div class="footer-col">
                 <h4>Product</h4>
@@ -879,84 +863,6 @@
         document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
 
         // ===== Public Tool Widget =====
-
-        // --- Link Scanner ---
-        async function fetchLinkQuota() {
-            try {
-                const r = await fetch('/api/scan-status');
-                const d = await r.json();
-                const dot = document.getElementById('linkQuotaDot');
-                const txt = document.getElementById('linkQuotaText');
-                if (d.remaining === 0) {
-                    dot.className = 'quota-dot empty';
-                    txt.textContent = 'Daily limit reached — sign up free for more scans';
-                    document.getElementById('linkBtn').disabled = true;
-                } else {
-                    dot.className = d.remaining <= 3 ? 'quota-dot warn' : 'quota-dot';
-                    txt.textContent = `${d.remaining} of ${d.limit} free scans remaining today`;
-                }
-            } catch(e) { /* keep default text */ }
-        }
-
-        async function runLinkScan() {
-            const url = document.getElementById('linkInput').value.trim();
-            if (!url) return;
-            const btn = document.getElementById('linkBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Scanning...';
-            const resultEl = document.getElementById('linkResult');
-            resultEl.classList.remove('show');
-            resultEl.innerHTML = '';
-            try {
-                const r = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-                const d = await r.json();
-                if (r.status === 429) {
-                    resultEl.innerHTML = `
-                        <div class="result-badge badge-info"><i class="bi bi-info-circle-fill"></i> Limit Reached</div>
-                        <p style="font-size:.9rem;color:var(--text-secondary);margin:0 0 14px;">You've used all 15 free scans for today.</p>
-                        <div class="tool-cta-strip">
-                            <p><strong style="color:var(--text-primary)">Sign up free</strong> for unlimited scans + full history</p>
-                            <a href="/login?tab=register">Create Free Account</a>
-                        </div>`;
-                    resultEl.classList.add('show');
-                    fetchLinkQuota();
-                    return;
-                }
-                const safe = d.is_safe;
-                const risk = (d.risk_level || 'unknown').toUpperCase();
-                const issues = [...(d.threats_detected || []), ...(d.warnings || [])].slice(0, 4);
-                let badgeClass, badgeIcon, badgeText;
-                if (safe) { badgeClass='badge-safe'; badgeIcon='bi-shield-check-fill'; badgeText='Safe'; }
-                else if (risk==='LOW') { badgeClass='badge-warn'; badgeIcon='bi-exclamation-triangle-fill'; badgeText='Low Risk'; }
-                else { badgeClass='badge-danger'; badgeIcon='bi-shield-x-fill'; badgeText=`Threat Detected — ${risk}`; }
-                const threatHTML = issues.length
-                    ? `<div class="result-threats">${issues.map(t=>`<span class="threat-tag">${t}</span>`).join('')}</div>` : '';
-                resultEl.innerHTML = `
-                    <div class="result-badge ${badgeClass}"><i class="bi ${badgeIcon}"></i> ${badgeText}</div>
-                    ${safe ? '<p style="font-size:.85rem;color:var(--text-muted);margin:0;">No threats detected. This link appears safe.</p>' : ''}
-                    ${threatHTML}
-                    ${!safe ? `<div class="tool-cta-strip" style="margin-top:16px;">
-                        <p>Sign up free to save results and monitor links over time</p>
-                        <a href="/login?tab=register">Get Started Free</a>
-                    </div>` : ''}`;
-                resultEl.classList.add('show');
-                fetchLinkQuota();
-            } catch(e) {
-                resultEl.innerHTML = `<p style="color:#ef4444;font-size:.9rem;">Error reaching scanner. Please try again.</p>`;
-                resultEl.classList.add('show');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-search"></i> Scan';
-            }
-        }
-        document.getElementById('linkInput').addEventListener('keydown', e => { if (e.key==='Enter') runLinkScan(); });
-
-        // Load link quota on page load
-        fetchLinkQuota();
 
         // ===== Domain Health Check =====
         async function fetchHealthQuota() {
@@ -1034,19 +940,19 @@
                         <div style="display:grid;gap:6px;font-size:0.85rem;">
                             <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                 <span style="color:#94a3b8"><i class="bi bi-lock me-1"></i>SSL</span>
-                                <span>${sslIcon} ${ssl.valid ? 'Valid' + daysMsg : 'Invalid or missing'}</span>
+                                <span style="color:#f1f5f9;">${sslIcon} ${ssl.valid ? 'Valid' + daysMsg : 'Invalid or missing'}</span>
                             </div>
                             <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                 <span style="color:#94a3b8"><i class="bi bi-envelope-check me-1"></i>SPF</span>
-                                <span>${spfIcon} ${dns.has_spf ? 'Configured' : 'Missing — spoofing risk'}</span>
+                                <span style="color:#f1f5f9;">${spfIcon} ${dns.has_spf ? 'Configured' : 'Missing — spoofing risk'}</span>
                             </div>
                             <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                 <span style="color:#94a3b8"><i class="bi bi-shield-check me-1"></i>DMARC</span>
-                                <span>${dmarcIcon} ${dns.has_dmarc ? 'Configured' : 'Missing — phishing risk'}</span>
+                                <span style="color:#f1f5f9;">${dmarcIcon} ${dns.has_dmarc ? 'Configured' : 'Missing — phishing risk'}</span>
                             </div>
                             <div style="display:flex;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                 <span style="color:#94a3b8"><i class="bi bi-shield me-1"></i>Headers</span>
-                                <span>${headersIcon} ${missingLabel}</span>
+                                <span style="color:#f1f5f9;">${headersIcon} ${missingLabel}</span>
                             </div>
                         </div>
                         <div style="margin-top:14px;padding:10px 14px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.18);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">

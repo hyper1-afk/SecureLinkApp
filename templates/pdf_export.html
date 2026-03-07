@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Health Check PDF Export - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --accent-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.12);
+        }
+        * { font-family: 'Inter', -apple-system, sans-serif; }
+        body { background: var(--bg-dark); min-height: 100vh; color: var(--text-primary); }
+
+        .page-hero {
+            text-align: center;
+            padding: 5rem 1rem 3rem;
+        }
+        .hero-icon {
+            width: 80px; height: 80px; border-radius: 20px;
+            background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(14,165,233,0.1));
+            color: #0ea5e9; font-size: 2.5rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .page-hero h1 { font-weight: 800; font-size: 2.2rem; margin-bottom: 0.75rem; }
+        .page-hero p { color: var(--text-secondary); font-size: 1.1rem; max-width: 540px; margin: 0 auto; }
+
+        .export-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 580px;
+            margin: 0 auto 2rem;
+        }
+        .export-card label { font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .export-card .form-control {
+            background: rgba(15,23,42,0.8); border: 1px solid var(--border-color);
+            color: var(--text-primary); border-radius: 10px; padding: 0.75rem 1rem;
+        }
+        .export-card .form-control:focus {
+            background: rgba(15,23,42,0.9); border-color: var(--primary-color);
+            color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+        }
+        .btn-export {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            border: none; color: #fff; font-weight: 600; border-radius: 10px;
+            padding: 0.75rem 2rem; font-size: 1rem; width: 100%; margin-top: 1rem;
+            transition: all 0.2s;
+        }
+        .btn-export:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(14,165,233,0.3); color: #fff; }
+        .btn-export:disabled { opacity: 0.6; transform: none; }
+
+        .badge-pro {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(245,158,11,0.15); color: #f59e0b;
+            font-size: 0.8rem; font-weight: 600; padding: 5px 12px; border-radius: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-list {
+            list-style: none; padding: 0; margin: 1.5rem 0 0;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+        }
+        .feature-list li {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--text-secondary); font-size: 0.9rem;
+        }
+        .feature-list li i { color: var(--primary-color); flex-shrink: 0; }
+
+        .upgrade-banner {
+            background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 16px; padding: 1.5rem; text-align: center;
+            max-width: 580px; margin: 0 auto 2rem; display: none;
+        }
+        .upgrade-banner h4 { font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem; }
+        .upgrade-banner p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.95rem; }
+
+        #statusMsg { margin-top: 1rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand" id="brandLink">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/pricing" class="sl-nav-link">Pricing</a>
+                <a href="/login" class="sl-nav-cta" id="authLink">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-hero">
+            <div class="hero-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+            <span class="badge-pro"><i class="bi bi-star-fill"></i> Pro Feature</span>
+            <h1>Health Check PDF Export</h1>
+            <p>Generate a branded PDF report for any domain — perfect for sharing with clients or keeping records.</p>
+        </div>
+
+        <div class="export-card" id="exportCard">
+            <label for="domainInput">Domain to scan &amp; export</label>
+            <input type="text" id="domainInput" class="form-control" placeholder="example.com"
+                   onkeydown="if(event.key==='Enter') generatePDF()">
+            <button class="btn btn-export" onclick="generatePDF()">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF Report
+            </button>
+            <div id="statusMsg"></div>
+
+            <ul class="feature-list">
+                <li><i class="bi bi-check-circle-fill"></i> Score &amp; A–F grade</li>
+                <li><i class="bi bi-check-circle-fill"></i> SSL certificate status</li>
+                <li><i class="bi bi-check-circle-fill"></i> SPF &amp; DMARC audit</li>
+                <li><i class="bi bi-check-circle-fill"></i> Security headers check</li>
+                <li><i class="bi bi-check-circle-fill"></i> Critical / high findings</li>
+                <li><i class="bi bi-check-circle-fill"></i> Shareable &amp; printable</li>
+            </ul>
+        </div>
+
+        <div class="upgrade-banner" id="upgradeBanner">
+            <h4><i class="bi bi-star-fill me-2"></i>Pro Plan Required</h4>
+            <p>PDF export is available on the Pro and Enterprise plans. Upgrade to unlock unlimited exports, domain watching, dark web monitoring, and more.</p>
+            <a href="/pricing" class="btn btn-warning fw-semibold">View Pricing &rarr;</a>
+        </div>
+    </div>
+
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom:4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>Domain security platform.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/domain-alerts">Score Alerts</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (async function() {
+            const token = localStorage.getItem('auth_token');
+            const authLink = document.getElementById('authLink');
+            const brandLink = document.getElementById('brandLink');
+            if (!token) {
+                document.getElementById('exportCard').style.display = 'none';
+                document.getElementById('upgradeBanner').style.display = 'block';
+                document.getElementById('upgradeBanner').querySelector('h4').textContent = 'Sign in to export PDF reports';
+                document.getElementById('upgradeBanner').querySelector('p').textContent = 'Create a free account to get started, then upgrade to Pro for PDF exports.';
+                document.getElementById('upgradeBanner').querySelector('a').href = '/login';
+                document.getElementById('upgradeBanner').querySelector('a').textContent = 'Sign In →';
+                return;
+            }
+            try {
+                const res = await fetch('/api/auth/validate', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (!data.valid) { localStorage.removeItem('auth_token'); return; }
+                if (authLink) { authLink.href = '/profile'; authLink.textContent = 'Profile'; }
+                if (brandLink) brandLink.href = '/home';
+                if (!['pro','enterprise'].includes(data.user?.subscription_tier)) {
+                    document.getElementById('exportCard').style.opacity = '0.5';
+                    document.getElementById('exportCard').style.pointerEvents = 'none';
+                    document.getElementById('upgradeBanner').style.display = 'block';
+                }
+            } catch(e) {}
+        })();
+
+        async function generatePDF() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) { window.location.href = '/login'; return; }
+            let domain = document.getElementById('domainInput').value.trim();
+            if (!domain) { setStatus('warning', 'Please enter a domain name.'); return; }
+            domain = domain.replace(/^https?:\/\//i, '').split('/')[0].trim();
+
+            const btn = document.querySelector('.btn-export');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning & generating…';
+            setStatus('', '');
+
+            try {
+                const res = await fetch('/api/reports/health-check-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ domain })
+                });
+                if (res.status === 403) {
+                    document.getElementById('upgradeBanner').style.display = 'block';
+                    setStatus('danger', 'PDF export requires a Pro plan.');
+                } else if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `securelink-health-${domain}.pdf`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    setStatus('success', `<i class="bi bi-check-circle me-1"></i>PDF downloaded for <strong>${domain}</strong>`);
+                } else {
+                    setStatus('danger', 'Failed to generate PDF. Please try again.');
+                }
+            } catch(e) {
+                setStatus('danger', 'Failed to generate PDF. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function setStatus(type, msg) {
+            const el = document.getElementById('statusMsg');
+            if (!msg) { el.innerHTML = ''; return; }
+            const colors = { success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
+            el.innerHTML = `<span style="color:${colors[type]||'#94a3b8'}">${msg}</span>`;
+        }
+    </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
+</body>
+</html>

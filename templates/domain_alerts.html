@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Domain Score Drop Alerts - SecureLink</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --accent-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.12);
+        }
+        * { font-family: 'Inter', -apple-system, sans-serif; }
+        body { background: var(--bg-dark); min-height: 100vh; color: var(--text-primary); }
+
+        .page-hero {
+            text-align: center;
+            padding: 5rem 1rem 3rem;
+        }
+        .hero-icon {
+            width: 80px; height: 80px; border-radius: 20px;
+            background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.1));
+            color: #f59e0b; font-size: 2.5rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .page-hero h1 { font-weight: 800; font-size: 2.2rem; margin-bottom: 0.75rem; }
+        .page-hero p { color: var(--text-secondary); font-size: 1.1rem; max-width: 540px; margin: 0 auto; }
+
+        .badge-pro {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(245,158,11,0.15); color: #f59e0b;
+            font-size: 0.8rem; font-weight: 600; padding: 5px 12px; border-radius: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .watch-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 620px;
+            margin: 0 auto 2rem;
+        }
+        .watch-card label { font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block; }
+        .watch-card .form-control {
+            background: rgba(15,23,42,0.8); border: 1px solid var(--border-color);
+            color: var(--text-primary); border-radius: 10px; padding: 0.75rem 1rem;
+        }
+        .watch-card .form-control:focus {
+            background: rgba(15,23,42,0.9); border-color: var(--primary-color);
+            color: var(--text-primary); box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: none; color: #000; font-weight: 700; border-radius: 10px;
+            padding: 0.75rem 1.5rem; white-space: nowrap;
+        }
+        .btn-add:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,158,11,0.3); color: #000; }
+
+        .section-title {
+            font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin: 1.75rem 0 1rem;
+        }
+
+        .watch-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.9rem 1rem;
+            background: rgba(15,23,42,0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 0.6rem;
+        }
+        .watch-item .domain-name { font-weight: 600; font-size: 0.95rem; }
+        .watch-item .last-score {
+            font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;
+        }
+        .btn-remove {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #ef4444; border-radius: 8px; padding: 4px 10px; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-remove:hover { background: rgba(239,68,68,0.2); }
+
+        .empty-state {
+            text-align: center; padding: 2rem;
+            color: var(--text-secondary); font-size: 0.95rem;
+        }
+        .empty-state i { font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
+
+        .upgrade-banner {
+            background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 16px; padding: 1.5rem; text-align: center;
+            max-width: 620px; margin: 0 auto 2rem; display: none;
+        }
+        .upgrade-banner h4 { font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem; }
+        .upgrade-banner p { color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.95rem; }
+
+        #statusMsg { margin-top: 0.75rem; font-size: 0.88rem; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/home" class="sl-brand" id="brandLink">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/home" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/pricing" class="sl-nav-link">Pricing</a>
+                <a href="/login" class="sl-nav-cta" id="authLink">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-hero">
+            <div class="hero-icon"><i class="bi bi-bell-fill"></i></div>
+            <span class="badge-pro"><i class="bi bi-star-fill"></i> Pro Feature</span>
+            <h1>Domain Score Drop Alerts</h1>
+            <p>Watch up to 10 domains and receive an email alert whenever the security score drops by 10+ points.</p>
+        </div>
+
+        <div class="watch-card" id="watchCard">
+            <label for="domainInput">Add a domain to watch</label>
+            <div class="d-flex gap-2">
+                <input type="text" id="domainInput" class="form-control" placeholder="example.com"
+                       onkeydown="if(event.key==='Enter') addWatch()">
+                <button class="btn btn-add" onclick="addWatch()">
+                    <i class="bi bi-bell-plus me-1"></i>Watch
+                </button>
+            </div>
+            <div id="statusMsg"></div>
+
+            <div class="section-title">Watched Domains</div>
+            <div id="watchList"><div class="empty-state"><i class="bi bi-bell-slash"></i>Loading…</div></div>
+        </div>
+
+        <div class="upgrade-banner" id="upgradeBanner">
+            <h4><i class="bi bi-star-fill me-2"></i>Pro Plan Required</h4>
+            <p>Domain score alerts are available on the Pro and Enterprise plans. Upgrade to monitor up to 10 domains and receive automatic email notifications.</p>
+            <a href="/pricing" class="btn btn-warning fw-semibold">View Pricing &rarr;</a>
+        </div>
+    </div>
+
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom:4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>Domain security platform.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/pdf-export">PDF Export</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let _token = null;
+        let _isPro = false;
+
+        (async function init() {
+            _token = localStorage.getItem('auth_token');
+            const authLink = document.getElementById('authLink');
+            const brandLink = document.getElementById('brandLink');
+
+            if (!_token) {
+                document.getElementById('watchCard').style.display = 'none';
+                showUpgrade('Sign in to use Domain Alerts', 'Create a free account, then upgrade to Pro to start watching domains.', '/login', 'Sign In →');
+                return;
+            }
+            try {
+                const res = await fetch('/api/auth/validate', { headers: { 'Authorization': `Bearer ${_token}` } });
+                const data = await res.json();
+                if (!data.valid) { localStorage.removeItem('auth_token'); return; }
+                if (authLink) { authLink.href = '/profile'; authLink.textContent = 'Profile'; }
+                if (brandLink) brandLink.href = '/home';
+                _isPro = ['pro','enterprise'].includes(data.user?.subscription_tier);
+                if (!_isPro) {
+                    document.getElementById('watchCard').style.opacity = '0.5';
+                    document.getElementById('watchCard').style.pointerEvents = 'none';
+                    document.getElementById('upgradeBanner').style.display = 'block';
+                } else {
+                    loadWatches();
+                }
+            } catch(e) {}
+        })();
+
+        function showUpgrade(title, text, href, btnText) {
+            const b = document.getElementById('upgradeBanner');
+            b.querySelector('h4').innerHTML = `<i class="bi bi-star-fill me-2"></i>${title}`;
+            b.querySelector('p').textContent = text;
+            b.querySelector('a').href = href;
+            b.querySelector('a').textContent = btnText;
+            b.style.display = 'block';
+        }
+
+        async function loadWatches() {
+            try {
+                const res = await fetch('/api/health-check/watches', { headers: { 'Authorization': `Bearer ${_token}` } });
+                if (!res.ok) { renderWatches([]); return; }
+                const data = await res.json();
+                renderWatches(data.watches || []);
+            } catch(e) { renderWatches([]); }
+        }
+
+        function renderWatches(watches) {
+            const list = document.getElementById('watchList');
+            if (!watches.length) {
+                list.innerHTML = '<div class="empty-state"><i class="bi bi-bell-slash"></i>No domains being watched yet. Add one above.</div>';
+                return;
+            }
+            list.innerHTML = watches.map(w => {
+                const scoreText = w.last_score != null
+                    ? `Last score: <strong>${w.last_score}</strong>`
+                    : 'Not yet scanned';
+                return `<div class="watch-item" id="wi_${w.domain.replace(/\./g,'_')}">
+                    <div>
+                        <div class="domain-name">${w.domain}</div>
+                        <div class="last-score">${scoreText}</div>
+                    </div>
+                    <button class="btn-remove" onclick="removeWatch('${w.domain}')">
+                        <i class="bi bi-bell-slash me-1"></i>Remove
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function addWatch() {
+            if (!_token) { window.location.href = '/login'; return; }
+            let domain = document.getElementById('domainInput').value.trim();
+            if (!domain) { setStatus('warning', 'Please enter a domain.'); return; }
+            domain = domain.replace(/^https?:\/\//i, '').split('/')[0].trim();
+
+            setStatus('', '');
+            try {
+                const res = await fetch('/api/health-check/watch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+                    body: JSON.stringify({ domain })
+                });
+                if (res.status === 403) {
+                    document.getElementById('upgradeBanner').style.display = 'block';
+                    setStatus('danger', 'Requires a Pro plan.');
+                } else if (res.status === 429) {
+                    setStatus('warning', 'You have reached the 10-domain watch limit.');
+                } else if (res.ok) {
+                    document.getElementById('domainInput').value = '';
+                    setStatus('success', `<i class="bi bi-check-circle me-1"></i>Now watching <strong>${domain}</strong>`);
+                    loadWatches();
+                } else {
+                    setStatus('danger', 'Failed to add watch. Please try again.');
+                }
+            } catch(e) { setStatus('danger', 'Failed to add watch. Please try again.'); }
+        }
+
+        async function removeWatch(domain) {
+            try {
+                const res = await fetch(`/api/health-check/watch/${encodeURIComponent(domain)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${_token}` }
+                });
+                if (res.ok) {
+                    const el = document.getElementById('wi_' + domain.replace(/\./g,'_'));
+                    if (el) el.remove();
+                    const list = document.getElementById('watchList');
+                    if (!list.querySelector('.watch-item')) {
+                        list.innerHTML = '<div class="empty-state"><i class="bi bi-bell-slash"></i>No domains being watched yet. Add one above.</div>';
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function setStatus(type, msg) {
+            const el = document.getElementById('statusMsg');
+            if (!msg) { el.innerHTML = ''; return; }
+            const colors = { success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
+            el.innerHTML = `<span style="color:${colors[type]||'#94a3b8'}">${msg}</span>`;
+        }
+    </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
+</body>
+</html>

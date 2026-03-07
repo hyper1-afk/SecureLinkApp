@@ -181,6 +181,29 @@
         .back-link:hover {
             color: var(--primary-color);
         }
+
+        .tier-header {
+            margin: 2.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .tier-header h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0;
+            white-space: nowrap;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .tier-divider {
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+        .tier-header.tier-free h2  { color: #10b981; }
+        .tier-header.tier-pro h2   { color: #f59e0b; }
+        .tier-header.tier-ent h2   { color: #8b5cf6; }
     </style>
 </head>
 <body>
@@ -212,7 +235,24 @@
             <p>Explore all the security tools SecureLink has to offer</p>
         </div>
         
+        <!-- FREE TIER -->
+        <div class="tier-header tier-free">
+            <h2><i class="bi bi-check-circle me-2"></i>Free</h2>
+            <div class="tier-divider"></div>
+        </div>
         <div class="feature-grid">
+            <!-- Domain Health Check -->
+            <a href="/home" class="feature-card">
+                <div class="feature-icon icon-shortener">
+                    <i class="bi bi-heart-pulse"></i>
+                </div>
+                <h3>Domain Health Check</h3>
+                <p>Instantly scan any domain for SSL issues, missing security headers, SPF/DMARC config, open ports, and get an overall A–F security grade. No account needed.</p>
+                <span class="feature-badge badge-free">
+                    <i class="bi bi-check-circle"></i> Free
+                </span>
+            </a>
+
             <!-- Community Reports -->
             <a href="/community" class="feature-card">
                 <div class="feature-icon icon-community">
@@ -224,7 +264,7 @@
                     <i class="bi bi-check-circle"></i> Free
                 </span>
             </a>
-            
+
             <!-- Security News -->
             <a href="/security-news" class="feature-card">
                 <div class="feature-icon icon-map">
@@ -236,32 +276,51 @@
                     <i class="bi bi-check-circle"></i> Free
                 </span>
             </a>
-            
-            <!-- Breach Checker -->
+
+            <!-- Breach Lookup -->
             <a href="/breach-checker" class="feature-card">
                 <div class="feature-icon icon-breach">
                     <i class="bi bi-shield-exclamation"></i>
                 </div>
-                <h3>Password Breach Checker</h3>
-                <p>Check if your passwords or email addresses have been exposed in known data breaches using HaveIBeenPwned's database.</p>
-                <span class="feature-badge badge-pro">
-                    <i class="bi bi-star-fill"></i> Pro
+                <h3>Breach Lookup</h3>
+                <p>Check if your email address has been exposed in known data breaches using HaveIBeenPwned's database. One-time, on-demand check.</p>
+                <span class="feature-badge badge-free">
+                    <i class="bi bi-check-circle"></i> Free
                 </span>
             </a>
-            
+
+            <!-- Browser Extension -->
+            <a href="/extension" class="feature-card">
+                <div class="feature-icon icon-extension">
+                    <i class="bi bi-puzzle"></i>
+                </div>
+                <h3>Browser Extension</h3>
+                <p>Install our Chrome extension to check domains as you browse and get instant security alerts. Pending Chrome Web Store review.</p>
+                <span class="feature-badge badge-free">
+                    <i class="bi bi-check-circle"></i> Free
+                </span>
+            </a>
+        </div>
+
+        <!-- PRO TIER -->
+        <div class="tier-header tier-pro">
+            <h2><i class="bi bi-star-fill me-2"></i>Pro</h2>
+            <div class="tier-divider"></div>
+        </div>
+        <div class="feature-grid">
             <!-- Dark Web Monitoring -->
             <a href="/dark-web-monitor" class="feature-card">
                 <div class="feature-icon icon-breach">
                     <i class="bi bi-incognito"></i>
                 </div>
                 <h3>Dark Web Monitoring</h3>
-                <p>Monitor your emails and domains for exposure in data breaches and dark web paste sites. Get real-time alerts.</p>
+                <p>Register your emails for continuous monitoring. Get automatic alerts when your credentials appear in new breaches or dark web leaks.</p>
                 <span class="feature-badge badge-pro">
                     <i class="bi bi-star-fill"></i> Pro
                 </span>
             </a>
-            
-            <!-- Link Shortener -->
+
+            <!-- Safe Link Shortener -->
             <a href="/shortener" class="feature-card">
                 <div class="feature-icon icon-shortener">
                     <i class="bi bi-link-45deg"></i>
@@ -272,19 +331,38 @@
                     <i class="bi bi-star-fill"></i> Pro
                 </span>
             </a>
-            
-            <!-- Browser Extension -->
-            <a href="/extension" class="feature-card" style="opacity: 0.85;">
-                <div class="feature-icon icon-extension">
-                    <i class="bi bi-puzzle"></i>
+
+            <!-- Health Check PDF Export -->
+            <a href="/pdf-export" class="feature-card">
+                <div class="feature-icon icon-shortener">
+                    <i class="bi bi-file-earmark-pdf"></i>
                 </div>
-                <h3>Browser Extension</h3>
-                <p>Install our Chrome extension to automatically scan links as you browse. Get instant security alerts.</p>
-                <span class="feature-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
-                    <i class="bi bi-clock"></i> Coming Soon
+                <h3>Health Check PDF Export</h3>
+                <p>Export any domain health check result as a branded PDF report. Includes score, grade, SSL/SPF/DMARC status, and security findings — shareable and printable.</p>
+                <span class="feature-badge badge-pro">
+                    <i class="bi bi-star-fill"></i> Pro
                 </span>
             </a>
-            
+
+            <!-- Domain Score Drop Alerts -->
+            <a href="/domain-alerts" class="feature-card">
+                <div class="feature-icon icon-org">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <h3>Domain Score Drop Alerts</h3>
+                <p>Watch up to 10 domains and get an email alert when the security score drops. Catch SSL expirations, new misconfigurations, and header regressions automatically.</p>
+                <span class="feature-badge badge-pro">
+                    <i class="bi bi-star-fill"></i> Pro
+                </span>
+            </a>
+        </div>
+
+        <!-- ENTERPRISE TIER -->
+        <div class="tier-header tier-ent">
+            <h2><i class="bi bi-briefcase me-2"></i>Enterprise</h2>
+            <div class="tier-divider"></div>
+        </div>
+        <div class="feature-grid" style="margin-bottom: 3rem;">
             <!-- Attack Surface Monitoring -->
             <a href="/attack-surface" class="feature-card">
                 <div class="feature-icon icon-attack-surface">
@@ -296,7 +374,7 @@
                     <i class="bi bi-briefcase"></i> Enterprise
                 </span>
             </a>
-            
+
             <!-- Organization Dashboard -->
             <a href="/organization" class="feature-card">
                 <div class="feature-icon icon-org">
@@ -308,7 +386,7 @@
                     <i class="bi bi-briefcase"></i> Enterprise
                 </span>
             </a>
-            
+
             <!-- Compliance Center -->
             <a href="/compliance" class="feature-card">
                 <div class="feature-icon icon-compliance">

@@ -18,6 +18,7 @@ import schedule
 from config import Config
 from domain_scanner import DomainScanner, DANGEROUS_PORTS
 from attack_surface_db import AttackSurfaceDB
+from database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,10 @@ class ScanScheduler:
         self.config = config or Config()
         self.scanner = DomainScanner(config)
         self.db = AttackSurfaceDB(config)
+        self.main_db = Database(config)
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._health_watch_last_run: Optional[str] = None
 
     def start(self):
         """Start the scheduler in a background thread"""
@@ -79,6 +82,8 @@ class ScanScheduler:
 
         except Exception as e:
             logger.error(f"Scheduler error: {e}")
+
+        self._run_due_health_watches()
 
     def _scan_domain(self, domain_info: dict):
         """Run a scan for a single domain and save results"""
@@ -485,6 +490,127 @@ class ScanScheduler:
             logger.info(f"IDS alert email sent to {recipient} for {domain} ({alert_type})")
         except Exception as e:
             logger.error(f"Failed to send IDS alert email to {recipient}: {e}")
+
+
+    def _run_due_health_watches(self):
+        """Daily job: check all Pro user domain watches and email on score drops."""
+        from datetime import date
+        today = date.today().isoformat()
+        if self._health_watch_last_run == today:
+            return
+        try:
+            watches = self.main_db.get_all_active_watches()
+            if not watches:
+                self._health_watch_last_run = today
+                return
+
+            logger.info(f"Running health watch checks for {len(watches)} watch(es)")
+            for watch in watches:
+                try:
+                    domain = watch['domain']
+                    user_id = watch['user_id']
+                    result = self.scanner.scan_domain(domain)
+                    old_score = watch.get('last_score')
+                    if old_score is not None and result.score < old_score - 10:
+                        self._send_health_watch_email(user_id, domain, old_score, result.score)
+                    self.main_db.update_health_watch_score(user_id, domain, result.score)
+                except Exception as e:
+                    logger.error(f"Health watch error for {watch.get('domain')}: {e}")
+
+            self._health_watch_last_run = today
+        except Exception as e:
+            logger.error(f"Health watch scheduler error: {e}")
+
+    def _send_health_watch_email(self, user_id: int, domain: str, old_score: int, new_score: int):
+        """Send score drop alert email for a watched domain (Pro feature)."""
+        try:
+            from auth import AuthManager, User
+            auth = AuthManager(self.config)
+            session = auth.Session()
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                session.close()
+                return
+            if not getattr(user, 'email_notifications', True):
+                session.close()
+                return
+            recipient = str(getattr(user, 'notification_email', None) or user.email)
+            session.close()
+        except Exception as e:
+            logger.error(f"Failed to look up user for health watch email: {e}")
+            return
+
+        smtp_user = getattr(self.config, 'EMAIL_USERNAME', None)
+        smtp_pass = getattr(self.config, 'EMAIL_PASSWORD', None)
+        if not smtp_user or not smtp_pass:
+            logger.warning("SMTP credentials not configured — skipping health watch email")
+            return
+
+        drop = old_score - new_score
+        severity = 'high' if drop >= 20 else 'medium'
+        color_map = {'high': '#fd7e14', 'medium': '#ffc107'}
+        banner_color = color_map.get(severity, '#6c757d')
+        text_color = '#000' if severity == 'medium' else '#fff'
+
+        # Determine grade from new score
+        if new_score >= 90:
+            grade = 'A'
+        elif new_score >= 80:
+            grade = 'B'
+        elif new_score >= 70:
+            grade = 'C'
+        elif new_score >= 60:
+            grade = 'D'
+        else:
+            grade = 'F'
+
+        subject = f'[{severity.upper()}] Security score dropped for {domain}'
+        html_body = f"""<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:{banner_color};padding:20px 24px;">
+      <h2 style="color:{text_color};margin:0;font-size:18px;">Security Score Drop Alert</h2>
+    </div>
+    <div style="padding:24px;">
+      <p style="margin:0 0 12px;font-size:15px;color:#333;"><strong>Domain:</strong> {domain}</p>
+      <p style="margin:0 0 12px;font-size:15px;color:#333;">
+        <strong>Score:</strong> {old_score} &rarr; <strong>{new_score}</strong> (Grade: {grade})
+      </p>
+      <p style="margin:0 0 20px;font-size:15px;color:#555;">
+        The security score for <strong>{domain}</strong> dropped by {drop} points.
+        Run a new health check to see what changed.
+      </p>
+      <a href="https://securelinkapp.com/dashboard"
+         style="display:inline-block;background:#0d6efd;color:#fff;padding:10px 20px;
+                border-radius:6px;text-decoration:none;font-size:14px;">
+        View Domain Health Check
+      </a>
+    </div>
+    <div style="padding:16px 24px;background:#f8f9fa;font-size:12px;color:#888;text-align:center;">
+      SecureLink Security Platform &mdash; <a href="https://securelinkapp.com" style="color:#888;">securelinkapp.com</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = getattr(self.config, 'SMTP_FROM_EMAIL', 'support@securelinkapp.com')
+            msg['To'] = recipient
+            msg.attach(MIMEText(html_body, 'html'))
+
+            smtp_host = getattr(self.config, 'SMTP_HOST', 'email-smtp.us-east-2.amazonaws.com')
+            smtp_port = int(getattr(self.config, 'SMTP_PORT', 587))
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+
+            logger.info(f"Health watch email sent to {recipient} for {domain} (score {old_score}→{new_score})")
+        except Exception as e:
+            logger.error(f"Failed to send health watch email to {recipient}: {e}")
 
 
 def run_single_scan(domain: str, monitored_domain_id: int, user_id: int,

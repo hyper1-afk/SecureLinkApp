@@ -1757,113 +1757,29 @@
 
         <!-- Scanner + Quick Actions Layout -->
         <div class="scanner-layout">
-            <!-- Scanner Column -->
+            <!-- Domain Health Check Column -->
             <div>
                 <div class="card main-card p-4 p-md-5">
                     <div class="text-center mb-4">
                         <h1 class="h3 mb-2">
-                            <i class="bi bi-shield-lock-fill text-primary me-2"></i>
-                            Scan &amp; Verify
+                            <i class="bi bi-heart-pulse text-primary me-2"></i>
+                            Domain Health Check
                         </h1>
                         <p class="text-secondary" style="font-size:0.9rem;">
-                            Check any link or file for phishing, malware, and security threats with AI-powered analysis.
+                            Scan any domain for SSL issues, missing security headers, SPF/DMARC config, and open port exposure.
                         </p>
                     </div>
-                    
-                    <!-- Verification Type Tabs -->
-                    <div class="verification-tabs">
-                        <button class="verification-tab active" data-tab="link" onclick="switchVerificationTab('link')">
-                            <i class="bi bi-link-45deg"></i>
-                            Verify Link
-                        </button>
-                        <button class="verification-tab" data-tab="file" onclick="switchVerificationTab('file')">
-                            <i class="bi bi-file-earmark-check"></i>
-                            Scan File
+                    <div class="d-flex gap-2 mb-3">
+                        <input type="text" id="dashDomainInput" class="form-control url-input"
+                            placeholder="example.com" autocomplete="off"
+                            onkeydown="if(event.key==='Enter') runDashboardHealthCheck()">
+                        <button class="btn btn-primary" id="dashDomainBtn" onclick="runDashboardHealthCheck()" style="white-space:nowrap;">
+                            <i class="bi bi-heart-pulse me-1"></i>Check Health
                         </button>
                     </div>
-                    
-                    <!-- Link Verification Panel -->
-                    <div class="verification-panel active" id="linkPanel">
-                        <form id="verifyForm">
-                            <div class="mb-4">
-                                <input type="text" 
-                                       class="form-control url-input" 
-                                       id="urlInput" 
-                                       placeholder="https://example.com/suspicious-link"
-                                       autocomplete="off"
-                                       required>
-                            </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-verify" id="verifyBtn">
-                                    <i class="bi bi-search me-2"></i>Verify Link
-                                </button>
-                            </div>
-                            <div class="text-center mt-3" id="scanLimitInfo">
-                                <small class="text-muted">
-                                    <span id="scansRemaining">--</span> scans remaining today • 
-                                    <a href="/login" class="text-info" id="upgradeLink">Sign up for more</a>
-                                </small>
-                            </div>
-                        </form>
-                    </div>
-                    
-                    <!-- File Scan Panel -->
-                    <div class="verification-panel" id="filePanel">
-                        <div class="file-drop-zone" id="fileDropZone">
-                            <div class="file-drop-icon">
-                                <i class="bi bi-cloud-arrow-up"></i>
-                            </div>
-                            <h4>Drop your file here</h4>
-                            <p>or click to browse files from your computer</p>
-                            <label class="file-browse-btn">
-                                <i class="bi bi-folder2-open"></i>
-                                Browse Files
-                                <input type="file" id="fileInput" hidden accept=".txt,.html,.htm,.js,.css,.json,.xml,.csv,.pdf,.doc,.docx,.xls,.xlsx,.eml,.msg">
-                            </label>
-                            <div class="file-types" id="fileLimitText">
-                                Supported: TXT, HTML, JS, CSS, JSON, XML, CSV, PDF, DOC, DOCX, XLS, XLSX, EML, MSG
-                                <span id="fileSizeLimit">(Pro: 50MB | Enterprise: 200MB)</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Selected File Display -->
-                        <div class="selected-file" id="selectedFile" style="display: none;">
-                            <div class="file-icon">
-                                <i class="bi bi-file-earmark" id="selectedFileIcon"></i>
-                            </div>
-                            <div class="file-info">
-                                <div class="file-name" id="selectedFileName">document.pdf</div>
-                                <div class="file-size" id="selectedFileSize">2.4 MB</div>
-                            </div>
-                            <button class="file-remove-btn" onclick="removeSelectedFile()">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                        
-                        <div class="d-grid mt-4">
-                            <button type="button" class="btn btn-primary btn-verify" id="scanFileBtn" onclick="scanFile()" disabled>
-                                <i class="bi bi-shield-check me-2"></i>Scan File
-                            </button>
-                        </div>
-                        
-                        <!-- File Scan Result -->
-                        <div class="file-result" id="fileResult" style="display: none;">
-                            <div class="file-result-header">
-                                <div class="file-result-icon" id="fileResultIcon">
-                                    <i class="bi bi-check-lg"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-1" id="fileResultTitle">File is Safe</h5>
-                                    <p class="text-secondary mb-0" id="fileResultSummary">No threats detected</p>
-                                </div>
-                            </div>
-                            <div class="file-findings" id="fileFindings">
-                                <!-- Findings populated by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
+                    <div id="dashDomainResult"></div>
                 </div><!-- /.card.main-card -->
-            </div><!-- /.scanner-column -->
+            </div><!-- /.domain-health-column -->
 
             <!-- Quick Actions Panel -->
             <div class="quick-actions-panel">
@@ -1937,74 +1853,6 @@
 
         </div><!-- /.scanner-layout -->
 
-        <!-- Domain Health Check Card -->
-        <div class="card mb-4" style="border:1px solid var(--border-color);border-radius:16px;">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                    <i class="bi bi-heart-pulse" style="font-size:1.2rem;color:var(--primary-color);"></i>
-                    <h5 class="mb-0" style="font-weight:700;">Domain Health Check</h5>
-                </div>
-                <p class="text-secondary mb-3" style="font-size:0.85rem;">Scan any domain for SSL issues, missing security headers, SPF/DMARC config, and open port exposure.</p>
-                <div class="d-flex gap-2 mb-3">
-                    <input type="text" id="dashDomainInput" class="form-control url-input"
-                        placeholder="example.com" autocomplete="off"
-                        style="max-width:480px;"
-                        onkeydown="if(event.key==='Enter') runDashboardHealthCheck()">
-                    <button class="btn btn-primary" id="dashDomainBtn" onclick="runDashboardHealthCheck()" style="white-space:nowrap;">
-                        <i class="bi bi-heart-pulse me-1"></i>Check Health
-                    </button>
-                </div>
-                <div id="dashDomainResult"></div>
-            </div>
-        </div>
-
-        <!-- Result Card (hidden initially) -->
-        <div class="mb-4" id="resultSection" style="display: none;">
-            <div class="card result-card p-4" id="resultCard">
-                    <div class="row align-items-center mb-4">
-                        <div class="col-auto">
-                            <div class="score-circle" id="scoreCircle">
-                                <span id="scoreValue">0%</span>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="d-flex align-items-center gap-3 mb-2">
-                                <h4 class="mb-0" id="resultTitle">Checking...</h4>
-                                <span class="risk-badge" id="riskBadge">-</span>
-                            </div>
-                            <p class="text-secondary mb-0 truncate" id="checkedUrl" style="max-width: 400px;"></p>
-                        </div>
-                    </div>
-
-                    <!-- Threats -->
-                    <div id="threatsSection" style="display: none;">
-                        <h5 class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Threats Detected</h5>
-                        <div id="threatsList"></div>
-                    </div>
-
-                    <!-- Warnings -->
-                    <div id="warningsSection" style="display: none;">
-                        <h5 class="mb-3"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Warnings</h5>
-                        <div id="warningsList"></div>
-                    </div>
-
-                    <!-- Details Accordion -->
-                    <div class="accordion details-accordion mt-4" id="detailsAccordion">
-                        <div class="accordion-item bg-transparent border-0">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#detailsCollapse">
-                                    <i class="bi bi-info-circle me-2"></i>Technical Details
-                                </button>
-                            </h2>
-                            <div id="detailsCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
-                                <div class="accordion-body">
-                                    <pre id="detailsJson"></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-        </div><!-- /#resultSection -->
 
         <!-- Activity Tabs -->
         <div class="row">
@@ -2698,415 +2546,6 @@
             }
         });
 
-        // ============== File Scanning Functions ==============
-        let selectedFileData = null;
-        
-        function switchVerificationTab(tab) {
-            // Update tabs
-            document.querySelectorAll('.verification-tab').forEach(t => {
-                t.classList.remove('active');
-                if (t.dataset.tab === tab) t.classList.add('active');
-            });
-            
-            // Update panels
-            document.querySelectorAll('.verification-panel').forEach(p => {
-                p.classList.remove('active');
-            });
-            document.getElementById(tab + 'Panel').classList.add('active');
-        }
-        
-        // File Drop Zone Event Handlers
-        const fileDropZone = document.getElementById('fileDropZone');
-        const fileInput = document.getElementById('fileInput');
-        
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileDropZone.addEventListener(eventName, preventDefaults, false);
-        });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileDropZone.addEventListener(eventName, () => {
-                fileDropZone.classList.add('drag-over');
-            });
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileDropZone.addEventListener(eventName, () => {
-                fileDropZone.classList.remove('drag-over');
-            });
-        });
-        
-        fileDropZone.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelection(files[0]);
-            }
-        });
-        
-        fileDropZone.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelection(e.target.files[0]);
-            }
-        });
-        
-        function handleFileSelection(file) {
-            // Get user's subscription tier to determine file size limit
-            const userTier = window.currentUserTier || 'free';
-            const tierLimits = {
-                'free': 0,
-                'pro': 50 * 1024 * 1024,     // 50MB
-                'enterprise': 200 * 1024 * 1024  // 200MB
-            };
-            const maxSize = tierLimits[userTier] || 0;
-            
-            // Free users can't scan files
-            if (maxSize === 0) {
-                alert('File scanning requires a Pro or Enterprise subscription. Upgrade to unlock this feature!');
-                return;
-            }
-            
-            // Check file size based on tier
-            if (file.size > maxSize) {
-                const limitMB = maxSize / (1024 * 1024);
-                const upgradeMsg = userTier === 'pro' ? ' Upgrade to Enterprise for 200MB file scanning.' : '';
-                alert(`File size exceeds ${limitMB}MB limit for your plan.${upgradeMsg}`);
-                return;
-            }
-            
-            // Check file type
-            const allowedExtensions = ['.txt', '.html', '.htm', '.js', '.css', '.json', '.xml', '.csv', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.eml', '.msg'];
-            const extension = '.' + file.name.split('.').pop().toLowerCase();
-            if (!allowedExtensions.includes(extension)) {
-                alert('File type not supported. Please select a supported file type.');
-                return;
-            }
-            
-            selectedFileData = file;
-            
-            // Update UI
-            fileDropZone.classList.add('has-file');
-            document.getElementById('selectedFile').style.display = 'flex';
-            document.getElementById('selectedFileName').textContent = file.name;
-            document.getElementById('selectedFileSize').textContent = formatFileSize(file.size);
-            document.getElementById('scanFileBtn').disabled = false;
-            document.getElementById('fileResult').style.display = 'none';
-            
-            // Update file icon based on type
-            const iconEl = document.getElementById('selectedFileIcon');
-            iconEl.className = 'bi ' + getFileIcon(extension);
-        }
-        
-        function getFileIcon(extension) {
-            const icons = {
-                '.pdf': 'bi-file-earmark-pdf',
-                '.doc': 'bi-file-earmark-word',
-                '.docx': 'bi-file-earmark-word',
-                '.xls': 'bi-file-earmark-excel',
-                '.xlsx': 'bi-file-earmark-excel',
-                '.html': 'bi-file-earmark-code',
-                '.htm': 'bi-file-earmark-code',
-                '.js': 'bi-file-earmark-code',
-                '.css': 'bi-file-earmark-code',
-                '.json': 'bi-file-earmark-code',
-                '.xml': 'bi-file-earmark-code',
-                '.txt': 'bi-file-earmark-text',
-                '.csv': 'bi-file-earmark-spreadsheet',
-                '.eml': 'bi-envelope',
-                '.msg': 'bi-envelope'
-            };
-            return icons[extension] || 'bi-file-earmark';
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        
-        function removeSelectedFile() {
-            selectedFileData = null;
-            fileInput.value = '';
-            fileDropZone.classList.remove('has-file');
-            document.getElementById('selectedFile').style.display = 'none';
-            document.getElementById('scanFileBtn').disabled = true;
-            document.getElementById('fileResult').style.display = 'none';
-        }
-        
-        async function scanFile() {
-            if (!selectedFileData) return;
-            
-            const btn = document.getElementById('scanFileBtn');
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning...';
-            btn.disabled = true;
-            
-            const formData = new FormData();
-            formData.append('file', selectedFileData);
-            
-            try {
-                const headers = {};
-                const token = getAuthToken();
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
-                const response = await fetch('/api/scan-file', {
-                    method: 'POST',
-                    headers: headers,
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    displayFileResult(data);
-                } else {
-                    alert(data.error || 'Error scanning file');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error scanning file. Please try again.');
-            } finally {
-                btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Scan File';
-                btn.disabled = false;
-            }
-        }
-        
-        function displayFileResult(data) {
-            const resultEl = document.getElementById('fileResult');
-            const iconEl = document.getElementById('fileResultIcon');
-            const titleEl = document.getElementById('fileResultTitle');
-            const summaryEl = document.getElementById('fileResultSummary');
-            const findingsEl = document.getElementById('fileFindings');
-            
-            resultEl.style.display = 'block';
-            
-            // Update icon and colors based on risk level
-            iconEl.className = 'file-result-icon';
-            if (data.risk_level === 'safe' || data.risk_level === 'low') {
-                iconEl.classList.add('safe');
-                iconEl.innerHTML = '<i class="bi bi-check-lg"></i>';
-                titleEl.textContent = 'File Appears Safe';
-                summaryEl.textContent = data.threats_count === 0 ? 'No threats detected' : `${data.threats_count} potential issue(s) found`;
-            } else if (data.risk_level === 'medium') {
-                iconEl.classList.add('warning');
-                iconEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
-                titleEl.textContent = 'Potential Risks Found';
-                summaryEl.textContent = `${data.threats_count} potential issue(s) require attention`;
-            } else {
-                iconEl.classList.add('danger');
-                iconEl.innerHTML = '<i class="bi bi-x-lg"></i>';
-                titleEl.textContent = 'Threats Detected';
-                summaryEl.textContent = `${data.threats_count} threat(s) found - Do not open this file`;
-            }
-            
-            // Display findings
-            findingsEl.innerHTML = '';
-            
-            if (data.threats && data.threats.length > 0) {
-                data.threats.forEach(threat => {
-                    findingsEl.innerHTML += `
-                        <div class="file-finding threat">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                            <div>${escapeHtml(threat)}</div>
-                        </div>
-                    `;
-                });
-            }
-            
-            if (data.warnings && data.warnings.length > 0) {
-                data.warnings.forEach(warning => {
-                    findingsEl.innerHTML += `
-                        <div class="file-finding warning">
-                            <i class="bi bi-exclamation-circle-fill"></i>
-                            <div>${escapeHtml(warning)}</div>
-                        </div>
-                    `;
-                });
-            }
-            
-            if (data.info && data.info.length > 0) {
-                data.info.forEach(info => {
-                    findingsEl.innerHTML += `
-                        <div class="file-finding info">
-                            <i class="bi bi-info-circle-fill"></i>
-                            <div>${escapeHtml(info)}</div>
-                        </div>
-                    `;
-                });
-            }
-            
-            if (findingsEl.innerHTML === '') {
-                findingsEl.innerHTML = `
-                    <div class="file-finding info">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <div>No suspicious content detected in this file.</div>
-                    </div>
-                `;
-            }
-            
-            // Scroll to results
-            resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Verify form submission
-        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) return;
-
-            const btn = document.getElementById('verifyBtn');
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-                const data = await response.json();
-                
-                // Handle rate limit error
-                if (response.status === 429) {
-                    const scansInfo = document.getElementById('scanLimitInfo');
-                    const isLoggedIn = !!getAuthToken();
-                    const upgradeUrl = isLoggedIn ? '/profile#subscription-tab' : '/login';
-                    const upgradeText = isLoggedIn ? 'Upgrade for more →' : 'Sign up for more →';
-                    scansInfo.innerHTML = `
-                        <div class="alert alert-warning py-2 mb-0">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            ${data.message || 'Daily scan limit reached'}
-                            <a href="${upgradeUrl}" class="alert-link ms-2">${upgradeText}</a>
-                        </div>
-                    `;
-                    document.getElementById('scansRemaining').textContent = '0';
-                    return;
-                }
-                
-                // Update scans remaining counter for anonymous users
-                updateScansRemaining();
-                
-                displayResult(data);
-                loadRecent();
-                loadHistory();
-                loadStats();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error verifying link. Please try again.');
-            } finally {
-                btn.innerHTML = '<i class="bi bi-search me-2"></i>Verify Link';
-                btn.disabled = false;
-            }
-        });
-        
-        // Track and update scans remaining for anonymous users
-        function updateScansRemaining() {
-            const scansEl = document.getElementById('scansRemaining');
-            if (scansEl) {
-                let remaining = parseInt(scansEl.textContent) || 5;
-                remaining = Math.max(0, remaining - 1);
-                scansEl.textContent = remaining;
-                
-                if (remaining <= 2) {
-                    scansEl.parentElement.classList.add('text-warning');
-                    scansEl.parentElement.classList.remove('text-muted');
-                }
-            }
-        }
-
-        // Display verification result
-        function displayResult(data) {
-            const section = document.getElementById('resultSection');
-            const card = document.getElementById('resultCard');
-            const scoreCircle = document.getElementById('scoreCircle');
-            const scoreValue = document.getElementById('scoreValue');
-            const resultTitle = document.getElementById('resultTitle');
-            const riskBadge = document.getElementById('riskBadge');
-            const checkedUrl = document.getElementById('checkedUrl');
-
-            section.style.display = 'block';
-
-            // Reset classes
-            card.className = 'card result-card p-4';
-            scoreCircle.className = 'score-circle';
-            riskBadge.className = 'risk-badge';
-
-            // Set score
-            const scorePercent = Math.round(data.risk_score * 100);
-            scoreValue.textContent = scorePercent + '%';
-
-            // Set URL
-            checkedUrl.textContent = data.url;
-            checkedUrl.title = data.url;
-
-            // Set based on safety
-            if (data.is_safe) {
-                card.classList.add('result-safe');
-                scoreCircle.classList.add('score-safe');
-                resultTitle.textContent = 'Link Appears Safe';
-                resultTitle.innerHTML = '<i class="bi bi-check-circle-fill text-success me-2"></i>' + resultTitle.textContent;
-            } else if (data.risk_level === 'medium') {
-                card.classList.add('result-warning');
-                scoreCircle.classList.add('score-warning');
-                resultTitle.textContent = 'Proceed with Caution';
-                resultTitle.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>' + resultTitle.textContent;
-            } else {
-                card.classList.add('result-danger');
-                scoreCircle.classList.add('score-danger');
-                resultTitle.textContent = 'Potentially Dangerous';
-                resultTitle.innerHTML = '<i class="bi bi-x-circle-fill text-danger me-2"></i>' + resultTitle.textContent;
-            }
-
-            // Risk badge
-            riskBadge.textContent = data.risk_level;
-            riskBadge.classList.add('risk-' + data.risk_level);
-
-            // Threats
-            const threatsSection = document.getElementById('threatsSection');
-            const threatsList = document.getElementById('threatsList');
-            if (data.threats_detected && data.threats_detected.length > 0) {
-                threatsSection.style.display = 'block';
-                threatsList.innerHTML = data.threats_detected.map(t => 
-                    `<div class="threat-item"><i class="bi bi-exclamation-diamond me-2"></i>${t}</div>`
-                ).join('');
-            } else {
-                threatsSection.style.display = 'none';
-            }
-
-            // Warnings
-            const warningsSection = document.getElementById('warningsSection');
-            const warningsList = document.getElementById('warningsList');
-            if (data.warnings && data.warnings.length > 0) {
-                warningsSection.style.display = 'block';
-                warningsList.innerHTML = data.warnings.map(w => 
-                    `<div class="warning-item"><i class="bi bi-exclamation-circle me-2"></i>${w}</div>`
-                ).join('');
-            } else {
-                warningsSection.style.display = 'none';
-            }
-
-            // Details
-            document.getElementById('detailsJson').textContent = JSON.stringify(data.details, null, 2);
-
-            // Scroll to result
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
 
         // Tech-focused fallback images (no humans) - expanded collection
         const techFallbackImages = [
@@ -3207,10 +2646,9 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="truncate" style="max-width: 60%;">
                                     <i class="bi bi-${icon}-fill text-${riskClass} me-2"></i>
-                                    <a href="#" onclick="document.getElementById('urlInput').value='${item.url}'; return false;" 
-                                       class="text-light text-decoration-none" title="${item.url}">
+                                    <span class="text-light" title="${item.url}">
                                         ${item.url.length > 60 ? item.url.substring(0, 60) + '...' : item.url}
-                                    </a>
+                                    </span>
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
                                     ${item.source === 'email' ? '<span class="badge bg-info"><i class="bi bi-envelope-fill me-1"></i>Email</span>' : ''}
@@ -3267,10 +2705,9 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="truncate" style="max-width: 60%;">
                                     <i class="bi bi-${icon}-fill text-${riskClass} me-2"></i>
-                                    <a href="#" onclick="document.getElementById('urlInput').value='${item.url}'; return false;" 
-                                       class="text-light text-decoration-none" title="${item.url}">
+                                    <span class="text-light" title="${item.url}">
                                         ${item.url.length > 60 ? item.url.substring(0, 60) + '...' : item.url}
-                                    </a>
+                                    </span>
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
                                     ${item.source === 'email' ? '<span class="badge bg-info"><i class="bi bi-envelope-fill me-1"></i>Email</span>' : ''}
@@ -3525,36 +2962,6 @@
                 }
             }
             
-            // Update scan limit info for logged-in users
-            updateScanLimitDisplay(user);
-        }
-        
-        async function updateScanLimitDisplay(user) {
-            const upgradeLink = document.getElementById('upgradeLink');
-            const scansRemainingEl = document.getElementById('scansRemaining');
-            
-            if (upgradeLink) {
-                if (user.subscription_tier === 'enterprise') {
-                    // Enterprise has unlimited scans
-                    if (scansRemainingEl) scansRemainingEl.textContent = '∞';
-                    upgradeLink.style.display = 'none';
-                } else {
-                    upgradeLink.href = '/profile#subscription-tab';
-                    upgradeLink.textContent = 'Upgrade for more';
-                    
-                    // Fetch actual scan usage
-                    try {
-                        const response = await fetch('/api/usage', { headers: getAuthHeaders() });
-                        if (response.ok) {
-                            const data = await response.json();
-                            const remaining = Math.max(0, (data.limit || 10) - (data.used || 0));
-                            if (scansRemainingEl) scansRemainingEl.textContent = remaining;
-                        }
-                    } catch (e) {
-                        console.error('Could not fetch scan usage:', e);
-                    }
-                }
-            }
         }
 
         function updateNavForLoggedOut() {
@@ -3885,36 +3292,125 @@
                                 <div class="col-6 col-md-3">
                                     <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                         <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-lock me-1"></i>SSL</div>
-                                        <div>${ssl.valid ? '✅ Valid'+daysMsg : '❌ Invalid'}</div>
+                                        <div style="color:#f1f5f9;">${ssl.valid ? '✅ Valid'+daysMsg : '❌ Invalid'}</div>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                         <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-envelope-check me-1"></i>SPF</div>
-                                        <div>${dns.has_spf ? '✅ Set' : '❌ Missing'}</div>
+                                        <div style="color:#f1f5f9;">${dns.has_spf ? '✅ Set' : '❌ Missing'}</div>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                         <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-shield-check me-1"></i>DMARC</div>
-                                        <div>${dns.has_dmarc ? '✅ Set' : '⚠️ Missing'}</div>
+                                        <div style="color:#f1f5f9;">${dns.has_dmarc ? '✅ Set' : '⚠️ Missing'}</div>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div style="padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">
                                         <div style="color:#94a3b8;font-size:0.75rem;margin-bottom:2px;"><i class="bi bi-shield me-1"></i>Headers</div>
-                                        <div>${missingHdrs.length ? '⚠️ '+missingHdrs.length+' missing' : '✅ All set'}</div>
+                                        <div style="color:#f1f5f9;">${missingHdrs.length ? '⚠️ '+missingHdrs.length+' missing' : '✅ All set'}</div>
                                     </div>
                                 </div>
                             </div>
                             ${issueCount > 0 ? `<div class="mt-2" style="font-size:0.8rem;color:#94a3b8;">${issueCount} issue${issueCount!==1?'s':''} found &mdash; <a href="/attack-surface" style="color:var(--primary-color);">add to monitoring →</a></div>` : `<div class="mt-2" style="font-size:0.8rem;color:#22c55e;">No critical issues found</div>`}
                         </div>
                     </div>`;
+                resultEl.innerHTML += `<div class="mt-3 d-flex gap-2 flex-wrap">
+                  <button class="btn btn-sm btn-outline-secondary" onclick="exportHealthPDF('${domain}')">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary" id="watchBtn_${domain.replace(/\./g,'_')}" onclick="toggleHealthWatch('${domain}')">
+                    <i class="bi bi-bell me-1"></i>Watch Domain
+                  </button>
+                </div>`;
+                // Pre-fill watch button state if already watching
+                const _tkn = localStorage.getItem('auth_token');
+                if (_tkn) {
+                    fetch('/api/health-check/watches', {headers:{'Authorization':`Bearer ${_tkn}`}})
+                        .then(r => r.ok ? r.json() : null)
+                        .then(d => {
+                            if (d && d.watches && d.watches.some(w => w.domain === '${domain}')) {
+                                const wb = document.getElementById('watchBtn_${domain.replace(/\./g,'_')}');
+                                if (wb) { wb.innerHTML = '<i class="bi bi-bell-fill me-1"></i>Watching \u2713'; wb.classList.replace('btn-outline-primary','btn-primary'); }
+                            }
+                        }).catch(()=>{});
+                }
             } catch(e) {
                 resultEl.innerHTML = `<div class="alert alert-warning py-2 mb-0"><i class="bi bi-x-circle me-1"></i>Scan failed. Please try again.</div>`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-heart-pulse me-1"></i>Check Health';
+            }
+        }
+
+        async function exportHealthPDF(domain) {
+            const token = localStorage.getItem('auth_token');
+            if (!token) { alert('Sign in to export PDF reports (Pro feature)'); return; }
+            const btn = event.target.closest('button');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+            try {
+                const res = await fetch('/api/reports/health-check-pdf', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+                    body: JSON.stringify({domain})
+                });
+                if (res.status === 403) {
+                    alert('PDF export requires a Pro plan. Upgrade at securelinkapp.com/pricing');
+                } else if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `securelink-health-${domain}.pdf`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                } else {
+                    alert('Failed to generate PDF. Please try again.');
+                }
+            } catch(e) {
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        async function toggleHealthWatch(domain) {
+            const token = localStorage.getItem('auth_token');
+            if (!token) { alert('Sign in to watch domains (Pro feature)'); return; }
+            const safeId = domain.replace(/\./g, '_');
+            const btn = document.getElementById('watchBtn_' + safeId);
+            const isWatching = btn && btn.classList.contains('btn-primary');
+            if (isWatching) {
+                try {
+                    const res = await fetch(`/api/health-check/watch/${encodeURIComponent(domain)}`, {
+                        method: 'DELETE',
+                        headers: {'Authorization': `Bearer ${token}`}
+                    });
+                    if (res.status === 403) { alert('Domain watch requires a Pro plan. Upgrade at securelinkapp.com/pricing'); return; }
+                    if (res.ok && btn) {
+                        btn.innerHTML = '<i class="bi bi-bell me-1"></i>Watch Domain';
+                        btn.classList.replace('btn-primary', 'btn-outline-primary');
+                    }
+                } catch(e) { alert('Failed to remove watch. Please try again.'); }
+            } else {
+                try {
+                    const res = await fetch('/api/health-check/watch', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+                        body: JSON.stringify({domain})
+                    });
+                    if (res.status === 403) { alert('Domain watch requires a Pro plan. Upgrade at securelinkapp.com/pricing'); return; }
+                    if (res.status === 429) { alert('You have reached the 10-domain watch limit.'); return; }
+                    if (res.ok && btn) {
+                        btn.innerHTML = '<i class="bi bi-bell-fill me-1"></i>Watching \u2713';
+                        btn.classList.replace('btn-outline-primary', 'btn-primary');
+                    }
+                } catch(e) { alert('Failed to add watch. Please try again.'); }
             }
         }
     </script>

@@ -364,6 +364,18 @@ def breach_checker_page():
     return render_template('breach_checker.html')
 
 
+@app.route('/pdf-export')
+def pdf_export_page():
+    """Render the Health Check PDF Export page (Pro feature)"""
+    return render_template('pdf_export.html')
+
+
+@app.route('/domain-alerts')
+def domain_alerts_page():
+    """Render the Domain Score Drop Alerts page (Pro feature)"""
+    return render_template('domain_alerts.html')
+
+
 @app.route('/security-news')
 def security_news_page():
     """Render the security news feed page"""
@@ -1879,6 +1891,271 @@ def domain_health_check():
     except Exception as e:
         logger.error(f"Health check error for {domain}: {e}", exc_info=True)
         return jsonify({'error': 'Unable to scan domain. Please try again.'}), 500
+
+
+@app.route('/api/reports/health-check-pdf', methods=['POST'])
+@require_auth
+def health_check_pdf():
+    """Export domain health check as PDF (Pro+)."""
+    import re as _re
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+
+    user = request.current_user
+    tier = user.get('subscription_tier', 'free')
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'PDF export requires a Pro plan'}), 403
+
+    data = request.get_json() or {}
+    domain = data.get('domain', '').strip().lower()
+    domain = _re.sub(r'^https?://', '', domain).split('/')[0].strip()
+    if not domain or '.' not in domain:
+        return jsonify({'error': 'Please provide a valid domain'}), 400
+
+    try:
+        result = _domain_scanner.scan_domain(domain)
+        r = result.to_dict()
+    except Exception as e:
+        logger.error(f"Health check PDF scan error: {e}", exc_info=True)
+        return jsonify({'error': 'Unable to scan domain'}), 500
+
+    ssl_info     = r.get('ssl_info', {})
+    dns_info     = r.get('dns_info', {})
+    headers_info = r.get('headers_info', {})
+    findings     = r.get('findings', [])
+    score        = r.get('score', 0)
+    grade        = r.get('grade', 'F')
+    generated_at = datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')
+
+    grade_colors = {'A+': '#22c55e', 'A': '#22c55e', 'B': '#84cc16',
+                    'C': '#f59e0b', 'D': '#f97316', 'F': '#ef4444'}
+    grade_hex = grade_colors.get(grade, '#94a3b8')
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            leftMargin=0.75*inch, rightMargin=0.75*inch,
+                            topMargin=0.75*inch, bottomMargin=0.75*inch)
+
+    styles = getSampleStyleSheet()
+    brand_blue = colors.HexColor('#0d6efd')
+    dark       = colors.HexColor('#1a1a2e')
+    muted_c    = colors.HexColor('#6c757d')
+    success_c  = colors.HexColor('#198754')
+    danger_c   = colors.HexColor('#dc3545')
+    warning_c  = colors.HexColor('#f59e0b')
+
+    h1      = ParagraphStyle('h1',    parent=styles['Normal'], fontSize=22, textColor=brand_blue, spaceAfter=4, fontName='Helvetica-Bold')
+    h2      = ParagraphStyle('h2',    parent=styles['Normal'], fontSize=12, textColor=dark, spaceAfter=6, spaceBefore=14, fontName='Helvetica-Bold')
+    body    = ParagraphStyle('body',  parent=styles['Normal'], fontSize=10, textColor=dark, leading=14)
+    small   = ParagraphStyle('small', parent=styles['Normal'], fontSize=9,  textColor=muted_c, leading=12)
+
+    BASE_STYLE = [
+        ('BACKGROUND',    (0, 0), (-1, 0), brand_blue),
+        ('TEXTCOLOR',     (0, 0), (-1, 0), colors.white),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE',      (0, 0), (-1, -1), 10),
+        ('ALIGN',         (0, 0), (-1, -1), 'LEFT'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
+        ('TOPPADDING',    (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('ROWBACKGROUNDS',(0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white]),
+        ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]
+
+    # Score interpretation
+    if score >= 90:
+        interpretation = 'Excellent — Strong security posture'
+    elif score >= 80:
+        interpretation = 'Good — Minor improvements recommended'
+    elif score >= 70:
+        interpretation = 'Fair — Several issues need attention'
+    elif score >= 60:
+        interpretation = 'Poor — Significant security gaps present'
+    else:
+        interpretation = 'Critical — Immediate action required'
+
+    story = []
+
+    # ── Header ────────────────────────────────────────────────────────────
+    story.append(Paragraph(
+        f'<font color="#0d6efd"><b>SecureLink</b></font>  '
+        f'<font size=10 color="#6c757d">Domain Health Report</font>', h1))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(f'<b>{domain}</b>', ParagraphStyle('domain', parent=styles['Normal'],
+        fontSize=14, textColor=dark, spaceAfter=3, fontName='Helvetica-Bold')))
+    story.append(Paragraph(
+        f'Generated {generated_at} &nbsp;&bull;&nbsp; {tier.title()} Plan',
+        ParagraphStyle('meta', parent=styles['Normal'], fontSize=9, textColor=muted_c, spaceAfter=8)))
+    story.append(HRFlowable(width='100%', thickness=2, color=brand_blue, spaceAfter=16))
+
+    # ── Score + Grade block ───────────────────────────────────────────────
+    grade_color_rl = colors.HexColor(grade_hex)
+    score_block = Table([[
+        Paragraph(f'<font size=36 color="{grade_hex}"><b>{score}</b></font>'
+                  f'<font size=11 color="#6c757d"> / 100</font>', body),
+        Table([[
+            Paragraph(f'<font size=22 color="{grade_hex}"><b>{grade}</b></font>', body),
+        ]], colWidths=[0.6*inch], rowHeights=[0.45*inch],
+            style=[('BOX', (0,0), (-1,-1), 1.5, grade_color_rl),
+                   ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                   ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                   ('TOPPADDING', (0,0), (-1,-1), 4),
+                   ('BOTTOMPADDING', (0,0), (-1,-1), 4)]),
+        Paragraph(f'<i>{interpretation}</i>',
+                  ParagraphStyle('interp', parent=styles['Normal'],
+                                 fontSize=10, textColor=muted_c, leading=14)),
+    ]], colWidths=[1.5*inch, 0.8*inch, None])
+    score_block.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (0,0), 0),
+        ('LEFTPADDING', (1,0), (1,0), 10),
+        ('LEFTPADDING', (2,0), (2,0), 16),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(score_block)
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#dee2e6'), spaceAfter=12))
+
+    # ── Security Checks ───────────────────────────────────────────────────
+    story.append(Paragraph('Security Checks', h2))
+    missing_hdrs = headers_info.get('headers_missing', [])
+    days_msg = f' ({ssl_info.get("days_remaining")}d remaining)' if ssl_info.get('days_remaining') is not None else ''
+
+    details_data = [
+        ['Check', 'Result', 'Details'],
+        ['SSL Certificate',
+         '✓  PASS' if ssl_info.get('valid') else '✗  FAIL',
+         f"Valid{days_msg} — Issuer: {ssl_info.get('issuer','Unknown')}" if ssl_info.get('valid') else 'Invalid or missing'],
+        ['SPF Record',
+         '✓  PASS' if dns_info.get('has_spf') else '✗  FAIL',
+         'Configured' if dns_info.get('has_spf') else 'Missing — email spoofing risk'],
+        ['DMARC Record',
+         '✓  PASS' if dns_info.get('has_dmarc') else '⚠  WARN',
+         'Configured' if dns_info.get('has_dmarc') else 'Missing — phishing risk'],
+        ['Security Headers',
+         '✓  PASS' if not missing_hdrs else '⚠  WARN',
+         'All present' if not missing_hdrs
+         else f"{len(missing_hdrs)} missing: {', '.join(missing_hdrs[:3])}{'…' if len(missing_hdrs)>3 else ''}"],
+    ]
+    det_style = TableStyle(BASE_STYLE + [
+        ('FONTNAME', (1, 1), (1, -1), 'Helvetica-Bold'),
+        ('TEXTCOLOR', (1, 1), (1, -1), success_c),
+        ('COLWIDTH',  (0, 0), (0, -1), 1.6*inch),
+    ])
+    for i, row in enumerate(details_data[1:], 1):
+        status = row[1]
+        if 'FAIL' in status:
+            det_style.add('TEXTCOLOR', (1, i), (1, i), danger_c)
+        elif 'WARN' in status:
+            det_style.add('TEXTCOLOR', (1, i), (1, i), warning_c)
+    det_tbl = Table(details_data, colWidths=[1.6*inch, 0.9*inch, None])
+    det_tbl.setStyle(det_style)
+    story.append(det_tbl)
+
+    # ── Findings ──────────────────────────────────────────────────────────
+    crit = len([f for f in findings if f.get('severity') == 'critical'])
+    high = len([f for f in findings if f.get('severity') == 'high'])
+    med  = len([f for f in findings if f.get('severity') == 'medium'])
+    story.append(Paragraph('Findings', h2))
+    if crit == 0 and high == 0 and med == 0:
+        story.append(Paragraph(
+            '✓  No critical, high, or medium findings — domain is well-configured.',
+            ParagraphStyle('ok', parent=styles['Normal'], fontSize=10,
+                           textColor=success_c, leading=14, spaceAfter=8)))
+    else:
+        findings_rows = [['Severity', 'Count']]
+        if crit > 0:
+            findings_rows.append(['Critical', str(crit)])
+        if high > 0:
+            findings_rows.append(['High', str(high)])
+        if med > 0:
+            findings_rows.append(['Medium', str(med)])
+        fi_style = TableStyle(BASE_STYLE)
+        row_idx = 1
+        if crit > 0:
+            fi_style.add('TEXTCOLOR', (1, row_idx), (1, row_idx), danger_c)
+            fi_style.add('FONTNAME',  (1, row_idx), (1, row_idx), 'Helvetica-Bold')
+            row_idx += 1
+        if high > 0:
+            fi_style.add('TEXTCOLOR', (1, row_idx), (1, row_idx), warning_c)
+            fi_style.add('FONTNAME',  (1, row_idx), (1, row_idx), 'Helvetica-Bold')
+            row_idx += 1
+        fi_tbl = Table(findings_rows, colWidths=[2*inch, 1*inch])
+        fi_tbl.setStyle(fi_style)
+        story.append(fi_tbl)
+
+    # ── Footer ────────────────────────────────────────────────────────────
+    story.append(Spacer(1, 24))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#dee2e6'), spaceAfter=10))
+    cta_style = ParagraphStyle('cta', parent=styles['Normal'], fontSize=9,
+                               textColor=muted_c, leading=13, spaceAfter=4)
+    story.append(Paragraph(
+        'Want 24/7 monitoring? <b>Upgrade to Enterprise</b> for continuous attack surface scanning, '
+        'IDS alerts, DNS/SSL change detection, and daily PDF reports. '
+        '<font color="#0d6efd">securelinkapp.com</font>', cta_style))
+    story.append(Paragraph(
+        f'CONFIDENTIAL &nbsp;&bull;&nbsp; Generated by SecureLink &nbsp;&bull;&nbsp; {generated_at}',
+        ParagraphStyle('conf', parent=styles['Normal'], fontSize=8,
+                       textColor=colors.HexColor('#adb5bd'), leading=11)))
+
+    doc.build(story)
+    buffer.seek(0)
+    filename = f"securelink-health-{domain}-{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+    return send_file(buffer, mimetype='application/pdf',
+                     as_attachment=True, download_name=filename)
+
+
+@app.route('/api/health-check/watch', methods=['POST'])
+@require_auth
+def add_health_watch():
+    """Add a domain to a Pro user's watch list for score-drop alerts."""
+    user = request.current_user
+    tier = user.get('subscription_tier', 'free')
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
+
+    import re as _re
+    data = request.get_json() or {}
+    domain = data.get('domain', '').strip().lower()
+    domain = _re.sub(r'^https?://', '', domain).split('/')[0].strip()
+    if not domain or '.' not in domain:
+        return jsonify({'error': 'Please provide a valid domain'}), 400
+
+    user_id = user['id']
+    watches = db.get_health_watches(user_id)
+    if len(watches) >= 10 and not any(w['domain'] == domain for w in watches):
+        return jsonify({'error': 'Watch limit reached (10 domains). Remove one to add another.'}), 429
+
+    db.add_health_watch(user_id, domain)
+    return jsonify({'success': True, 'domain': domain})
+
+
+@app.route('/api/health-check/watch/<path:domain>', methods=['DELETE'])
+@require_auth
+def remove_health_watch(domain):
+    """Remove a domain from a Pro user's watch list."""
+    user = request.current_user
+    tier = user.get('subscription_tier', 'free')
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
+    db.remove_health_watch(user['id'], domain)
+    return jsonify({'success': True})
+
+
+@app.route('/api/health-check/watches', methods=['GET'])
+@require_auth
+def list_health_watches():
+    """List all watched domains for the current Pro user."""
+    user = request.current_user
+    tier = user.get('subscription_tier', 'free')
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
+    return jsonify({'watches': db.get_health_watches(user['id'])})
 
 
 @app.route('/api/scan-file', methods=['POST'])

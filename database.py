@@ -366,6 +366,18 @@ class AnonQuota(Base):
     count     = Column(Integer,    nullable=False, default=0)
 
 
+class HealthCheckWatch(Base):
+    """Pro-tier: track domains a user wants daily score-drop alerts for."""
+    __tablename__ = 'health_check_watches'
+
+    id              = Column(Integer,  primary_key=True, autoincrement=True)
+    user_id         = Column(Integer,  nullable=False, index=True)
+    domain          = Column(String(253), nullable=False)
+    last_score      = Column(Integer,  nullable=True)
+    last_checked_at = Column(DateTime, nullable=True)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+
+
 class Database:
     """Database manager class"""
     
@@ -458,6 +470,78 @@ class Database:
         except Exception:
             session.rollback()
             return False
+        finally:
+            session.close()
+
+    # ── Health Check Watch (Pro) ─────────────────────────────────────────
+
+    def add_health_watch(self, user_id: int, domain: str) -> bool:
+        """Add a domain to a user's watch list (idempotent)."""
+        session = self.Session()
+        try:
+            existing = session.query(HealthCheckWatch).filter_by(
+                user_id=user_id, domain=domain
+            ).first()
+            if not existing:
+                session.add(HealthCheckWatch(user_id=user_id, domain=domain))
+                session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def remove_health_watch(self, user_id: int, domain: str) -> bool:
+        """Remove a domain from a user's watch list."""
+        session = self.Session()
+        try:
+            deleted = session.query(HealthCheckWatch).filter_by(
+                user_id=user_id, domain=domain
+            ).delete()
+            session.commit()
+            return deleted > 0
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def get_health_watches(self, user_id: int) -> List[Dict]:
+        """Return all watched domains for a user."""
+        session = self.Session()
+        try:
+            rows = session.query(HealthCheckWatch).filter_by(user_id=user_id).all()
+            return [{'domain': r.domain, 'last_score': r.last_score,
+                     'last_checked_at': r.last_checked_at.isoformat() if r.last_checked_at else None}
+                    for r in rows]
+        finally:
+            session.close()
+
+    def get_all_active_watches(self) -> List[Dict]:
+        """Return all watches (used by scheduler)."""
+        session = self.Session()
+        try:
+            rows = session.query(HealthCheckWatch).all()
+            return [{'id': r.id, 'user_id': r.user_id, 'domain': r.domain,
+                     'last_score': r.last_score}
+                    for r in rows]
+        finally:
+            session.close()
+
+    def update_health_watch_score(self, user_id: int, domain: str, score: int) -> None:
+        """Update the last known score and check timestamp for a watch."""
+        session = self.Session()
+        try:
+            row = session.query(HealthCheckWatch).filter_by(
+                user_id=user_id, domain=domain
+            ).first()
+            if row:
+                row.last_score = score
+                row.last_checked_at = datetime.utcnow()
+                session.commit()
+        except Exception:
+            session.rollback()
         finally:
             session.close()
 
