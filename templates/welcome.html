@@ -79,13 +79,11 @@
             width: 100%; max-width: 1280px; margin: 0 auto;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .brand-icon { width: 40px; height: 40px; } .brand-icon img { width: 40px; height: 40px; display: block; border-radius: 10px; } .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
         .brand-icon {
-            width: 40px; height: 40px; border-radius: 12px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px;
         }
-        .brand-icon i { font-size: 20px; color: #fff; }
+        
         .brand-text { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; }
         .nav-links { display: flex; align-items: center; gap: 4px; }
         .nav-links a {
@@ -499,7 +497,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-inner">
             <a href="/" class="brand">
-                <div class="brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div class="brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink"></div>
                 <span class="brand-text">SecureLink</span>
             </a>
             <button class="mobile-toggle" onclick="toggleMenu()">
@@ -830,7 +828,7 @@
         <div class="footer-inner">
             <div class="footer-brand">
                 <a href="/" class="brand" style="margin-bottom: 4px;">
-                    <div class="brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <div class="brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink"></div>
                     <span class="brand-text">SecureLink</span>
                 </a>
                 <p>AI-powered domain security platform — health checks, attack surface monitoring, and breach detection.</p>
