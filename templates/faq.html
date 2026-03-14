@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>FAQ - SecureLink</title>
+    <meta name="description" content="Answers to common questions about SecureLink — URL scanning, dark web monitoring, the browser extension, billing, and privacy.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --accent-color: #8b5cf6;
+            --success-color: #10b981;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(148, 163, 184, 0.12);
+        }
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+        body {
+            background: var(--bg-dark);
+            background-image:
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Hero */
+        .faq-hero {
+            text-align: center;
+            padding: 100px 24px 60px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .faq-hero .label {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25);
+            border-radius: 100px; padding: 7px 18px; margin-bottom: 24px;
+            font-size: 0.85rem; font-weight: 600; color: #38bdf8;
+        }
+
+        .faq-hero h1 {
+            font-size: 3rem; font-weight: 800; letter-spacing: -0.04em;
+            margin-bottom: 16px; color: #fff;
+        }
+
+        .faq-hero p {
+            font-size: 1.1rem; color: var(--text-secondary); line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        /* Search */
+        .faq-search-wrap {
+            max-width: 520px; margin: 0 auto 64px; position: relative;
+        }
+
+        .faq-search {
+            width: 100%; padding: 14px 20px 14px 48px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 14px; color: var(--text-primary); font-size: 0.95rem;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .faq-search:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+
+        .faq-search::placeholder { color: var(--text-muted); }
+
+        .faq-search-icon {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 1rem; pointer-events: none;
+        }
+
+        /* Layout */
+        .faq-layout {
+            max-width: 900px; margin: 0 auto; padding: 0 24px 80px;
+            display: flex; flex-direction: column; gap: 48px;
+        }
+
+        /* Category */
+        .faq-category-label {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .faq-category-label .cat-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+
+        .cat-icon.blue   { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+        .cat-icon.purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+        .cat-icon.green  { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .cat-icon.amber  { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .cat-icon.red    { background: rgba(239, 68, 68, 0.15);  color: #f87171; }
+
+        .faq-category-label h2 {
+            font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;
+        }
+
+        /* Accordion */
+        .faq-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .faq-item {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 14px; overflow: hidden; transition: border-color 0.2s;
+        }
+
+        .faq-item:hover { border-color: rgba(14, 165, 233, 0.25); }
+        .faq-item.open  { border-color: rgba(14, 165, 233, 0.35); }
+
+        .faq-question {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 20px; cursor: pointer; user-select: none; gap: 16px;
+        }
+
+        .faq-question span {
+            font-weight: 600; font-size: 0.95rem; color: var(--text-primary); line-height: 1.5;
+        }
+
+        .faq-question i {
+            color: var(--text-muted); font-size: 0.9rem; flex-shrink: 0;
+            transition: transform 0.25s;
+        }
+
+        .faq-item.open .faq-question i { transform: rotate(180deg); }
+        .faq-item.open .faq-question { background: rgba(14, 165, 233, 0.05); }
+
+        .faq-answer {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.25s ease;
+            padding: 0 20px;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 400px;
+            padding: 0 20px 18px;
+        }
+
+        .faq-answer p {
+            color: var(--text-secondary); font-size: 0.92rem; line-height: 1.75;
+            margin: 0;
+        }
+
+        .faq-answer a { color: var(--primary-color); text-decoration: none; }
+        .faq-answer a:hover { text-decoration: underline; }
+
+        /* No results */
+        #noResults {
+            display: none; text-align: center; padding: 48px 24px;
+            color: var(--text-muted); font-size: 0.95rem;
+        }
+
+        /* Still have questions */
+        .faq-cta {
+            text-align: center; padding: 60px 24px;
+            border-top: 1px solid var(--border-color);
+            max-width: 560px; margin: 0 auto;
+        }
+
+        .faq-cta h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+        .faq-cta p  { color: var(--text-secondary); margin-bottom: 24px; }
+
+        .btn-contact {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #fff; font-weight: 600; font-size: 0.95rem;
+            padding: 12px 28px; border-radius: 12px; text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-contact:hover { color: #fff; opacity: 0.88; }
+
+        @media (max-width: 600px) {
+            .faq-hero h1 { font-size: 2rem; }
+            .faq-hero { padding: 90px 16px 40px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/" class="sl-brand">
+                <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/" class="sl-nav-link">Home</a>
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/pricing" class="sl-nav-link">Pricing</a>
+                <a href="/extension" class="sl-nav-link">Extension</a>
+                <a href="/login" class="sl-nav-cta" id="authLink">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="faq-hero">
+        <div class="label"><i class="bi bi-chat-dots-fill"></i> Help Center</div>
+        <h1>Frequently Asked Questions</h1>
+        <p>Everything you need to know about SecureLink. Can't find an answer? <a href="mailto:support@securelinkapp.com" style="color:var(--primary-color);text-decoration:none;">Contact support.</a></p>
+        <div class="faq-search-wrap">
+            <i class="bi bi-search faq-search-icon"></i>
+            <input type="text" class="faq-search" id="faqSearch" placeholder="Search questions..." oninput="filterFAQ(this.value)">
+        </div>
+    </div>
+
+    <div class="faq-layout">
+
+        <!-- General -->
+        <div class="faq-category" data-cat="general">
+            <div class="faq-category-label">
+                <div class="cat-icon blue"><i class="bi bi-shield-check"></i></div>
+                <h2>General</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What is SecureLink?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>SecureLink is a cybersecurity platform that protects you from malicious links, monitors your domain's security health, and alerts you when your data appears in dark web breaches. It includes a browser extension for real-time link scanning, a domain health check tool, dark web monitoring, and an attack surface monitor for businesses.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Do I need an account to use SecureLink?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No account is needed to run a domain health check on the website — you get 3 free checks per day without signing up. The browser extension also works without an account for up to 15 URL scans per day. Creating a free account removes all limits and gives you unlimited scans, unlimited health checks, 7-day scan history, and access to the full dashboard.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What does SecureLink scan for?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>SecureLink checks URLs against multiple threat intelligence databases to detect phishing sites, malware distribution pages, scam sites, and known exploit kits. For domain health checks, it scans SSL certificate validity, SPF and DMARC email authentication records, HTTP security headers, and open port exposure.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>How accurate is the threat detection?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>SecureLink uses an AI-powered scoring engine that cross-references results from 10+ threat intelligence sources including VirusTotal and Google Safe Browsing. Scans complete in under 2 seconds on average. Like any automated system, false positives can occasionally occur — you can always choose to proceed past a warning if you trust the site.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Browser Extension -->
+        <div class="faq-category" data-cat="extension">
+            <div class="faq-category-label">
+                <div class="cat-icon purple"><i class="bi bi-puzzle-fill"></i></div>
+                <h2>Browser Extension</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Which browsers are supported?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>SecureLink is currently available on <strong>Google Chrome</strong> via the Chrome Web Store. Support for Microsoft Edge and Firefox is in development.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Does the extension slow down my browser?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No. The extension runs entirely in the background using Chrome's service worker architecture. URL scans happen asynchronously so they never block page loads or affect browsing speed.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>How do I scan a link before clicking it?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Right-click any hyperlink on any page and select <strong>Scan with SecureLink</strong>. The extension popup will open and show you the result instantly — without navigating to the page. You can also paste any URL directly into the popup's manual scanner.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What does the badge counter on the extension icon mean?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>The red badge number on the SecureLink icon shows how many threats have been blocked in the current session. It persists across browser restarts. You can reset it by clicking <strong>Clear</strong> in the extension popup.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Can I use the extension without a SecureLink account?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes. The extension scans URLs and shows warnings without requiring an account. Signing in with a free SecureLink account syncs your scan history to your dashboard and gives you access to manual URL scanning and all dashboard features.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Domain Health & Monitoring -->
+        <div class="faq-category" data-cat="domain">
+            <div class="faq-category-label">
+                <div class="cat-icon green"><i class="bi bi-heart-pulse"></i></div>
+                <h2>Domain Health &amp; Monitoring</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What does the domain health check look for?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>The health check scans a domain for: SSL certificate validity and expiry date, SPF and DMARC email authentication records, HTTP security headers (HSTS, CSP, X-Frame-Options, etc.), and open port exposure. It produces an overall security grade from A to F and highlights specific issues to fix.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>How many free health checks do I get?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Anonymous visitors get 3 domain health checks per day. Creating a free account removes this limit — authenticated users get unlimited health checks regardless of plan. Pro and Enterprise users can also export results as a PDF report.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What is Attack Surface Monitoring?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Attack Surface Monitoring (Enterprise) continuously scans up to 25 of your domains on an hourly schedule. It tracks changes in SSL status, security headers, DNS records, open ports, and detects new technologies. You receive automated alerts whenever a change is detected that could indicate a security regression or intrusion.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Can I export health check results?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes. Pro and Enterprise users can export any domain health check as a branded PDF report. The report includes the security score, grade, SSL/SPF/DMARC status, and a full findings summary — suitable for sharing with clients or stakeholders.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dark Web Monitoring -->
+        <div class="faq-category" data-cat="darkweb">
+            <div class="faq-category-label">
+                <div class="cat-icon red"><i class="bi bi-incognito"></i></div>
+                <h2>Dark Web Monitoring</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>How does dark web monitoring work?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>You register email addresses to monitor and SecureLink continuously checks them against known data breach databases and dark web sources. When your email appears in a new breach, you receive an immediate email alert with details about the breach — including what data was exposed and recommended actions.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>How many email addresses can I monitor?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Free accounts do not include dark web monitoring. Pro plan lets you monitor up to 5 email addresses. Enterprise plan includes unlimited email monitoring.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Is my email address shared with anyone?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No. Your email addresses are stored securely and used only for breach lookup purposes. We do not share, sell, or use your email addresses for marketing. See our <a href="/privacy">Privacy Policy</a> for full details.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billing -->
+        <div class="faq-category" data-cat="billing">
+            <div class="faq-category-label">
+                <div class="cat-icon amber"><i class="bi bi-credit-card-fill"></i></div>
+                <h2>Billing &amp; Plans</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Can I cancel anytime?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes. There are no long-term contracts. You can cancel your subscription at any time and continue using the service until the end of your billing period.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What payment methods do you accept?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe. Your card details are never stored on our servers.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>What happens when I hit the daily scan limit?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Anonymous users are limited to 3 domain health checks per day on the website, and 15 URL scans per day via the browser extension. Creating a free account removes all of these limits — all account holders get unlimited scans and health checks.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Is there a free trial for Pro or Enterprise?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Our Free plan lets you try core features without a time limit. When you upgrade, you can cancel within 7 days for a full refund if you're not satisfied.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggle(this)">
+                        <span>Do anonymous scan limits roll over to the next day?</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No. Anonymous daily limits reset at midnight UTC and do not carry over. Creating a free account removes all scan limits permanently.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No results message -->
+        <div id="noResults">
+            <i class="bi bi-search" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
+            No questions match your search. Try different keywords or <a href="mailto:support@securelinkapp.com">contact support</a>.
+        </div>
+
+    </div>
+
+    <!-- Still have questions CTA -->
+    <div class="faq-cta">
+        <h3>Still have questions?</h3>
+        <p>Our support team typically responds within a few hours on business days.</p>
+        <a href="mailto:support@securelinkapp.com" class="btn-contact">
+            <i class="bi bi-envelope-fill"></i> Contact Support
+        </a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/#features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/faq">FAQ</a>
+                <a href="/security-news">Security News</a>
+                <a href="/community">Community</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggle(btn) {
+            btn.parentElement.classList.toggle('open');
+        }
+
+        function filterFAQ(query) {
+            const q = query.toLowerCase().trim();
+            const items = document.querySelectorAll('.faq-item');
+            const categories = document.querySelectorAll('.faq-category');
+            let totalVisible = 0;
+
+            categories.forEach(cat => {
+                let catVisible = 0;
+                cat.querySelectorAll('.faq-item').forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    const match = !q || text.includes(q);
+                    item.style.display = match ? '' : 'none';
+                    if (match) catVisible++;
+                });
+                cat.style.display = catVisible > 0 ? '' : 'none';
+                totalVisible += catVisible;
+            });
+
+            document.getElementById('noResults').style.display = totalVisible === 0 ? 'block' : 'none';
+        }
+
+        // Update nav auth link
+        fetch('/api/auth/validate').then(r => r.json()).then(data => {
+            if (data.valid && data.user) {
+                document.getElementById('authLink').textContent = 'Dashboard';
+                document.getElementById('authLink').href = '/home';
+            }
+        }).catch(() => {});
+    </script>
+</body>
+</html>

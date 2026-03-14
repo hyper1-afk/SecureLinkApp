@@ -346,6 +346,12 @@ def features_page():
     return render_template('features.html')
 
 
+@app.route('/faq')
+def faq_page():
+    """Render the FAQ page"""
+    return render_template('faq.html')
+
+
 @app.route('/pricing')
 def pricing_page():
     """Render the pricing page"""
