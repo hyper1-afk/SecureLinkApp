@@ -710,8 +710,10 @@ If you have any questions, just reply to this email.
             session.commit()
             
             # Send reset email
-            self._send_password_reset_email(user.email, user.username, token, base_url)
-            
+            email_sent = self._send_password_reset_email(user.email, user.username, token, base_url)
+            if not email_sent:
+                logger.error(f"Password reset email failed to send to {user.email} — token was saved but email not delivered")
+
             return {'success': True, 'message': 'If that email exists, a reset link has been sent.'}
             
         except Exception as e:
@@ -804,7 +806,7 @@ If you have any questions, just reply to this email.
             smtp_pass = self.config.SMTP_PASSWORD or self.config.EMAIL_PASSWORD
             
             if not smtp_user or not smtp_pass:
-                print("Warning: SMTP not configured - password reset email not sent")
+                logger.error("Password reset email not sent: SMTP credentials not configured")
                 return False
             
             if getattr(self.config, 'SMTP_USE_SSL', False) or smtp_port == 465:
@@ -817,11 +819,11 @@ If you have any questions, just reply to this email.
                     server.login(smtp_user, smtp_pass)
                     server.send_message(msg)
             
-            print(f"Password reset email sent to {email}")
+            logger.info(f"Password reset email sent to {email}")
             return True
-            
+
         except Exception as e:
-            print(f"Failed to send password reset email: {e}")
+            logger.error(f"Failed to send password reset email to {email}: {e}")
             return False
     
     def verify_password_reset_token(self, token: str) -> Dict:

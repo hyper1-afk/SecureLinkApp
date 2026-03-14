@@ -26,67 +26,51 @@
             --text-muted: #64748b;
             --border-color: rgba(148, 163, 184, 0.12);
         }
-        
-        * {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-        
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
         body {
             background: var(--bg-dark);
-            background-image: 
+            background-image:
                 radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
                 radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
             min-height: 100vh;
             color: var(--text-primary);
         }
-        
-        .navbar {
-            background: rgba(15, 23, 42, 0.9) !important;
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 1.35rem;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .nav-link {
-            color: var(--text-secondary) !important;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        
-        .nav-link:hover {
-            color: var(--primary-color) !important;
-        }
-        
+
+        /* Hero */
         .hero-section {
             text-align: center;
-            padding: 4rem 1rem;
-            position: relative;
+            padding: 4rem 1rem 3rem;
         }
-        
-        .coming-soon-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            padding: 0.5rem 1.5rem;
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #10b981;
+            padding: 0.4rem 1.2rem;
             border-radius: 50px;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.9rem;
             margin-bottom: 1.5rem;
-            animation: pulse 2s infinite;
         }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.9; transform: scale(1.02); }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-dot 2s infinite;
         }
-        
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        }
+
         .hero-section h1 {
             font-weight: 800;
             font-size: 3rem;
@@ -95,136 +79,151 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 1rem;
         }
-        
+
         .hero-section p {
             color: var(--text-secondary);
-            font-size: 1.25rem;
-            max-width: 600px;
-            margin: 0 auto;
+            font-size: 1.2rem;
+            max-width: 580px;
+            margin: 0 auto 2rem;
         }
-        
-        .extension-preview {
-            max-width: 800px;
-            margin: 3rem auto;
-            padding: 2rem;
-            background: var(--bg-card);
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .extension-preview::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(139, 92, 246, 0.05));
-            pointer-events: none;
-        }
-        
-        .browser-mockup {
-            background: #1a1a2e;
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .browser-bar {
-            display: flex;
+
+        .install-btn {
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            background: #252542;
-            border-radius: 8px;
-            margin-bottom: 1rem;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            font-weight: 700;
+            font-size: 1.05rem;
+            padding: 0.9rem 2rem;
+            border-radius: 14px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
         }
-        
-        .browser-dots {
-            display: flex;
-            gap: 6px;
+
+        .install-btn:hover {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(14, 165, 233, 0.45);
         }
-        
-        .browser-dots span {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-        
-        .browser-dots span:nth-child(1) { background: #ef4444; }
-        .browser-dots span:nth-child(2) { background: #f59e0b; }
-        .browser-dots span:nth-child(3) { background: #10b981; }
-        
-        .browser-url {
-            flex: 1;
-            background: #1a1a2e;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
+
+        .install-btn i { font-size: 1.2rem; }
+
+        .hero-meta {
+            margin-top: 1rem;
             color: var(--text-muted);
             font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
-        
-        .extension-icon {
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
+
+        /* Setup Steps */
+        .setup-section {
+            max-width: 760px;
+            margin: 3rem auto;
+            padding: 0 1rem;
         }
-        
-        .browser-content {
-            background: #252542;
-            border-radius: 8px;
-            padding: 2rem;
+
+        .setup-section h2 {
             text-align: center;
-            min-height: 200px;
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .setup-steps {
             display: flex;
             flex-direction: column;
+            gap: 1rem;
+        }
+
+        .setup-step {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.4rem 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .setup-step:hover {
+            border-color: rgba(14, 165, 233, 0.3);
+            background: var(--bg-card-hover);
+        }
+
+        .step-num {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
-        
-        .browser-content i {
-            font-size: 4rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-        
-        .browser-content p {
-            color: var(--text-muted);
+
+        .step-body h4 {
+            font-weight: 600;
             font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
         }
-        
+
+        .step-body p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .step-body a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .step-body a:hover { text-decoration: underline; }
+
+        /* Pin tip */
+        .pin-tip {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            margin-top: 1.25rem;
+        }
+
+        .pin-tip i { color: #f59e0b; font-size: 1.1rem; margin-top: 2px; }
+        .pin-tip p { color: var(--text-secondary); font-size: 0.9rem; margin: 0; line-height: 1.6; }
+
+        /* Benefits */
         .benefits-section {
             padding: 3rem 1rem;
             max-width: 1000px;
             margin: 0 auto;
         }
-        
+
         .benefits-section h2 {
             text-align: center;
             font-weight: 700;
-            font-size: 2rem;
+            font-size: 1.75rem;
             margin-bottom: 2rem;
             color: var(--text-primary);
         }
-        
+
         .benefits-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
         }
-        
+
         .benefit-card {
             background: var(--bg-card);
             border-radius: 16px;
@@ -232,12 +231,12 @@
             border: 1px solid var(--border-color);
             transition: all 0.3s ease;
         }
-        
+
         .benefit-card:hover {
             background: var(--bg-card-hover);
             transform: translateY(-4px);
         }
-        
+
         .benefit-icon {
             width: 50px;
             height: 50px;
@@ -248,156 +247,41 @@
             font-size: 1.5rem;
             margin-bottom: 1rem;
         }
-        
+
         .benefit-icon.protection { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .benefit-icon.speed { background: rgba(14, 165, 233, 0.2); color: #0ea5e9; }
-        .benefit-icon.alerts { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-        .benefit-icon.privacy { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
-        .benefit-icon.sync { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
-        .benefit-icon.easy { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
-        
-        .benefit-card h3 {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-        
-        .benefit-card p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            margin: 0;
-            line-height: 1.6;
-        }
-        
-        .notify-section {
+        .benefit-icon.speed      { background: rgba(14, 165, 233, 0.2); color: #0ea5e9; }
+        .benefit-icon.alerts     { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .benefit-icon.privacy    { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .benefit-icon.sync       { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+        .benefit-icon.easy       { background: rgba(6, 182, 212, 0.2);  color: #06b6d4; }
+
+        .benefit-card h3 { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .benefit-card p  { color: var(--text-secondary); font-size: 0.92rem; margin: 0; line-height: 1.6; }
+
+        /* CTA */
+        .cta-section {
             text-align: center;
             padding: 4rem 1rem;
             max-width: 600px;
             margin: 0 auto;
         }
-        
-        .notify-section h2 {
-            font-weight: 700;
-            font-size: 1.75rem;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-        
-        .notify-section p {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-        }
-        
-        .notify-form {
-            display: flex;
-            gap: 0.75rem;
-            max-width: 450px;
-            margin: 0 auto;
-        }
-        
-        .notify-form input {
-            flex: 1;
-            padding: 0.875rem 1.25rem;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-        
-        .notify-form input::placeholder {
-            color: var(--text-muted);
-        }
-        
-        .notify-form input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
-        }
-        
-        .notify-btn {
-            padding: 0.875rem 1.5rem;
-            border-radius: 12px;
-            border: none;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-        
-        .notify-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
-        }
-        
-        .browsers-section {
+
+        .cta-section h2 { font-weight: 700; font-size: 1.75rem; margin-bottom: 1rem; }
+        .cta-section p  { color: var(--text-secondary); margin-bottom: 2rem; }
+
+        /* Browsers */
+        .browsers-note {
             text-align: center;
-            padding: 2rem 1rem 4rem;
-        }
-        
-        .browsers-section h3 {
+            padding: 1rem 1rem 4rem;
             color: var(--text-muted);
-            font-weight: 500;
-            font-size: 1rem;
-            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
         }
-        
-        .browser-logos {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            opacity: 0.5;
-        }
-        
-        .browser-logo {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-muted);
-        }
-        
-        .browser-logo i {
-            font-size: 2.5rem;
-        }
-        
-        .browser-logo span {
-            font-size: 0.85rem;
-        }
-        
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-        
-        .back-link:hover {
-            color: var(--primary-color);
-            background: rgba(14, 165, 233, 0.1);
-        }
-        
+
+        .browsers-note i { font-size: 1.4rem; vertical-align: middle; margin-right: 6px; color: #0ea5e9; }
+
         @media (max-width: 768px) {
-            .hero-section h1 {
-                font-size: 2rem;
-            }
-            
-            .notify-form {
-                flex-direction: column;
-            }
-            
-            .browser-logos {
-                gap: 1.5rem;
-            }
+            .hero-section h1 { font-size: 2rem; }
+            .setup-step { flex-direction: column; }
         }
     </style>
 </head>
@@ -426,127 +310,127 @@
     </nav>
 
     <div class="container" style="padding-top: 68px;">
-        
-        <!-- Hero Section -->
+
+        <!-- Hero -->
         <section class="hero-section">
-            <span class="coming-soon-badge">
-                <i class="bi bi-clock me-2"></i>Coming Soon
-            </span>
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                Now Live on Chrome Web Store
+            </div>
             <h1>SecureLink Browser Extension</h1>
-            <p>Real-time link protection while you browse. Automatically scan every link before you click for ultimate peace of mind.</p>
+            <p>Real-time link protection while you browse. Automatically scans every URL you visit and warns you before it's too late.</p>
+            <a href="https://chromewebstore.google.com/detail/securelink/dpegeipjmofhdikcbniodhohpckoeole" target="_blank" class="install-btn">
+                <i class="bi bi-browser-chrome"></i>
+                Add to Chrome — It's Free
+            </a>
+            <p class="hero-meta">Free forever &nbsp;·&nbsp; No account required &nbsp;·&nbsp; v1.2.0</p>
         </section>
-        
-        <!-- Extension Preview -->
-        <div class="extension-preview">
-            <div class="browser-mockup">
-                <div class="browser-bar">
-                    <div class="browser-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <div class="browser-url">
-                        <i class="bi bi-lock-fill" style="color: #10b981;"></i>
-                        https://example.com
-                    </div>
-                    <div class="extension-icon">
-                        <i class="bi bi-shield-check"></i>
+
+        <!-- Setup Steps -->
+        <section class="setup-section">
+            <h2>How to Set It Up</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>Install from the Chrome Web Store</h4>
+                        <p>Click <a href="https://chromewebstore.google.com/detail/securelink/dpegeipjmofhdikcbniodhohpckoeole" target="_blank">Add to Chrome</a> on the store page, then confirm by clicking <strong>Add extension</strong> in the popup. Chrome will install it in seconds.</p>
                     </div>
                 </div>
-                <div class="browser-content">
-                    <i class="bi bi-puzzle"></i>
-                    <p>Extension preview coming soon...</p>
+                <div class="setup-step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>Pin the extension to your toolbar</h4>
+                        <p>Click the <strong>puzzle piece icon</strong> in the top-right of Chrome, find <strong>SecureLink</strong> in the list, and click the pin icon next to it. The SecureLink shield will now appear in your toolbar at all times.</p>
+                    </div>
+                </div>
+                <div class="setup-step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>Browse — you're already protected</h4>
+                        <p>No configuration needed. SecureLink immediately starts scanning URLs in the background. If you navigate to a malicious or suspicious site, a warning page will intercept you automatically.</p>
+                    </div>
+                </div>
+                <div class="setup-step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h4>Sign in to unlock your dashboard (optional)</h4>
+                        <p>Click the SecureLink icon in your toolbar and sign into your SecureLink account. This syncs your scan history to your dashboard and gives you access to manual URL scanning, domain health checks, and Pro features if you're on a paid plan.</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Benefits Section -->
+
+            <div class="pin-tip">
+                <i class="bi bi-lightbulb-fill"></i>
+                <p><strong>Tip:</strong> You can manually scan any URL directly from the extension popup — just paste a link into the input field and hit Scan. No need to visit the site first.</p>
+            </div>
+        </section>
+
+        <!-- Benefits -->
         <section class="benefits-section">
-            <h2>Why Install the SecureLink Extension?</h2>
+            <h2>What You Get</h2>
             <div class="benefits-grid">
                 <div class="benefit-card">
                     <div class="benefit-icon protection">
                         <i class="bi bi-shield-check"></i>
                     </div>
                     <h3>Real-Time Protection</h3>
-                    <p>Automatically scans links as you browse. Get instant warnings before clicking on suspicious or malicious URLs.</p>
+                    <p>Every URL you visit is scanned in the background. You're warned before a malicious page ever loads.</p>
                 </div>
-                
                 <div class="benefit-card">
                     <div class="benefit-icon speed">
                         <i class="bi bi-lightning-charge"></i>
                     </div>
-                    <h3>Lightning Fast</h3>
-                    <p>Our lightweight extension runs in the background without slowing down your browsing experience.</p>
+                    <h3>Lightweight & Fast</h3>
+                    <p>Runs silently without slowing down your browser. You won't notice it's there until it saves you.</p>
                 </div>
-                
                 <div class="benefit-card">
                     <div class="benefit-icon alerts">
                         <i class="bi bi-bell"></i>
                     </div>
-                    <h3>Instant Alerts</h3>
-                    <p>Receive immediate notifications when you encounter a dangerous link, phishing attempt, or malware.</p>
+                    <h3>Instant Warning Pages</h3>
+                    <p>When a threat is detected, a full warning page blocks the site and explains why it was flagged before you proceed.</p>
                 </div>
-                
                 <div class="benefit-card">
                     <div class="benefit-icon privacy">
                         <i class="bi bi-eye-slash"></i>
                     </div>
                     <h3>Privacy Focused</h3>
-                    <p>We only check links you interact with. Your browsing history and personal data stay private.</p>
+                    <p>Only the URLs you navigate to are checked. Your browsing history and personal data stay on your device.</p>
                 </div>
-                
                 <div class="benefit-card">
                     <div class="benefit-icon sync">
                         <i class="bi bi-arrow-repeat"></i>
                     </div>
-                    <h3>Synced Dashboard</h3>
-                    <p>All scanned links sync with your SecureLink dashboard for a complete security overview.</p>
+                    <h3>Dashboard Sync</h3>
+                    <p>Sign in to sync scanned links with your SecureLink dashboard for a full security overview across sessions.</p>
                 </div>
-                
                 <div class="benefit-card">
                     <div class="benefit-icon easy">
-                        <i class="bi bi-hand-thumbs-up"></i>
+                        <i class="bi bi-search"></i>
                     </div>
-                    <h3>Easy to Use</h3>
-                    <p>One-click installation. No configuration needed. Just install and stay protected automatically.</p>
+                    <h3>Manual URL Scanner</h3>
+                    <p>Paste any suspicious link into the popup and get an instant verdict — without ever opening the page.</p>
                 </div>
             </div>
         </section>
-        
-        <!-- Notify Section -->
-        <section class="notify-section">
-            <h2>Get Notified When It's Ready</h2>
-            <p>Be the first to know when the SecureLink browser extension launches. We'll send you an email the moment it's available.</p>
-            <form class="notify-form" onsubmit="handleNotify(event)">
-                <input type="email" placeholder="Enter your email address" required>
-                <button type="submit" class="notify-btn">Notify Me</button>
-            </form>
-            <p id="notify-message" style="margin-top: 1rem; display: none;"></p>
+
+        <!-- CTA -->
+        <section class="cta-section">
+            <h2>Start Browsing Safer Today</h2>
+            <p>Free to install. No account required. Join the growing community of people protecting themselves and their organizations from phishing and malicious links.</p>
+            <a href="https://chromewebstore.google.com/detail/securelink/dpegeipjmofhdikcbniodhohpckoeole" target="_blank" class="install-btn">
+                <i class="bi bi-browser-chrome"></i>
+                Add to Chrome — Free
+            </a>
         </section>
-        
-        <!-- Supported Browsers -->
-        <section class="browsers-section">
-            <h3>Coming to these browsers</h3>
-            <div class="browser-logos">
-                <div class="browser-logo">
-                    <i class="bi bi-browser-chrome"></i>
-                    <span>Chrome</span>
-                </div>
-                <div class="browser-logo">
-                    <i class="bi bi-browser-firefox"></i>
-                    <span>Firefox</span>
-                </div>
-                <div class="browser-logo">
-                    <i class="bi bi-browser-edge"></i>
-                    <span>Edge</span>
-                </div>
-                <div class="browser-logo">
-                    <i class="bi bi-browser-safari"></i>
-                    <span>Safari</span>
-                </div>
-            </div>
-        </section>
+
+        <!-- Browser note -->
+        <div class="browsers-note">
+            <i class="bi bi-browser-chrome"></i>
+            Currently available on <strong>Google Chrome</strong>. Support for Edge and Firefox coming soon.
+        </div>
+
     </div>
 
     <!-- Footer -->
@@ -591,20 +475,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function handleNotify(event) {
-            event.preventDefault();
-            const email = event.target.querySelector('input').value;
-            const messageEl = document.getElementById('notify-message');
-            
-            // Here you would typically send this to your backend
-            messageEl.innerHTML = '<i class="bi bi-check-circle-fill text-success me-2"></i>Thanks! We\'ll notify you at <strong>' + email + '</strong> when the extension is ready.';
-            messageEl.style.display = 'block';
-            messageEl.style.color = '#10b981';
-            
-            event.target.querySelector('input').value = '';
-        }
+        // Update nav auth link
+        fetch('/api/auth/validate').then(r => r.json()).then(data => {
+            if (data.valid && data.user) {
+                document.getElementById('authLink').textContent = 'Dashboard';
+                document.getElementById('authLink').href = '/home';
+                document.getElementById('homeLink').style.display = '';
+                document.getElementById('brandLink').href = '/home';
+            }
+        }).catch(() => {});
     </script>
-    <!-- Scroll animation observer -->
     <script>
         const fadeObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
