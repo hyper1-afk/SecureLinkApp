@@ -8,6 +8,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         scanPageLinks();
     } else if (message.action === 'showResult') {
         showInlineResult(message.url, message.data);
+    } else if (message.action === 'showScanToast') {
+        showToast(message.message, message.type || 'info');
     }
 });
 
@@ -104,26 +106,49 @@ function showInlineResult(url, data) {
     const link = links[0];
     const rect = link.getBoundingClientRect();
 
-    // Create result popup
+    // Create result popup using DOM (no innerHTML — prevents XSS)
     const popup = document.createElement('div');
     popup.className = 'securelink-popup';
-    popup.innerHTML = `
-        <div class="securelink-popup-header">
-            <span class="securelink-popup-icon">${data.risk_score < 30 ? '✅' : data.risk_score < 70 ? '⚠️' : '🚨'}</span>
-            <span class="securelink-popup-title">${data.risk_score < 30 ? 'Safe' : data.risk_score < 70 ? 'Suspicious' : 'Dangerous'}</span>
-        </div>
-        <div class="securelink-popup-score">Risk Score: ${data.risk_score}/100</div>
-        ${data.threat_types && data.threat_types.length > 0 ? `
-            <div class="securelink-popup-threats">
-                ${data.threat_types.map(t => `<span class="securelink-threat-tag">${t}</span>`).join('')}
-            </div>
-        ` : ''}
-        <div class="securelink-popup-close">Click anywhere to close</div>
-    `;
 
-    // Position popup
-    popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
-    popup.style.left = `${rect.left + window.scrollX}px`;
+    const header = document.createElement('div');
+    header.className = 'securelink-popup-header';
+    const iconEl = document.createElement('span');
+    iconEl.className = 'securelink-popup-icon';
+    iconEl.textContent = data.risk_score < 30 ? '✅' : data.risk_score < 70 ? '⚠️' : '🚨';
+    const titleEl = document.createElement('span');
+    titleEl.className = 'securelink-popup-title';
+    titleEl.textContent = data.risk_score < 30 ? 'Safe' : data.risk_score < 70 ? 'Suspicious' : 'Dangerous';
+    header.appendChild(iconEl);
+    header.appendChild(titleEl);
+
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'securelink-popup-score';
+    scoreEl.textContent = 'Risk Score: ' + data.risk_score + '/100';
+
+    const closeEl = document.createElement('div');
+    closeEl.className = 'securelink-popup-close';
+    closeEl.textContent = 'Click anywhere to close';
+
+    popup.appendChild(header);
+    popup.appendChild(scoreEl);
+
+    if (data.threat_types && data.threat_types.length > 0) {
+        const threatsEl = document.createElement('div');
+        threatsEl.className = 'securelink-popup-threats';
+        data.threat_types.forEach(t => {
+            const tag = document.createElement('span');
+            tag.className = 'securelink-threat-tag';
+            tag.textContent = t;
+            threatsEl.appendChild(tag);
+        });
+        popup.appendChild(threatsEl);
+    }
+
+    popup.appendChild(closeEl);
+
+    // Position popup using CSS classes instead of inline styles
+    popup.style.setProperty('top', (rect.bottom + window.scrollY + 10) + 'px');
+    popup.style.setProperty('left', (rect.left + window.scrollX) + 'px');
 
     document.body.appendChild(popup);
 

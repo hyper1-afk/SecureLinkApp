@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="linkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff" stop-opacity="1"/>
+      <stop offset="100%" style="stop-color:#e0f2fe" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid lines for high-tech feel -->
+  <line x1="0" y1="42" x2="128" y2="42" stroke="#0ea5e9" stroke-width="0.3" stroke-opacity="0.2"/>
+  <line x1="0" y1="86" x2="128" y2="86" stroke="#0ea5e9" stroke-width="0.3" stroke-opacity="0.2"/>
+  <line x1="42" y1="0" x2="42" y2="128" stroke="#8b5cf6" stroke-width="0.3" stroke-opacity="0.2"/>
+  <line x1="86" y1="0" x2="86" y2="128" stroke="#8b5cf6" stroke-width="0.3" stroke-opacity="0.2"/>
+
+  <!-- Shield body -->
+  <path d="M64 14 L92 26 L92 58 C92 76 78 90 64 96 C50 90 36 76 36 58 L36 26 Z"
+        fill="url(#shieldGrad)" opacity="0.15"/>
+  <path d="M64 14 L92 26 L92 58 C92 76 78 90 64 96 C50 90 36 76 36 58 L36 26 Z"
+        fill="none" stroke="url(#shieldGrad)" stroke-width="2.5" filter="url(#glow)"/>
+
+  <!-- Chain link left -->
+  <rect x="38" y="52" width="22" height="13" rx="6.5"
+        fill="none" stroke="url(#linkGrad)" stroke-width="3.5" filter="url(#glow)"/>
+
+  <!-- Chain link right -->
+  <rect x="68" y="52" width="22" height="13" rx="6.5"
+        fill="none" stroke="url(#linkGrad)" stroke-width="3.5" filter="url(#glow)"/>
+
+  <!-- Chain link connector -->
+  <line x1="60" y1="58.5" x2="68" y2="58.5" stroke="url(#linkGrad)" stroke-width="3.5"/>
+
+  <!-- Checkmark / verify dot — bottom right accent -->
+  <circle cx="88" cy="88" r="11" fill="#0f172a"/>
+  <circle cx="88" cy="88" r="11" fill="url(#shieldGrad)" opacity="0.9"/>
+  <polyline points="83,88 86.5,91.5 93,85" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

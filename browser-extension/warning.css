@@ -135,6 +135,13 @@ h1 {
     font-size: 14px;
 }
 
+/* Score-based heading colors — set via className in warning.js */
+h1.heading-safe    { color: #10b981; }
+h1.heading-warning { color: #f59e0b; }
+
+/* Hide proceed button for safe links */
+.btn.hidden { display: none; }
+
 .powered-by a {
     color: #3b82f6;
     text-decoration: none;

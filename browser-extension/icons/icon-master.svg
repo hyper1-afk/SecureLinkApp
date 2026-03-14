@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0c1629"/>
+      <stop offset="100%" style="stop-color:#1a2744"/>
+    </linearGradient>
+    <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="neon2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+    <radialGradient id="innerGlow" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" style="stop-color:#38bdf8; stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:#a78bfa; stop-opacity:0"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="108" fill="url(#innerGlow)"/>
+
+  <!-- Subtle corner accent dots -->
+  <circle cx="80" cy="80" r="3" fill="#38bdf8" opacity="0.3"/>
+  <circle cx="432" cy="80" r="3" fill="#a78bfa" opacity="0.3"/>
+  <circle cx="80" cy="432" r="3" fill="#a78bfa" opacity="0.3"/>
+  <circle cx="432" cy="432" r="3" fill="#38bdf8" opacity="0.3"/>
+
+  <!-- Shield outer -->
+  <path d="M256 52 L388 104 L388 240 C388 322 330 384 256 416 C182 384 124 322 124 240 L124 104 Z"
+        fill="none" stroke="url(#neon)" stroke-width="10" stroke-linejoin="round"
+        filter="url(#glow)"/>
+
+  <!-- Shield inner fill -->
+  <path d="M256 52 L388 104 L388 240 C388 322 330 384 256 416 C182 384 124 322 124 240 L124 104 Z"
+        fill="url(#neon)" opacity="0.05"/>
+
+  <!-- Shield inner stroke (thinner, offset inward) -->
+  <path d="M256 76 L368 120 L368 240 C368 310 316 364 256 392 C196 364 144 310 144 240 L144 120 Z"
+        fill="none" stroke="url(#neon2)" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- S letterform — bold, centered -->
+  <path d="M296 168
+           C296 152 280 140 256 140
+           C232 140 216 152 216 168
+           C216 184 232 192 256 196
+           C280 200 296 210 296 228
+           C296 246 280 258 256 258
+           C232 258 216 246 216 228"
+        fill="none"
+        stroke="url(#neon)"
+        stroke-width="22"
+        stroke-linecap="round"
+        filter="url(#softglow)"/>
+
+  <!-- Verified check badge — bottom right -->
+  <circle cx="368" cy="368" r="58" fill="#0c1629"/>
+  <circle cx="368" cy="368" r="58" fill="url(#neon)" opacity="0.15"/>
+  <circle cx="368" cy="368" r="54" fill="none" stroke="url(#neon)" stroke-width="3" filter="url(#glow)"/>
+  <polyline points="344,368 360,384 396,348"
+            fill="none" stroke="url(#neon)" stroke-width="12"
+            stroke-linecap="round" stroke-linejoin="round"
+            filter="url(#softglow)"/>
+</svg>

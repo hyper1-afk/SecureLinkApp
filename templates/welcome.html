@@ -87,10 +87,11 @@
         }
         .brand-icon i { font-size: 20px; color: #fff; }
         .brand-text { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; }
-        .nav-links { display: flex; align-items: center; gap: 8px; }
+        .nav-links { display: flex; align-items: center; gap: 4px; }
         .nav-links a {
             padding: 9px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 500;
-            text-decoration: none; transition: all 0.25s;
+            text-decoration: none; transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+            border: 1px solid transparent;
         }
         .nav-link-text { color: var(--text-secondary); }
         .nav-link-text:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
@@ -98,7 +99,7 @@
             color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent));
             font-weight: 600;
         }
-        .nav-link-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(14,165,233,0.3); color: #fff; }
+        .nav-link-cta:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.3); color: #fff; filter: brightness(1.08); }
         .mobile-toggle {
             display: none; background: none; border: 1px solid var(--border-light);
             color: var(--text-primary); padding: 8px 10px; border-radius: 10px;
@@ -506,8 +507,8 @@
             </button>
             <div class="nav-links" id="navLinks">
                 <a href="#features" class="nav-link-text">Features</a>
-                <a href="#attack-surface" class="nav-link-text">Attack Surface</a>
                 <a href="#pricing" class="nav-link-text">Pricing</a>
+                <a href="/extension" class="nav-link-text"><i class="bi bi-puzzle-fill me-1"></i>Extension</a>
                 <a href="/login" class="nav-link-text">Sign In</a>
                 <a href="/login?tab=register" class="nav-link-cta">Get Started Free</a>
             </div>
@@ -526,8 +527,8 @@
             <a href="/login?tab=register" class="btn-hero btn-hero-primary">
                 <i class="bi bi-rocket-takeoff-fill"></i> Start Free Account
             </a>
-            <a href="#features" class="btn-hero btn-hero-secondary">
-                <i class="bi bi-play-circle"></i> See How It Works
+            <a href="#try-it" class="btn-hero btn-hero-secondary">
+                <i class="bi bi-heart-pulse"></i> Check Your Domain Free
             </a>
         </div>
     </section>

@@ -15,7 +15,6 @@ let userSession = null;
 chrome.storage.local.get(['userSession'], (result) => {
     if (result.userSession) {
         userSession = result.userSession;
-        console.log('SecureLink: Loaded saved session for', userSession.user?.email);
     }
 });
 
@@ -127,14 +126,76 @@ const SAFE_DOMAINS = [
     'securelinkapp.com', 'www.securelinkapp.com'
 ];
 
-// Test domains - always show warning (for testing)
-const TEST_DOMAINS = [
-    'securelink-test-malware.com',
-    'test-phishing-example.net',
-    'fake-dangerous-site.xyz'
-];
+// Persistent counters — survive service worker restarts
+let badgeBlockedCount = 0;
+let totalScannedCount = 0;
+chrome.storage.local.get(['badgeBlockedCount', 'totalScannedCount'], (result) => {
+    badgeBlockedCount  = result.badgeBlockedCount  || 0;
+    totalScannedCount  = result.totalScannedCount  || 0;
+    updateBadge();
+});
 
-console.log('SecureLink: Extension loaded and ready');
+function updateBadge() {
+    if (badgeBlockedCount > 0) {
+        chrome.action.setBadgeText({ text: badgeBlockedCount > 99 ? '99+' : String(badgeBlockedCount) });
+        chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+    } else {
+        chrome.action.setBadgeText({ text: '' });
+    }
+}
+
+function incrementBadge() {
+    badgeBlockedCount++;
+    chrome.storage.local.set({ badgeBlockedCount });
+    updateBadge();
+}
+
+function incrementScanned() {
+    totalScannedCount++;
+    chrome.storage.local.set({ totalScannedCount });
+}
+
+// Right-click context menu for scanning links
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+        id: 'securelink-scan',
+        title: 'Scan link with SecureLink',
+        contexts: ['link']
+    });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId !== 'securelink-scan') return;
+
+    const url = info.linkUrl;
+    if (!url) return;
+
+    // Store scanning state and open popup immediately
+    chrome.storage.local.set({ lastScanResult: { status: 'scanning', url, timestamp: Date.now() } });
+
+    // Open popup so user can see the scan happening
+    chrome.windows.getCurrent({ populate: false }, (win) => {
+        if (win && win.focused && chrome.action.openPopup) {
+            chrome.action.openPopup().catch(() => {});
+        }
+    });
+
+    const result = await checkUrl(url);
+
+    if (result.limitReached) {
+        chrome.storage.local.set({ lastScanResult: { status: 'limit', url, message: result.message, timestamp: Date.now() } });
+        return;
+    }
+
+    const score = result.riskScore || 0;
+    const threats = [...(result.threats || []), ...(result.warnings || [])];
+
+    incrementScanned();
+    if (score >= 50) incrementBadge();
+
+    // Store final result — popup listening for this change will update automatically
+    chrome.storage.local.set({ lastScanResult: { status: 'done', url, score, threats, timestamp: Date.now() } });
+});
 
 // Use webNavigation.onBeforeNavigate to intercept BEFORE page loads
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
@@ -143,15 +204,10 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     
     const url = details.url;
     const tabId = details.tabId;
-    
-    console.log('SecureLink: Intercepting navigation to:', url);
-    
+
     // Skip internal/local URLs
     for (const pattern of SKIP_PATTERNS) {
-        if (pattern.test(url)) {
-            console.log('SecureLink: Skipping internal URL');
-            return;
-        }
+        if (pattern.test(url)) return;
     }
     
     // Skip extension pages
@@ -162,53 +218,26 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         const hostname = urlObj.hostname.replace(/^www\./, '');
         
         // Skip known safe domains
-        if (SAFE_DOMAINS.some(d => d === urlObj.hostname || d === hostname)) {
-            console.log('SecureLink: Known safe domain, skipping');
-            return;
-        }
-        
+        if (SAFE_DOMAINS.some(d => d === urlObj.hostname || d === hostname)) return;
+
         // Check if already pending
-        if (pendingChecks.has(url)) {
-            console.log('SecureLink: Check already in progress');
-            return;
-        }
-        
+        if (pendingChecks.has(url)) return;
+
         // Check cache first
         const cached = checkedUrls.get(url);
         if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-            console.log('SecureLink: Using cached result, dangerous:', cached.dangerous);
-            if (cached.dangerous) {
-                showWarning(tabId, url, cached.data);
-            }
+            if (cached.dangerous) showWarning(tabId, url, cached.data);
             return;
         }
-        
-        // Quick check for test domains (no API needed)
-        if (TEST_DOMAINS.some(d => hostname === d || hostname === 'www.' + d)) {
-            console.log('SecureLink: TEST DOMAIN DETECTED - showing warning');
-            const testResult = {
-                riskScore: 95,
-                threats: ['Test Malware Site'],
-                warnings: ['This is a test URL for extension testing']
-            };
-            checkedUrls.set(url, { timestamp: Date.now(), dangerous: true, data: testResult });
-            showWarning(tabId, url, testResult);
-            return;
-        }
-        
+
         // Mark as pending
         pendingChecks.add(url);
-        
-        // Check the URL with our API
-        console.log('SecureLink: Checking URL with API...');
+
         const result = await checkUrl(url);
-        
         pendingChecks.delete(url);
-        console.log('SecureLink: API result - Risk Score:', result.riskScore);
-        
+
         // Handle rate limit
         if (result.limitReached) {
-            console.log('SecureLink: Rate limit reached');
             showUpgradePrompt(tabId, result.message);
             return;
         }
@@ -219,15 +248,16 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
             dangerous: result.riskScore >= 50,
             data: result
         });
-        
-        // Show warning for risky URLs (50+ risk score)
+
+        incrementScanned();
+
         if (result.riskScore >= 50) {
-            console.log('SecureLink: DANGEROUS URL DETECTED! Showing warning...');
+            incrementBadge();
             showWarning(tabId, url, result);
         }
         
-    } catch (error) {
-        console.error('SecureLink: Error checking URL', error);
+    } catch (_) {
+        // Silently skip — do not block navigation on scan errors
     }
 });
 
@@ -259,7 +289,6 @@ async function checkUrl(url) {
         }
         
         if (!response.ok) {
-            console.error('SecureLink: API returned status', response.status);
             return { riskScore: 0, threats: [], message: 'API error' };
         }
         
@@ -280,8 +309,7 @@ async function checkUrl(url) {
             subscriptionTier: data.subscription_tier,
             message: data.message || ''
         };
-    } catch (error) {
-        console.error('SecureLink: API fetch error', error);
+    } catch (_) {
         return { riskScore: 0, threats: [], message: 'Could not verify' };
     }
 }
@@ -399,8 +427,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     if (message.action === 'getStats') {
         sendResponse({
-            checkedCount: checkedUrls.size,
-            blockedCount: [...checkedUrls.values()].filter(v => v.dangerous).length
+            checkedCount: totalScannedCount,
+            blockedCount: badgeBlockedCount
         });
+    }
+
+    if (message.action === 'clearBadge') {
+        badgeBlockedCount = 0;
+        totalScannedCount = 0;
+        chrome.storage.local.set({ badgeBlockedCount: 0, totalScannedCount: 0 });
+        updateBadge();
+        sendResponse({ success: true });
     }
 });

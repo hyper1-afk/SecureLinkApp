@@ -79,13 +79,14 @@ body {
 }
 
 .status-text { font-size: 12px; font-weight: 600; color: #10b981; }
+.status-text.status-warning { color: #f59e0b; }
 .status-bar.warning .status-text { color: #f59e0b; }
 
 /* ── Stats Row ── */
 .stats-row {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid rgba(255,255,255,0.07);
     background: #1e293b;
 }
@@ -95,8 +96,14 @@ body {
     text-align: center;
 }
 
+.stat-icon {
+    font-size: 13px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
 .stat-value {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #0ea5e9;
     line-height: 1;
@@ -110,8 +117,36 @@ body {
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-top: 3px;
+    margin-top: 2px;
 }
+
+.stat-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.clear-badge-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    background: rgba(239,68,68,0.2);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 3px;
+    color: #f87171;
+    font-size: 8px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s;
+}
+
+.clear-badge-btn:hover { background: rgba(239,68,68,0.4); }
+.clear-badge-btn.visible { display: flex; }
 
 .stat-divider {
     width: 1px;
@@ -120,16 +155,7 @@ body {
 }
 
 /* ── Check Section ── */
-.check-section { padding: 14px 16px; }
-
-.section-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #64748b;
-    margin-bottom: 8px;
-}
+.check-section { padding: 12px 16px; }
 
 .input-group { display: flex; gap: 6px; }
 
@@ -173,28 +199,44 @@ body {
 /* Result */
 .result {
     margin-top: 10px;
-    padding: 12px;
+    padding: 11px 13px;
     border-radius: 10px;
     border: 1px solid transparent;
 }
 
-.result.safe    { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.25); }
-.result.warning { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.25); }
-.result.danger  { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.25); }
-.result.info    { background: rgba(14,165,233,0.08); border-color: rgba(14,165,233,0.2); }
+.result.safe     { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.25); }
+.result.warning  { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.25); }
+.result.danger   { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.25); }
+.result.info     { background: rgba(14,165,233,0.08); border-color: rgba(14,165,233,0.2); }
+.result.scanning { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.15); }
 
-.result-badge {
+.result-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-weight: 700;
+    gap: 10px;
+}
+
+.result-icon-large {
+    font-size: 22px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.result-text {
     font-size: 13px;
+    font-weight: 700;
+    color: #f8fafc;
 }
 
 .result-score {
     font-size: 11px;
     color: #94a3b8;
-    margin-top: 6px;
 }
 
 .result-threats {
@@ -214,6 +256,9 @@ body {
     border: 1px solid rgba(239,68,68,0.2);
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+.result.scanning .result-icon-large { display: inline-block; animation: spin 1s linear infinite; }
+
 /* ── Divider ── */
 .divider {
     height: 1px;
@@ -222,7 +267,7 @@ body {
 }
 
 /* ── Account Section ── */
-.account-section { padding: 14px 16px; }
+.account-section { padding: 12px 16px; }
 
 .account-header {
     display: flex;

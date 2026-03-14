@@ -1,13 +1,37 @@
 // Parse URL parameters
 const params = new URLSearchParams(window.location.search);
 const blockedUrl = params.get('url') || 'Unknown URL';
-const riskScore = params.get('score') || '?';
+const riskScore = parseInt(params.get('score') || '0', 10);
 let threats = [];
 
 try {
     threats = JSON.parse(params.get('threats') || '[]');
 } catch (e) {
-    threats = ['Suspicious activity detected'];
+    threats = [];
+}
+
+// Adapt page appearance based on risk score
+const container = document.querySelector('.warning-container');
+const icon = document.querySelector('.warning-icon');
+const heading = document.querySelector('h1');
+const subtitle = document.querySelector('.subtitle');
+const proceedBtn = document.getElementById('btn-proceed');
+
+if (riskScore < 30) {
+    icon.textContent = '✅';
+    heading.textContent = 'Link Looks Safe';
+    heading.className = 'heading-safe';
+    subtitle.textContent = 'SecureLink found no threats with this link';
+    proceedBtn.classList.add('hidden');
+    if (threats.length === 0) threats = ['No threats detected'];
+} else if (riskScore < 50) {
+    icon.textContent = '⚠️';
+    heading.textContent = 'Suspicious Link';
+    heading.className = 'heading-warning';
+    subtitle.textContent = 'Proceed with caution — this link has some risk indicators';
+    if (threats.length === 0) threats = ['Some risk indicators detected'];
+} else {
+    if (threats.length === 0) threats = ['This site has been flagged as potentially dangerous'];
 }
 
 // Display blocked URL
@@ -16,18 +40,22 @@ document.getElementById('blocked-url').textContent = blockedUrl;
 // Display risk score
 document.getElementById('risk-score').textContent = `Risk Score: ${riskScore}/100`;
 
-// Display threats
+// Display threats/findings
 const threatsList = document.getElementById('threats-list');
-if (threats.length === 0) {
-    threats = ['This site has been flagged as potentially dangerous'];
+const threatsHeading = document.querySelector('.threats h3');
+if (riskScore < 30) {
+    threatsHeading.textContent = '✅ Scan Results:';
+} else if (riskScore < 50) {
+    threatsHeading.textContent = '⚠️ Risk Indicators:';
 }
+
 threats.forEach(threat => {
     const item = document.createElement('div');
     item.className = 'threat-item';
-    const icon = document.createElement('span');
-    icon.textContent = '⚠️';
+    const iconEl = document.createElement('span');
+    iconEl.textContent = riskScore < 30 ? '✅' : '⚠️';
     const text = document.createTextNode(' ' + threat);
-    item.appendChild(icon);
+    item.appendChild(iconEl);
     item.appendChild(text);
     threatsList.appendChild(item);
 });

@@ -8,9 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultText    = document.getElementById('result-text');
     const resultScore   = document.getElementById('result-score');
     const resultThreats = document.getElementById('result-threats');
-    const checkedCount  = document.getElementById('checked-count');
-    const blockedCount  = document.getElementById('blocked-count');
-    const safeCount     = document.getElementById('safe-count');
+    const checkedCount   = document.getElementById('checked-count');
+    const blockedCount   = document.getElementById('blocked-count');
+    const safeCount      = document.getElementById('safe-count');
+    const clearBadgeBtn  = document.getElementById('clear-badge-btn');
 
     const loginSection  = document.getElementById('login-section');
     const userSection   = document.getElementById('user-section');
@@ -28,12 +29,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadStats();
     checkLoginStatus();
+    loadLastScanResult();
+
+    clearBadgeBtn.addEventListener('click', function() {
+        chrome.runtime.sendMessage({ action: 'clearBadge' }, function() {
+            blockedCount.textContent = '0';
+            safeCount.textContent = Math.max(0, parseInt(checkedCount.textContent) - 0);
+            clearBadgeBtn.classList.remove('visible');
+        });
+    });
 
     loginBtn.addEventListener('click', handleLogin);
     loginPassword.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
     logoutBtn.addEventListener('click', handleLogout);
     checkBtn.addEventListener('click', runScan);
     urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') runScan(); });
+
+    function loadLastScanResult() {
+        chrome.storage.local.get(['lastScanResult'], function(data) {
+            if (!data.lastScanResult) return;
+            applyLastScanResult(data.lastScanResult);
+        });
+    }
+
+    function applyLastScanResult(r) {
+        if (!r || Date.now() - r.timestamp > 5 * 60 * 1000) return;
+        urlInput.value = r.url || '';
+
+        if (r.status === 'scanning') {
+            showResult('scanning', '…', 'Scanning', r.url, []);
+        } else if (r.status === 'limit') {
+            showResult('info', '!', 'Limit Reached', r.message || 'Upgrade for more scans', []);
+            chrome.storage.local.remove(['lastScanResult']);
+        } else if (r.status === 'done') {
+            var score = r.score || 0;
+            var threats = r.threats || [];
+            if (score < 30) {
+                showResult('safe', '✓', 'Safe', 'Risk score: ' + score + '/100', threats);
+            } else if (score < 50) {
+                showResult('warning', '!', 'Suspicious', 'Risk score: ' + score + '/100 — proceed with caution', threats);
+            } else {
+                showResult('danger', '✕', 'Threat Detected', 'Risk score: ' + score + '/100 — do not visit', threats);
+            }
+            loadStats();
+            chrome.storage.local.remove(['lastScanResult']);
+        }
+    }
+
+    // Live update when background finishes a right-click scan
+    chrome.storage.onChanged.addListener(function(changes) {
+        if (changes.lastScanResult && changes.lastScanResult.newValue) {
+            applyLastScanResult(changes.lastScanResult.newValue);
+        }
+    });
 
     function loadStats() {
         chrome.runtime.sendMessage({ action: 'getStats' }, function(resp) {
@@ -43,6 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
             checkedCount.textContent = checked;
             blockedCount.textContent = blocked;
             safeCount.textContent    = Math.max(0, checked - blocked);
+            if (blocked > 0) {
+                clearBadgeBtn.classList.add('visible');
+            } else {
+                clearBadgeBtn.classList.remove('visible');
+            }
         });
     }
 
@@ -98,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setStatus(type, text) {
         statusText.textContent = text;
         statusDot.className    = type === 'warning' ? 'status-dot warning' : 'status-dot';
-        statusText.style.color = type === 'warning' ? '#f59e0b' : '#10b981';
+        statusText.className   = type === 'warning' ? 'status-text status-warning' : 'status-text';
     }
 
     function handleLogin() {
@@ -173,12 +226,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showResult(type, icon, text, score, threats) {
         resultEl.className      = 'result ' + type;
-        resultIcon.textContent  = icon;
+        resultIcon.textContent  = type === 'safe'     ? '✅' :
+                                   type === 'warning'  ? '⚠️' :
+                                   type === 'danger'   ? '🚨' :
+                                   type === 'scanning' ? '⟳' : 'ℹ️';
         resultText.textContent  = text;
         resultScore.textContent = score;
-        resultThreats.innerHTML = threats.map(function(t) {
-            return '<span class="threat-tag">' + t + '</span>';
-        }).join('');
+        resultThreats.textContent = '';
+        threats.forEach(function(t) {
+            var tag = document.createElement('span');
+            tag.className = 'threat-tag';
+            tag.textContent = t;
+            resultThreats.appendChild(tag);
+        });
         resultEl.classList.remove('hidden');
     }
 

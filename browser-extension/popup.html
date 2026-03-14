@@ -26,16 +26,22 @@
     <!-- Stats Row -->
     <div class="stats-row">
         <div class="stat-card">
+            <div class="stat-icon">🔍</div>
             <div class="stat-value" id="checked-count">0</div>
             <div class="stat-label">Scanned</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-card">
+            <div class="stat-icon">🚫</div>
             <div class="stat-value danger" id="blocked-count">0</div>
-            <div class="stat-label">Blocked</div>
+            <div class="stat-label-row">
+                <span class="stat-label">Blocked</span>
+                <button class="clear-badge-btn" id="clear-badge-btn" title="Clear blocked count">✕</button>
+            </div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-card">
+            <div class="stat-icon">✅</div>
             <div class="stat-value safe" id="safe-count">0</div>
             <div class="stat-label">Safe</div>
         </div>
@@ -43,20 +49,21 @@
 
     <!-- Manual URL Check -->
     <div class="check-section">
-        <div class="section-label">Check a URL</div>
         <div class="input-group">
-            <input type="text" id="url-input" placeholder="Paste any URL to scan..." autocomplete="off" spellcheck="false">
+            <input type="text" id="url-input" placeholder="Paste or right-click any URL to scan..." autocomplete="off" spellcheck="false">
             <button class="check-btn" id="check-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 Scan
             </button>
         </div>
         <div class="result hidden" id="result">
-            <div class="result-badge" id="result-badge">
-                <span id="result-icon"></span>
-                <span id="result-text"></span>
+            <div class="result-header">
+                <span class="result-icon-large" id="result-icon"></span>
+                <div class="result-info">
+                    <span class="result-text" id="result-text"></span>
+                    <span class="result-score" id="result-score"></span>
+                </div>
             </div>
-            <div class="result-score" id="result-score"></div>
             <div class="result-threats" id="result-threats"></div>
         </div>
     </div>
@@ -98,7 +105,7 @@
     <!-- Footer -->
     <div class="footer">
         <a href="https://securelinkapp.com" target="_blank">securelinkapp.com</a>
-        <span>v1.2.0</span>
+        <span>v1.3.0</span>
     </div>
 
     <script src="popup.js"></script>
