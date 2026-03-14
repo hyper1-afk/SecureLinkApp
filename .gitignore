@@ -71,3 +71,16 @@ node_modules/
 .vercel/
 .netlify/
 .vercel
+
+# Local admin/debug scripts — contain credentials, never commit
+debug_login.py
+list_users.py
+reset_password.py
+reset_password_direct.py
+reset_remote_password.py
+reset_remote_password_*.py
+seed_test_user.py
+verify_test_user.py
+
+# Claude memory
+.claude/

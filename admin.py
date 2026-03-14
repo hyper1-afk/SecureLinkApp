@@ -332,10 +332,11 @@ class AdminManager:
             ).count()
             
             if admin_count == 0:
-                # Create default admin
+                # Generate a random default password — printed once to console on first boot
+                default_password = secrets.token_urlsafe(16)
                 salt = secrets.token_hex(32)
-                password_hash = hashlib.sha256(('admin123' + salt).encode()).hexdigest()
-                
+                password_hash = hashlib.sha256((default_password + salt).encode()).hexdigest()
+
                 admin = Employee(
                     email='admin@securelinkapp.com',
                     username='admin',
@@ -346,7 +347,7 @@ class AdminManager:
                 )
                 session.add(admin)
                 session.commit()
-                print("Default admin created: admin / admin123 (CHANGE THIS PASSWORD!)")
+                print(f"Default admin created — username: admin  password: {default_password}  (save this and change it immediately)")
         except Exception as e:
             session.rollback()
             print(f"Error creating default admin: {e}")
