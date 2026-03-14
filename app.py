@@ -754,13 +754,13 @@ def verify_all_users():
 extension_scan_counts = {}
 
 def get_scan_limit(subscription_tier):
-    """Get daily scan limit based on subscription tier"""
+    """Get daily scan limit based on subscription tier. -1 means unlimited."""
     limits = {
-        'free': float('inf'),
-        'pro': float('inf'),
-        'enterprise': float('inf')
+        'free': -1,
+        'pro': -1,
+        'enterprise': -1
     }
-    return limits.get(subscription_tier, float('inf'))
+    return limits.get(subscription_tier, -1)
 
 @app.route('/api/extension/auth', methods=['POST'])
 def extension_auth():
@@ -835,8 +835,8 @@ def extension_status():
     key = f"{user_id}:{today}"
     scans_today = extension_scan_counts.get(key, 0)
     
-    remaining = max(0, limit - scans_today) if limit != float('inf') else 'unlimited'
-    
+    remaining = max(0, limit - scans_today) if limit != -1 else 'unlimited'
+
     return jsonify({
         'authenticated': True,
         'user': {
@@ -844,7 +844,7 @@ def extension_status():
             'username': user.get('username')
         },
         'subscription_tier': tier,
-        'scan_limit': limit if limit != float('inf') else 'unlimited',
+        'scan_limit': limit if limit != -1 else 'unlimited',
         'scans_today': scans_today,
         'scans_remaining': remaining
     })
@@ -922,7 +922,7 @@ def extension_verify():
     key = f"{user_id or _get_client_ip()}:{today}"
     scans_today = extension_scan_counts.get(key, 0)
     
-    if limit != float('inf') and scans_today >= limit:
+    if limit != -1 and scans_today >= limit:
         upgrade_msg = "Upgrade to Pro for 500 scans/day" if tier == 'free' else "Sign in for more scans"
         return jsonify({
             'error': 'Daily scan limit reached',
@@ -947,7 +947,7 @@ def extension_verify():
         'threats_detected': result.threats_detected,
         'warnings': result.warnings,
         'subscription_tier': tier,
-        'scans_remaining': max(0, limit - scans_today - 1) if limit != float('inf') else 'unlimited'
+        'scans_remaining': max(0, limit - scans_today - 1) if limit != -1 else 'unlimited'
     }
     
     return jsonify(response)
