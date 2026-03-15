@@ -2727,6 +2727,7 @@
         // Load statistics
         async function loadStats() {
             try {
+                const token = getAuthToken();
                 const response = await fetch('/api/stats', {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
