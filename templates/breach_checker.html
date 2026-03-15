@@ -507,7 +507,7 @@
                 resultDiv.innerHTML = `
                     <div class="error-box">
                         <i class="bi bi-exclamation-circle-fill me-2"></i>
-                        Error checking email. Please try again.
+                        ${error.message || 'Error checking email. Please try again.'}
                     </div>
                 `;
             }
