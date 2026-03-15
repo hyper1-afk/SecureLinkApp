@@ -311,28 +311,28 @@ class AttackSurfaceDB:
             'baseline_ssl_issuer':      'VARCHAR(255)',
             'baseline_dns':             'TEXT',
             'baseline_content_hash':    'VARCHAR(64)',
-            'baseline_set_at':          'DATETIME',
+            'baseline_set_at':          'TIMESTAMP',
         }
-        with self.engine.connect() as conn:
-            for col, col_type in new_md_cols.items():
-                if col not in md_cols:
-                    try:
+        # Use a separate connection per statement so one failure doesn't abort the rest
+        for col, col_type in new_md_cols.items():
+            if col not in md_cols:
+                try:
+                    with self.engine.connect() as conn:
                         conn.execute(sqlalchemy.text(
                             f'ALTER TABLE monitored_domains ADD COLUMN {col} {col_type}'
                         ))
-                    except Exception:
-                        pass
+                        conn.commit()
+                except Exception:
+                    pass
 
-            sr_cols = {c['name'] for c in insp.get_columns('domain_scan_records')}
-            if 'port_info' not in sr_cols:
-                try:
+        sr_cols = {c['name'] for c in insp.get_columns('domain_scan_records')}
+        if 'port_info' not in sr_cols:
+            try:
+                with self.engine.connect() as conn:
                     conn.execute(sqlalchemy.text(
                         'ALTER TABLE domain_scan_records ADD COLUMN port_info TEXT'
                     ))
-                except Exception:
-                    pass
-            try:
-                conn.commit()
+                    conn.commit()
             except Exception:
                 pass
 
