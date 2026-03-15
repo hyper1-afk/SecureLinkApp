@@ -307,24 +307,17 @@
     <script>
         const token = localStorage.getItem('auth_token');
 
-        // Check subscription - Pro or Enterprise required
-        (async function checkSubscription() {
-            if (!token) {
-                window.location.href = '/pricing?upgrade=pro&feature=breach-checker';
-                return;
-            }
+        // Load subscription tier to show/hide Pro features
+        let userTier = 'free';
+        (async function loadSubscription() {
+            if (!token) return;
             try {
                 const res = await fetch('/api/profile', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const profile = await res.json();
-                const tier = (profile.user && profile.user.subscription_tier) || 'free';
-                if (tier === 'free') {
-                    window.location.href = '/pricing?upgrade=pro&feature=breach-checker';
-                }
-            } catch (e) {
-                window.location.href = '/pricing?upgrade=pro&feature=breach-checker';
-            }
+                userTier = (profile.user && profile.user.subscription_tier) || 'free';
+            } catch (e) {}
         })();
 
         function togglePassword() {
@@ -412,8 +405,12 @@
             }
 
             if (!token) {
-                alert('Please log in to use this feature');
                 window.location.href = '/login';
+                return;
+            }
+
+            if (userTier === 'free') {
+                window.location.href = '/pricing?upgrade=pro&feature=breach-checker';
                 return;
             }
 
