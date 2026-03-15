@@ -72,6 +72,10 @@ if Config.DEBUG:
 
 CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
 
+# Extension API endpoints must allow chrome-extension:// origins (no credentials)
+from flask_cors import cross_origin
+EXTENSION_CORS = {'origins': '*', 'supports_credentials': False}
+
 # ================================================================
 #  Rate Limiting (flask-limiter)
 # ================================================================
@@ -762,7 +766,8 @@ def get_scan_limit(subscription_tier):
     }
     return limits.get(subscription_tier, -1)
 
-@app.route('/api/extension/auth', methods=['POST'])
+@app.route('/api/extension/auth', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', supports_credentials=False)
 def extension_auth():
     """Authenticate user from browser extension"""
     data = request.get_json()
@@ -799,7 +804,8 @@ def extension_auth():
     return jsonify(result)
 
 
-@app.route('/api/extension/status', methods=['GET'])
+@app.route('/api/extension/status', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', supports_credentials=False)
 def extension_status():
     """Get extension status and remaining scans for authenticated user"""
     token = get_token_from_request()
@@ -850,7 +856,8 @@ def extension_status():
     })
 
 
-@app.route('/api/extension/verify', methods=['POST'])
+@app.route('/api/extension/verify', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', supports_credentials=False)
 def extension_verify():
     """Verify URL from extension with rate limiting based on subscription"""
     data = request.get_json()
