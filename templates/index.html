@@ -2727,7 +2727,9 @@
         // Load statistics
         async function loadStats() {
             try {
-                const response = await fetch('/api/stats');
+                const response = await fetch('/api/stats', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
                 const data = await response.json();
 
                 document.getElementById('statTotal').textContent = data.total;
@@ -2903,7 +2905,7 @@
             // Update welcome strip
             const welcomeName = document.getElementById('welcomeName');
             if (welcomeName) {
-                welcomeName.textContent = user.display_name || (user.email ? user.email.split('@')[0] : 'there');
+                welcomeName.textContent = user.display_name || user.username || 'there';
             }
             const tierBadge = document.getElementById('welcomeTierBadge');
             if (tierBadge) {
@@ -2946,7 +2948,7 @@
             loggedInNav.classList.remove('d-none');
             
             if (userDisplayName) {
-                userDisplayName.textContent = user.display_name || (user.email ? user.email.split('@')[0] : 'User');
+                userDisplayName.textContent = user.display_name || user.username || 'User';
             }
             
             if (badge) {

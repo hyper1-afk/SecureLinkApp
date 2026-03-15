@@ -625,22 +625,25 @@ class Database:
         finally:
             session.close()
     
-    def get_statistics(self) -> Dict:
-        """Get verification statistics"""
+    def get_statistics(self, user_id: int = None) -> Dict:
+        """Get verification statistics, optionally filtered by user"""
         session = self.get_session()
         try:
-            total = session.query(VerificationRecord).count()
-            safe = session.query(VerificationRecord).filter(VerificationRecord.is_safe == True).count()
+            q = session.query(VerificationRecord)
+            if user_id is not None:
+                q = q.filter(VerificationRecord.user_id == user_id)
+            total = q.count()
+            safe = q.filter(VerificationRecord.is_safe == True).count()
             unsafe = total - safe
-            
+
             # Risk level breakdown
             risk_levels = {}
             for level in ['safe', 'low', 'medium', 'high', 'critical']:
-                count = session.query(VerificationRecord)\
-                    .filter(VerificationRecord.risk_level == level)\
-                    .count()
-                risk_levels[level] = count
-            
+                rq = session.query(VerificationRecord).filter(VerificationRecord.risk_level == level)
+                if user_id is not None:
+                    rq = rq.filter(VerificationRecord.user_id == user_id)
+                risk_levels[level] = rq.count()
+
             return {
                 'total': total,
                 'safe': safe,

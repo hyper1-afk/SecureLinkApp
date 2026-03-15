@@ -238,13 +238,13 @@
                 </div>
             </div>
 
-            <!-- Email Check Card (Pro Feature) -->
+            <!-- Email Check Card -->
             <div class="card-glass">
                 <div class="d-flex align-items-center justify-content-between mb-4">
                     <h2 class="fw-semibold mb-0" style="font-size: 1.5rem;">
                         <i class="bi bi-envelope-fill me-2" style="color: var(--accent-color);"></i>Email Breach Check
                     </h2>
-                    <span class="pro-badge">PRO</span>
+                    <span class="pro-badge">FULL DETAILS: PRO</span>
                 </div>
 
                 <div class="mb-3">
@@ -404,78 +404,104 @@
                 return;
             }
 
-            if (!token) {
-                window.location.href = '/login';
-                return;
-            }
-
-            if (userTier === 'free') {
-                window.location.href = '/pricing?upgrade=pro&feature=breach-checker';
-                return;
-            }
-
             const resultDiv = document.getElementById('emailResult');
             resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--accent-color);" role="status"></span><p class="mt-2">Checking breaches...</p></div>';
             resultDiv.classList.remove('hidden');
 
+            // Pro users get full breach details; free/anonymous users get count + risk only
+            const isPro = userTier === 'pro' || userTier === 'enterprise';
+
             try {
-                const response = await fetch('/api/breach/email', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ email })
-                });
+                let response, data;
 
-                const data = await response.json();
+                if (isPro && token) {
+                    response = await fetch('/api/breach/email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ email })
+                    });
+                    data = await response.json();
+                } else {
+                    response = await fetch('/api/public/breach-check', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    data = await response.json();
+                }
 
-                if (response.status === 403) {
-                    resultDiv.innerHTML = `
-                        <div class="upgrade-box">
-                            <i class="bi bi-gem me-2"></i>
-                            This feature requires a Pro subscription.
-                            <a href="/profile" style="color:var(--accent-light);text-decoration:underline;">Upgrade now</a>
-                        </div>
-                    `;
+                if (!response.ok) {
+                    resultDiv.innerHTML = `<div class="upgrade-box"><i class="bi bi-exclamation-circle me-2"></i>${data.error || 'Unable to check breaches right now.'}</div>`;
                     return;
                 }
 
-                if (data.breaches && data.breaches.length > 0) {
-                    let breachList = data.breaches.map(b => `
-                        <div class="breach-list-item">
-                            <strong>${b.Name}</strong>
-                            <span style="color:var(--text-muted);font-size:0.875rem;" class="ms-2">${b.BreachDate || 'Unknown date'}</span>
-                        </div>
-                    `).join('');
-
-                    resultDiv.innerHTML = `
-                        <div class="breach-danger rounded-3 p-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
-                                <div>
-                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Email Found in ${data.breaches.length} Breach${data.breaches.length > 1 ? 'es' : ''}</h3>
-                                    <p class="mb-0">Your email has been exposed in data breaches.</p>
+                // Pro: full breach list
+                if (isPro && data.breaches) {
+                    if (data.breaches.length > 0) {
+                        const breachList = data.breaches.map(b => `
+                            <div class="breach-list-item">
+                                <strong>${b.Name}</strong>
+                                <span style="color:var(--text-muted);font-size:0.875rem;" class="ms-2">${b.BreachDate || 'Unknown date'}</span>
+                            </div>
+                        `).join('');
+                        resultDiv.innerHTML = `
+                            <div class="breach-danger rounded-3 p-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
+                                    <div>
+                                        <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Found in ${data.breaches.length} Breach${data.breaches.length > 1 ? 'es' : ''}</h3>
+                                        <p class="mb-0">Your email has been exposed in data breaches.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="breach-list-scroll">
-                                ${breachList}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="breach-safe rounded-3 p-4">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
-                                <div>
-                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">No Breaches Found</h3>
-                                    <p class="mb-0">This email hasn't appeared in any known data breaches.</p>
+                                <div class="breach-list-scroll">${breachList}</div>
+                            </div>`;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="breach-safe rounded-3 p-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
+                                    <div>
+                                        <h3 class="fw-bold mb-1" style="font-size:1.25rem;">No Breaches Found</h3>
+                                        <p class="mb-0">This email hasn't appeared in any known data breaches.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    `;
+                            </div>`;
                 }
+
+                // Free/anonymous: count + risk only, upsell for full details
+                if (!isPro) {
+                    const riskColors = { none: '#10b981', low: '#22c55e', medium: '#eab308', high: '#ef4444' };
+                    const riskColor = riskColors[data.risk_level] || '#94a3b8';
+                    if (data.has_breaches) {
+                        resultDiv.innerHTML = `
+                            <div class="breach-danger rounded-3 p-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
+                                    <div>
+                                        <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Found in ${data.breach_count} Breach${data.breach_count > 1 ? 'es' : ''}</h3>
+                                        <p class="mb-0">Risk level: <strong style="color:${riskColor};">${data.risk_level.charAt(0).toUpperCase() + data.risk_level.slice(1)}</strong></p>
+                                    </div>
+                                </div>
+                                <div class="upgrade-box mt-3">
+                                    <i class="bi bi-gem me-2"></i>
+                                    <strong>Upgrade to Pro</strong> to see which breaches and what data was exposed.
+                                    <a href="/pricing?upgrade=pro&feature=breach-checker" style="color:var(--accent-light);text-decoration:underline;margin-left:6px;">Upgrade now</a>
+                                </div>
+                            </div>`;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="breach-safe rounded-3 p-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
+                                    <div>
+                                        <h3 class="fw-bold mb-1" style="font-size:1.25rem;">No Breaches Found</h3>
+                                        <p class="mb-0">This email hasn't appeared in any known data breaches.</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+                }
+
             } catch (error) {
                 resultDiv.innerHTML = `
                     <div class="error-box">

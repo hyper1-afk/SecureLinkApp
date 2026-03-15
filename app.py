@@ -2421,9 +2421,17 @@ def get_history():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    """Get verification statistics"""
+    """Get verification statistics for the current user"""
     try:
-        stats = db.get_statistics()
+        user_id = getattr(request, 'current_user', {}).get('id') if hasattr(request, 'current_user') else None
+        # Try to resolve user from token if not already set
+        if user_id is None:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            if token:
+                user_data = auth_manager.verify_token(token)
+                if user_data:
+                    user_id = user_data.get('id')
+        stats = db.get_statistics(user_id=user_id)
         return jsonify(stats)
     except Exception as e:
         logger.error(f"Error getting stats: {e}", exc_info=True)
