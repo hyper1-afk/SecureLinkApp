@@ -2428,7 +2428,7 @@ def get_stats():
         if user_id is None:
             token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
             if token:
-                user_data = auth_manager.verify_token(token)
+                user_data = auth_manager.validate_token(token)
                 if user_data:
                     user_id = user_data.get('id')
         stats = db.get_statistics(user_id=user_id)
