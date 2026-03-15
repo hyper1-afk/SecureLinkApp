@@ -3334,8 +3334,8 @@
                     fetch('/api/health-check/watches', {headers:{'Authorization':`Bearer ${_tkn}`}})
                         .then(r => r.ok ? r.json() : null)
                         .then(d => {
-                            if (d && d.watches && d.watches.some(w => w.domain === '${domain}')) {
-                                const wb = document.getElementById('watchBtn_${domain.replace(/\./g,'_')}');
+                            if (d && d.watches && d.watches.some(w => w.domain === domain)) {
+                                const wb = document.getElementById('watchBtn_' + domain.replace(/\./g,'_'));
                                 if (wb) { wb.innerHTML = '<i class="bi bi-bell-fill me-1"></i>Watching \u2713'; wb.classList.replace('btn-outline-primary','btn-primary'); }
                             }
                         }).catch(()=>{});
