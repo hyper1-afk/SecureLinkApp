@@ -302,9 +302,7 @@ class AttackSurfaceDB:
     def _run_ids_migration(self):
         """Idempotent ALTER TABLE migration for IDS columns."""
         import sqlalchemy
-        insp = sqlalchemy.inspect(self.engine)
 
-        md_cols = {c['name'] for c in insp.get_columns('monitored_domains')}
         new_md_cols = {
             'baseline_ports':           'TEXT',
             'baseline_ssl_fingerprint': 'VARCHAR(128)',
@@ -313,28 +311,25 @@ class AttackSurfaceDB:
             'baseline_content_hash':    'VARCHAR(64)',
             'baseline_set_at':          'TIMESTAMP',
         }
-        # Use a separate connection per statement so one failure doesn't abort the rest
+        # Use IF NOT EXISTS so columns are silently skipped if already present
         for col, col_type in new_md_cols.items():
-            if col not in md_cols:
-                try:
-                    with self.engine.connect() as conn:
-                        conn.execute(sqlalchemy.text(
-                            f'ALTER TABLE monitored_domains ADD COLUMN {col} {col_type}'
-                        ))
-                        conn.commit()
-                except Exception:
-                    pass
-
-        sr_cols = {c['name'] for c in insp.get_columns('domain_scan_records')}
-        if 'port_info' not in sr_cols:
             try:
                 with self.engine.connect() as conn:
                     conn.execute(sqlalchemy.text(
-                        'ALTER TABLE domain_scan_records ADD COLUMN port_info TEXT'
+                        f'ALTER TABLE monitored_domains ADD COLUMN IF NOT EXISTS {col} {col_type}'
                     ))
                     conn.commit()
             except Exception:
                 pass
+
+        try:
+            with self.engine.connect() as conn:
+                conn.execute(sqlalchemy.text(
+                    'ALTER TABLE domain_scan_records ADD COLUMN IF NOT EXISTS port_info TEXT'
+                ))
+                conn.commit()
+        except Exception:
+            pass
 
     def get_session(self):
         return self.Session()
