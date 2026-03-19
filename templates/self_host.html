@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="darkreader-lock">
+    <title>Self-Host SecureLink — Deploy on Your Own Server</title>
+    <meta name="description" content="Deploy SecureLink on your own server or internal network. Full Docker setup guide, environment variables, Nginx reverse proxy, and browser extension configuration.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="/static/css/design-system.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --accent-color: #8b5cf6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(148, 163, 184, 0.12);
+        }
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+        body {
+            background: var(--bg-dark);
+            background-image:
+                radial-gradient(ellipse at top left, rgba(14, 165, 233, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            padding: 5rem 0 3.5rem;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            color: #a78bfa;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-weight: 800;
+            font-size: clamp(2rem, 5vw, 3rem);
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            line-height: 1.15;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-cta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary-glow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.25);
+        }
+
+        .btn-primary-glow:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-outline-subtle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-outline-subtle:hover {
+            color: var(--text-primary);
+            border-color: rgba(148, 163, 184, 0.35);
+            background: rgba(255,255,255,0.04);
+        }
+
+        /* ── Why self-host cards ── */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0 4rem;
+        }
+
+        .why-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .why-icon {
+            font-size: 1.75rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .why-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .why-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ── Steps ── */
+        .steps-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 2rem;
+            align-items: start;
+            margin-bottom: 4rem;
+        }
+
+        @media (max-width: 768px) {
+            .steps-layout { grid-template-columns: 1fr; }
+            .steps-sidebar { display: none; }
+        }
+
+        .steps-sidebar {
+            position: sticky;
+            top: 80px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem;
+        }
+
+        .steps-sidebar h5 {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .sidebar-link:hover { color: var(--primary-color); background: rgba(14,165,233,0.07); }
+        .sidebar-link.active { color: var(--primary-color); background: rgba(14,165,233,0.1); font-weight: 600; }
+
+        .sidebar-step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(14,165,233,0.15);
+            color: var(--primary-color);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ── Step cards ── */
+        .step-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem 2.25rem;
+            margin-bottom: 1.5rem;
+            scroll-margin-top: 80px;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .step-num {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(139,92,246,0.2));
+            border: 1px solid rgba(14,165,233,0.25);
+            color: var(--primary-color);
+            font-size: 1rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .step-header h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .step-header .step-time {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .step-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* ── Code blocks ── */
+        .code-block {
+            background: #0a0f1e;
+            border: 1px solid rgba(14,165,233,0.15);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.83rem;
+            line-height: 1.7;
+            color: #e2e8f0;
+        }
+
+        .code-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .copy-btn:hover { background: rgba(14,165,233,0.15); color: var(--primary-color); border-color: rgba(14,165,233,0.3); }
+
+        /* ── Env var table ── */
+        .env-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+
+        .env-table th {
+            background: rgba(255,255,255,0.04);
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .env-table th:first-child { border-radius: 8px 0 0 0; }
+        .env-table th:last-child  { border-radius: 0 8px 0 0; }
+
+        .env-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--text-secondary);
+            vertical-align: top;
+        }
+
+        .env-table tr:last-child td { border-bottom: none; }
+
+        .env-key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #7dd3fc;
+            white-space: nowrap;
+        }
+
+        .env-req {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .env-req.req  { background: rgba(239,68,68,0.15);  color: #f87171; }
+        .env-req.opt  { background: rgba(100,116,139,0.15); color: #94a3b8; }
+        .env-req.rec  { background: rgba(245,158,11,0.15);  color: #fbbf24; }
+
+        /* ── Callout boxes ── */
+        .callout {
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 12px;
+            font-size: 0.875rem;
+        }
+
+        .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+        .callout p { margin: 0; line-height: 1.6; }
+        .callout strong { display: block; margin-bottom: 3px; }
+
+        .callout.tip  { background: rgba(16,185,129,0.08);  border: 1px solid rgba(16,185,129,0.2);  color: #6ee7b7; }
+        .callout.warn { background: rgba(245,158,11,0.08);  border: 1px solid rgba(245,158,11,0.2);  color: #fcd34d; }
+        .callout.info { background: rgba(14,165,233,0.08);  border: 1px solid rgba(14,165,233,0.2);  color: #7dd3fc; }
+
+        /* ── Extension section ── */
+        .ext-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .ext-step {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .ext-step-num {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            opacity: 0.4;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .ext-step h5 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .ext-step p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <a href="/" class="sl-brand">
+                <div class="sl-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:36px;height:36px;display:block;border-radius:9px;"></div>
+                <span class="sl-brand-text">SecureLink</span>
+            </a>
+            <button class="sl-nav-toggle" onclick="document.querySelector('.sl-nav-links').classList.toggle('show')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="sl-nav-links">
+                <a href="/features" class="sl-nav-link">Features</a>
+                <a href="/pricing" class="sl-nav-link">Pricing</a>
+                <a href="/self-host" class="sl-nav-link active">Self-Host</a>
+                <a href="/login" class="sl-nav-cta" id="authLink">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 960px;">
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-badge">
+                <i class="bi bi-server"></i> Free to Deploy · Feature Licensing Required
+            </div>
+            <h1>Run SecureLink<br>on Your Own Infrastructure</h1>
+            <p>Deploy the full SecureLink platform on your own server or internal network. Your data never leaves your infrastructure. Full control over users, limits, and branding.</p>
+            <div class="hero-cta">
+                <a href="https://github.com/hyper1-afk/SecureLinkApp" target="_blank" class="btn-primary-glow">
+                    <i class="bi bi-github"></i> View on GitHub
+                </a>
+                <a href="#step-1" class="btn-outline-subtle">
+                    <i class="bi bi-arrow-down"></i> Setup Guide
+                </a>
+            </div>
+        </div>
+
+        <!-- Why self-host -->
+        <p class="section-label"><i class="bi bi-question-circle me-2"></i>Why self-host?</p>
+        <div class="why-grid">
+            <div class="why-card">
+                <span class="why-icon">🔒</span>
+                <h4>Data Privacy</h4>
+                <p>Every scan stays on your server. Zero telemetry sent to third parties.</p>
+            </div>
+            <div class="why-card">
+                <span class="why-icon">🏢</span>
+                <h4>Internal Networks</h4>
+                <p>Protect air-gapped or corporate networks that can't reach external APIs.</p>
+            </div>
+            <div class="why-card">
+                <span class="why-icon">⚙️</span>
+                <h4>Full Control</h4>
+                <p>Set your own scan limits, user tiers, branding, and email settings.</p>
+            </div>
+            <div class="why-card">
+                <span class="why-icon">💸</span>
+                <h4>Free to Deploy</h4>
+                <p>The platform is free to self-host. Bring your own server and API keys — no per-seat fees for the deployment itself.</p>
+            </div>
+        </div>
+
+        <!-- Licensing model callout -->
+        <div style="margin: 2rem 0 2.5rem; background: linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(14,165,233,0.08) 100%); border: 1px solid rgba(139,92,246,0.25); border-radius: 16px; padding: 1.75rem 2rem; display: flex; gap: 1.5rem; align-items: flex-start;">
+            <div style="font-size: 2rem; flex-shrink: 0; line-height: 1;">🔑</div>
+            <div>
+                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; color: #f1f5f9;">Free to deploy. Pay only for premium features.</h4>
+                <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.6;">
+                    Deploying SecureLink on your own server is completely free. The core platform — URL scanning, domain health checks, user accounts, and the browser extension — costs nothing to run.
+                    <br><br>
+                    Premium features (Dark Web Monitoring, Attack Surface Monitoring, AI Remediation, Priority Support) require an active <strong style="color: #a78bfa;">Pro</strong> or <strong style="color: #a78bfa;">Enterprise</strong> license. Users on your self-hosted instance log in with their securelinkapp.com account, and their plan tier unlocks the features they've paid for — just like the cloud version.
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="/pricing" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: linear-gradient(135deg, #8b5cf6, #0ea5e9); border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                        <i class="bi bi-star-fill"></i> View plans
+                    </a>
+                    <a href="/login" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #f1f5f9; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
+                        <i class="bi bi-person-check"></i> Create free account
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content: sidebar + steps -->
+        <div class="steps-layout">
+
+            <!-- Sidebar nav -->
+            <div class="steps-sidebar">
+                <h5><i class="bi bi-list-ul me-1"></i> Steps</h5>
+                <a href="#step-1" class="sidebar-link active">
+                    <span class="sidebar-step-num">1</span> Prerequisites
+                </a>
+                <a href="#step-2" class="sidebar-link">
+                    <span class="sidebar-step-num">2</span> Clone &amp; Configure
+                </a>
+                <a href="#step-3" class="sidebar-link">
+                    <span class="sidebar-step-num">3</span> Generate Keys
+                </a>
+                <a href="#step-4" class="sidebar-link">
+                    <span class="sidebar-step-num">4</span> Start the Stack
+                </a>
+                <a href="#step-5" class="sidebar-link">
+                    <span class="sidebar-step-num">5</span> Reverse Proxy &amp; HTTPS
+                </a>
+                <a href="#step-6" class="sidebar-link">
+                    <span class="sidebar-step-num">6</span> Browser Extension
+                </a>
+                <a href="#step-7" class="sidebar-link">
+                    <span class="sidebar-step-num">7</span> Optional API Keys
+                </a>
+                <a href="#step-8" class="sidebar-link">
+                    <span class="sidebar-step-num">8</span> First Admin Account
+                </a>
+            </div>
+
+            <!-- Steps -->
+            <div>
+
+                <!-- Step 1 -->
+                <div class="step-card" id="step-1">
+                    <div class="step-header">
+                        <div class="step-num">1</div>
+                        <h2>Prerequisites</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>2 min</span>
+                    </div>
+                    <p>You need two things installed on your server:</p>
+                    <div class="ext-steps" style="grid-template-columns: 1fr 1fr;">
+                        <div class="ext-step">
+                            <h5><i class="bi bi-box me-2" style="color:#0ea5e9;"></i>Docker</h5>
+                            <p>Version 24 or newer with Docker Compose v2. Runs the app and database in isolated containers.</p>
+                        </div>
+                        <div class="ext-step">
+                            <h5><i class="bi bi-globe me-2" style="color:#8b5cf6;"></i>A Domain Name</h5>
+                            <p>Pointed at your server's IP. Required for HTTPS — strongly recommended for production.</p>
+                        </div>
+                    </div>
+                    <div class="callout tip">
+                        <span class="callout-icon">💡</span>
+                        <p><strong>Local testing only?</strong> You can skip the domain and run on <code>http://localhost:5000</code> for evaluation without HTTPS.</p>
+                    </div>
+                    <div class="code-label">Install Docker (Ubuntu/Debian)</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # allow running docker without sudo
+newgrp docker</pre>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-card" id="step-2">
+                    <div class="step-header">
+                        <div class="step-num">2</div>
+                        <h2>Clone &amp; Configure</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>5 min</span>
+                    </div>
+                    <p>Clone the repo and create your environment file from the template.</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>git clone https://github.com/hyper1-afk/SecureLinkApp.git
+cd securelink
+cp .env.docker.example .env</pre>
+                    </div>
+                    <p>Open <code>.env</code> in any text editor. The file is split into sections — you only need to fill in the <strong>Required</strong> section to get started:</p>
+                    <table class="env-table">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="env-key">SECRET_KEY</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>Flask session secret — generate in Step 3</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">ADMIN_SECRET_KEY</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>Admin operations key — generate in Step 3</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">FERNET_ENCRYPTION_KEY</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>Encrypts sensitive data at rest — generate in Step 3</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">APP_URL</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>Your public URL, e.g. <code>https://yourdomain.com</code></td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">APP_NAME</td>
+                                <td><span class="env-req opt">Optional</span></td>
+                                <td>Display name for your instance (default: SecureLink)</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">POSTGRES_USER</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>PostgreSQL username</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">POSTGRES_PASSWORD</td>
+                                <td><span class="env-req req">Required</span></td>
+                                <td>PostgreSQL password — use a strong random value</td>
+                            </tr>
+                            <tr>
+                                <td class="env-key">SMTP_HOST / USERNAME / PASSWORD</td>
+                                <td><span class="env-req rec">Recommended</span></td>
+                                <td>SMTP credentials for password resets and alerts</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-card" id="step-3">
+                    <div class="step-header">
+                        <div class="step-num">3</div>
+                        <h2>Generate Secret Keys</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>2 min</span>
+                    </div>
+                    <p>Run these commands to generate cryptographically secure keys and paste the output into your <code>.env</code> file.</p>
+                    <div class="code-label">Generate SECRET_KEY and ADMIN_SECRET_KEY</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>python3 -c "import secrets; print(secrets.token_hex(32))"
+python3 -c "import secrets; print(secrets.token_hex(32))"</pre>
+                    </div>
+                    <div class="code-label">Generate FERNET_ENCRYPTION_KEY</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"</pre>
+                    </div>
+                    <div class="callout warn">
+                        <span class="callout-icon">⚠️</span>
+                        <p><strong>Never reuse keys across instances.</strong> Each deployment should have its own unique keys. Do not commit your <code>.env</code> file to version control.</p>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="step-card" id="step-4">
+                    <div class="step-header">
+                        <div class="step-num">4</div>
+                        <h2>Start the Stack</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>3 min</span>
+                    </div>
+                    <p>With your <code>.env</code> configured, spin up the full stack — the app, PostgreSQL, and all background services start automatically.</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>docker compose up -d</pre>
+                    </div>
+                    <p>The app binds to <code>127.0.0.1:5000</code> by default (localhost only). Check that it started correctly:</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>docker compose ps          # all services should show "healthy"
+docker compose logs web    # view app startup logs</pre>
+                    </div>
+                    <div class="callout tip">
+                        <span class="callout-icon">💡</span>
+                        <p>The database schema is created automatically on first startup. No manual migration steps needed.</p>
+                    </div>
+                    <p>For local testing, open <strong>http://localhost:5000</strong> in your browser. For production, continue to Step 5 to add HTTPS.</p>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="step-card" id="step-5">
+                    <div class="step-header">
+                        <div class="step-num">5</div>
+                        <h2>Reverse Proxy &amp; HTTPS</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>10 min</span>
+                    </div>
+                    <p>The app listens on localhost only. Nginx sits in front of it, handles HTTPS termination, and forwards traffic to the app.</p>
+                    <div class="code-label">Install Nginx and Certbot</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>sudo apt install nginx certbot python3-certbot-nginx -y</pre>
+                    </div>
+                    <div class="code-label">Copy the included nginx.conf and edit your domain</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>sudo cp nginx.conf /etc/nginx/sites-available/securelink
+sudo nano /etc/nginx/sites-available/securelink
+# Replace all instances of "yourdomain.com" with your actual domain
+
+sudo ln -s /etc/nginx/sites-available/securelink /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx</pre>
+                    </div>
+                    <div class="code-label">Get a free SSL certificate from Let's Encrypt</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>sudo certbot --nginx -d yourdomain.com</pre>
+                    </div>
+                    <p>Certbot will automatically update your Nginx config with the certificate paths and set up auto-renewal. Your instance is now accessible at <strong>https://yourdomain.com</strong>.</p>
+                    <div class="callout info">
+                        <span class="callout-icon">ℹ️</span>
+                        <p>The <code>nginx.conf</code> included in the repo has rate limiting pre-configured — 30 requests/min general, 10 requests/min for auth endpoints.</p>
+                    </div>
+                </div>
+
+                <!-- Step 6 -->
+                <div class="step-card" id="step-6">
+                    <div class="step-header">
+                        <div class="step-num">6</div>
+                        <h2>Configure the Browser Extension</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>3 min</span>
+                    </div>
+                    <p>The browser extension needs to point at your server instead of the default <code>securelinkapp.com</code>. There are two ways to do this:</p>
+
+                    <p style="font-weight:600;color:var(--text-primary);margin-bottom:0.5rem;">Option A — Settings Panel (easiest, no code changes)</p>
+                    <div class="ext-steps">
+                        <div class="ext-step">
+                            <div class="ext-step-num">01</div>
+                            <h5>Load the extension</h5>
+                            <p>Go to <code>chrome://extensions</code>, enable Developer mode, click "Load unpacked", select the <code>browser-extension/</code> folder.</p>
+                        </div>
+                        <div class="ext-step">
+                            <div class="ext-step-num">02</div>
+                            <h5>Open Settings</h5>
+                            <p>Click the SecureLink extension icon in the toolbar, then click the <strong>⚙</strong> gear icon in the top-right of the popup.</p>
+                        </div>
+                        <div class="ext-step">
+                            <div class="ext-step-num">03</div>
+                            <h5>Enter your URL</h5>
+                            <p>Type in <code>https://yourdomain.com</code> and click Save. The extension will now send all scans to your server.</p>
+                        </div>
+                    </div>
+
+                    <p style="font-weight:600;color:var(--text-primary);margin: 1.5rem 0 0.5rem;">Option B — Bake your URL into the extension</p>
+                    <p>Edit line 1 of <code>browser-extension/background.js</code>:</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>const DEFAULT_API_BASE = 'https://yourdomain.com';</pre>
+                    </div>
+                    <p>Then zip the <code>browser-extension/</code> folder and distribute it to your users, or publish to the Chrome Web Store.</p>
+                </div>
+
+                <!-- Step 7 -->
+                <div class="step-card" id="step-7">
+                    <div class="step-header">
+                        <div class="step-num">7</div>
+                        <h2>Optional API Keys</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>5 min</span>
+                    </div>
+                    <p>The scanner works without any external API keys using built-in heuristics. These integrations improve detection accuracy:</p>
+                    <table class="env-table">
+                        <thead>
+                            <tr><th>Service</th><th>Env Var</th><th>What it adds</th><th>Cost</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>VirusTotal</td>
+                                <td class="env-key">VIRUSTOTAL_API_KEY</td>
+                                <td>Checks URLs against 70+ antivirus engines</td>
+                                <td>Free tier (4 req/min)</td>
+                            </tr>
+                            <tr>
+                                <td>Google Safe Browsing</td>
+                                <td class="env-key">GOOGLE_SAFE_BROWSING_API_KEY</td>
+                                <td>Google's phishing/malware URL database</td>
+                                <td>Free</td>
+                            </tr>
+                            <tr>
+                                <td>Have I Been Pwned</td>
+                                <td class="env-key">HIBP_API_KEY</td>
+                                <td>Email breach lookup with full breach details</td>
+                                <td>~$4/month</td>
+                            </tr>
+                            <tr>
+                                <td>NewsAPI</td>
+                                <td class="env-key">NEWS_API_KEY</td>
+                                <td>Security news feed on the dashboard</td>
+                                <td>Free tier</td>
+                            </tr>
+                            <tr>
+                                <td>Stripe</td>
+                                <td class="env-key">STRIPE_SECRET_KEY</td>
+                                <td>Paid user tiers (Pro/Enterprise)</td>
+                                <td>Free (pay per transaction)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="callout tip">
+                        <span class="callout-icon">💡</span>
+                        <p>Leave Stripe keys blank to run in <strong>free-only mode</strong> — all users get free-tier access with no billing.</p>
+                    </div>
+                </div>
+
+                <!-- Step 8 -->
+                <div class="step-card" id="step-8">
+                    <div class="step-header">
+                        <div class="step-num">8</div>
+                        <h2>Create Your First Admin Account</h2>
+                        <span class="step-time"><i class="bi bi-clock me-1"></i>1 min</span>
+                    </div>
+                    <p>Run the admin manager inside the running container to create your first admin user:</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre>docker compose exec web python manage_admins.py</pre>
+                    </div>
+                    <p>Then sign in at <strong>https://yourdomain.com/login</strong>. Your instance is live.</p>
+
+                    <div class="callout tip">
+                        <span class="callout-icon">✅</span>
+                        <p><strong>You're done.</strong> To keep the stack running after reboots, Docker Compose's <code>restart: unless-stopped</code> policy handles that automatically.</p>
+                    </div>
+
+                    <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border-color);">
+                        <p style="font-weight:600;color:var(--text-primary);margin-bottom:0.75rem;">Useful commands</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre>docker compose stop           # stop the stack
+docker compose start          # start it again
+docker compose pull && docker compose up -d   # update to latest
+docker compose logs -f web    # tail live app logs</pre>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /steps -->
+        </div><!-- /steps-layout -->
+
+    </div><!-- /container -->
+
+    <!-- Footer -->
+    <footer class="sl-footer">
+        <div class="sl-footer-inner">
+            <div class="sl-footer-brand">
+                <a href="/" class="sl-brand" style="margin-bottom: 4px;">
+                    <div class="sl-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:36px;height:36px;display:block;border-radius:9px;"></div>
+                    <span class="sl-brand-text">SecureLink</span>
+                </a>
+                <p>AI-powered cybersecurity platform for link scanning, dark web monitoring, and attack surface analysis.</p>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Product</h4>
+                <a href="/features">Features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/dark-web-monitor">Dark Web Monitor</a>
+                <a href="/extension">Browser Extension</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Resources</h4>
+                <a href="/guide">User Guide</a>
+                <a href="/self-host">Self-Host Guide</a>
+                <a href="/faq">FAQ</a>
+                <a href="/security-news">Security News</a>
+                <a href="mailto:support@securelinkapp.com">Support</a>
+            </div>
+            <div class="sl-footer-col">
+                <h4>Legal</h4>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </div>
+        </div>
+        <div class="sl-footer-bottom">
+            <p>&copy; 2026 SecureLink. All rights reserved.</p>
+            <div class="sl-footer-bottom-links">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="mailto:support@securelinkapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Copy button functionality
+        function copyCode(btn) {
+            const pre = btn.nextElementSibling;
+            navigator.clipboard.writeText(pre.textContent.trim()).then(() => {
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            });
+        }
+
+        // Sidebar active link on scroll
+        const sections = document.querySelectorAll('.step-card[id]');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    const link = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+                    if (link) link.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+
+        sections.forEach(s => observer.observe(s));
+
+        // Auth check — update nav link if logged in
+        (async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/auth/validate', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.valid) {
+                    const authLink = document.getElementById('authLink');
+                    if (authLink) { authLink.href = '/home'; authLink.textContent = 'Dashboard'; }
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/js/inactivity-timeout.js"></script>
+</body>
+</html>

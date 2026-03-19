@@ -531,6 +531,10 @@
                         <i class="bi bi-check-circle-fill"></i>
                         <span>Priority support</span>
                     </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Self-host on your own server</span>
+                    </li>
                 </ul>
                 <a href="/login" class="plan-btn enterprise">Go Enterprise</a>
             </div>
@@ -623,6 +627,12 @@
                     <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
+                    <td>Self-Hosting</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
                     <td>Support</td>
                     <td>Community</td>
                     <td>Email</td>
@@ -685,6 +695,16 @@
                 Our Free plan lets you try the core features. When you're ready to upgrade, you'll be billed immediately but can cancel within 7 days for a full refund if you're not satisfied.
             </div>
         </div>
+
+        <div class="faq-item">
+            <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+                <span>Can I self-host SecureLink on my own server?</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Yes — deploying SecureLink on your own infrastructure is free. The core platform (URL scanning, domain health checks, user accounts, browser extension) costs nothing to run. Premium features like Dark Web Monitoring, Attack Surface Monitoring, and AI Remediation require an active Pro or Enterprise license tied to each user's account. <a href="/self-host" style="color: var(--primary-color);">See the self-hosting guide →</a>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -707,6 +727,7 @@
             <div class="sl-footer-col">
                 <h4>Resources</h4>
                 <a href="/guide">User Guide</a>
+                <a href="/self-host">Self-Host Guide</a>
                 <a href="/faq">FAQ</a>
                 <a href="/security-news">Security News</a>
                 <a href="/community">Community</a>

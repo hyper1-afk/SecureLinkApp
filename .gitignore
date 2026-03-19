@@ -39,6 +39,10 @@ logs/
 Thumbs.db
 desktop.ini
 
+# Extension build artifacts
+*.zip
+browser-extension/export-instagram.html
+
 # Distribution / packaging
 dist/
 build/

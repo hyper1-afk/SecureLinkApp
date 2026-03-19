@@ -23,6 +23,10 @@ class Config:
     DEBUG = _flask_env == 'development' and os.getenv('DEBUG', 'False').lower() == 'true'
     FLASK_ENV = _flask_env
     APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
+    APP_NAME = os.getenv('APP_NAME', 'SecureLink')
+    # License key for self-hosted instances — obtained from securelinkapp.com/account
+    # Leave blank for local dev. Required in production to unlock Pro/Enterprise features.
+    LICENSE_KEY = os.getenv('LICENSE_KEY', '')
     
     # Database
     DATABASE_URL = os.getenv('DATABASE_URL')  # PostgreSQL for production

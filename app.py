@@ -41,6 +41,8 @@ from security import (
     PasswordPolicy, lockout_manager, request_firewall,
     sanitize_error, _get_client_ip
 )
+from license import validate_on_startup, get_instance_tier, is_self_hosted
+from auth import LicenseKey
 
 # Configure logging
 logging.basicConfig(
@@ -58,6 +60,18 @@ app.secret_key = Config.SECRET_KEY  # Required for OAuth sessions
 #  Max upload size — reject oversized bodies early (16 MB)
 # ================================================================
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# ================================================================
+#  Template globals — available in all Jinja2 templates
+# ================================================================
+@app.context_processor
+def inject_globals():
+    return {
+        'app_name': Config.APP_NAME,
+        'app_url': Config.APP_URL,
+        'is_self_hosted': is_self_hosted(),
+        'instance_tier': get_instance_tier(),
+    }
 
 # ================================================================
 #  CORS — restrict to our own origins only
@@ -182,6 +196,9 @@ app.register_blueprint(compliance_bp)
 
 # Initialize Dark Web Monitor
 dark_web_monitor = get_dark_web_monitor(config)
+
+# Validate license key on startup (self-hosted instances only)
+validate_on_startup()
 
 
 def get_token_from_request():
@@ -354,6 +371,12 @@ def features_page():
 def faq_page():
     """Render the FAQ page"""
     return render_template('faq.html')
+
+
+@app.route('/self-host')
+def deploy_guide_page():
+    """Render the self-hosting guide"""
+    return render_template('self_host.html')
 
 
 @app.route('/pricing')
@@ -1190,6 +1213,100 @@ def update_profile():
     data = request.get_json()
     result = auth_manager.update_profile(request.current_user['id'], data)
     return jsonify(result)
+
+
+# ================================================================
+#  License Key API — self-hosted instance management
+# ================================================================
+
+@app.route('/api/license/validate', methods=['POST'])
+def validate_license_key():
+    """
+    Public endpoint called by self-hosted instances to validate their LICENSE_KEY.
+    Returns the tier associated with the key.
+    """
+    import secrets as _secrets
+    data = request.get_json(silent=True) or {}
+    key = str(data.get('key', '')).strip()
+    if not key:
+        return jsonify({'error': 'No key provided'}), 400
+
+    db_session = auth_manager.get_session()
+    try:
+        lk = db_session.query(LicenseKey).filter_by(key=key, is_active=True).first()
+        if not lk:
+            return jsonify({'error': 'Invalid or inactive license key'}), 403
+
+        from datetime import datetime as _dt
+        if lk.expires_at is not None and lk.expires_at < _dt.utcnow():
+            return jsonify({'error': 'License key has expired'}), 403
+
+        lk.last_validated = _dt.utcnow()
+        db_session.commit()
+        return jsonify({'valid': True, 'tier': lk.tier})
+    finally:
+        db_session.close()
+
+
+@app.route('/api/license/keys', methods=['GET'])
+@require_auth
+def list_license_keys():
+    """List all license keys for the authenticated user."""
+    db_session = auth_manager.get_session()
+    try:
+        keys = db_session.query(LicenseKey).filter_by(
+            user_id=request.current_user['id']
+        ).order_by(LicenseKey.created_at.desc()).all()
+        return jsonify({'keys': [k.to_dict() for k in keys]})
+    finally:
+        db_session.close()
+
+
+@app.route('/api/license/keys', methods=['POST'])
+@require_auth
+def generate_license_key():
+    """Generate a new license key (Pro and Enterprise only)."""
+    import secrets as _secrets
+    tier = request.current_user.get('subscription_tier', 'free')
+    if tier == 'free':
+        return jsonify({'error': 'License keys require a Pro or Enterprise subscription'}), 403
+
+    data = request.get_json(silent=True) or {}
+    label = str(data.get('label', 'My Instance'))[:100].strip() or 'My Instance'
+
+    key = 'sl_' + _secrets.token_urlsafe(40)
+
+    db_session = auth_manager.get_session()
+    try:
+        lk = LicenseKey(
+            user_id=request.current_user['id'],
+            key=key,
+            tier=tier,
+            label=label,
+        )
+        db_session.add(lk)
+        db_session.commit()
+        return jsonify({'key': lk.to_dict()}), 201
+    finally:
+        db_session.close()
+
+
+@app.route('/api/license/keys/<int:key_id>', methods=['DELETE'])
+@require_auth
+def revoke_license_key(key_id):
+    """Revoke (deactivate) a license key."""
+    db_session = auth_manager.get_session()
+    try:
+        lk = db_session.query(LicenseKey).filter_by(
+            id=key_id, user_id=request.current_user['id']
+        ).first()
+        if not lk:
+            return jsonify({'error': 'Key not found'}), 404
+        lk.is_active = False
+        db_session.commit()
+        return jsonify({'success': True})
+    finally:
+        db_session.close()
 
 
 @app.route('/api/usage', methods=['GET'])

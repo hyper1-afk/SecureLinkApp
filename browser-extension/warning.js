@@ -60,23 +60,25 @@ threats.forEach(threat => {
     threatsList.appendChild(item);
 });
 
-// Go back to safety
+// Go back to safety — open new tab instead of history.back() to avoid looping back to the blocked site
 document.getElementById('btn-back').addEventListener('click', function() {
-    if (window.history.length > 1) {
-        window.history.back();
-    } else {
-        window.location.href = 'https://google.com';
-    }
+    chrome.tabs.create({ url: 'chrome://newtab' });
+    window.close();
 });
 
-// Proceed anyway (at user's risk)
+// Proceed anyway — chrome extension pages block confirm(), so use inline confirmation
+let proceedConfirmPending = false;
 document.getElementById('btn-proceed').addEventListener('click', function() {
-    if (confirm('Are you sure you want to proceed? This site may be dangerous and could harm your computer or steal your information.')) {
-        // Store bypass for this URL temporarily
-        chrome.storage.local.set({ 
-            [`bypass_${blockedUrl}`]: Date.now() 
-        }, () => {
-            window.location.href = blockedUrl;
-        });
+    if (!proceedConfirmPending) {
+        proceedConfirmPending = true;
+        this.textContent = 'Click again to confirm — this site may be dangerous';
+        this.style.background = '#dc2626';
+        return;
     }
+    // Store bypass for this URL temporarily
+    chrome.storage.local.set({
+        [`bypass_${blockedUrl}`]: Date.now()
+    }, () => {
+        window.location.href = blockedUrl;
+    });
 });

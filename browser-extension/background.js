@@ -1,7 +1,20 @@
 // SecureLink Browser Extension - Background Service Worker
 // Automatically scans URLs when you navigate and warns about malicious sites
 
-const API_BASE = 'https://securelinkapp.com'; // Production API
+const DEFAULT_API_BASE = 'https://securelinkapp.com';
+let API_BASE = DEFAULT_API_BASE;
+
+// Load custom API URL (set via extension settings panel)
+chrome.storage.local.get(['customApiUrl'], (result) => {
+    if (result.customApiUrl) API_BASE = result.customApiUrl;
+});
+
+// Update API_BASE whenever user changes it in the settings panel
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.customApiUrl !== undefined) {
+        API_BASE = changes.customApiUrl.newValue || DEFAULT_API_BASE;
+    }
+});
 
 // Track checked URLs to avoid re-checking
 const checkedUrls = new Map();
@@ -63,7 +76,10 @@ const SAFE_DOMAINS = [
     'shopify.com', 'www.shopify.com',
     
     // Tech giants
-    'microsoft.com', 'www.microsoft.com', 'office.com', 'live.com', 'outlook.com',
+    'microsoft.com', 'www.microsoft.com', 'office.com', 'www.office.com',
+    'outlook.office.com', 'outlook.office365.com', 'outlook.com', 'www.outlook.com',
+    'live.com', 'login.microsoftonline.com', 'login.live.com',
+    'teams.microsoft.com', 'sharepoint.com', 'onedrive.live.com',
     'apple.com', 'www.apple.com', 'icloud.com',
     'google.com', 'accounts.google.com', 'mail.google.com', 'drive.google.com', 'docs.google.com',
     

@@ -952,6 +952,9 @@
                         <a class="nav-link" data-bs-toggle="pill" href="#sessions-tab">
                             <i class="bi bi-laptop"></i>Active Sessions
                         </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#license-tab" id="licenseNavLink" style="display:none;">
+                            <i class="bi bi-key"></i>License Keys
+                        </a>
                     </nav>
                 </div>
                 
@@ -1197,6 +1200,65 @@
                                 </div>
                             </div>
                         </div>
+                    <!-- License Keys Tab -->
+                    <div class="tab-pane fade" id="license-tab">
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0"><i class="bi bi-key me-2"></i>License Keys</h4>
+                                <button class="btn btn-primary btn-sm" onclick="openNewKeyModal()">
+                                    <i class="bi bi-plus-lg me-1"></i>New Key
+                                </button>
+                            </div>
+                            <p class="text-secondary mb-4">
+                                License keys let you run a self-hosted SecureLink instance with your plan's features unlocked.
+                                Each key ties your subscription tier to a private deployment.
+                                <a href="/self-host" target="_blank" style="color: var(--primary-color);">Setup guide &rarr;</a>
+                            </p>
+
+                            <div id="licenseKeysList">
+                                <div class="text-center text-secondary py-4" id="licenseKeysEmpty">
+                                    <i class="bi bi-key" style="font-size:2rem; opacity:.4;"></i>
+                                    <p class="mt-2 mb-0">No license keys yet. Create one to start self-hosting.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Key Modal -->
+                        <div class="modal fade" id="newKeyModal" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content" style="background:#1e293b; border:1px solid rgba(255,255,255,.1);">
+                                    <div class="modal-header border-0">
+                                        <h5 class="modal-title">Generate License Key</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div id="newKeyAlert" class="alert d-none"></div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-secondary">Instance Label <small>(optional)</small></label>
+                                            <input type="text" class="form-control" id="newKeyLabel" placeholder="e.g. Office Server, Home Lab" maxlength="100">
+                                        </div>
+                                        <div id="newKeyResult" class="d-none">
+                                            <label class="form-label text-secondary">Your License Key</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control font-monospace" id="newKeyValue" readonly>
+                                                <button class="btn btn-outline-secondary" onclick="copyNewKey()" title="Copy">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            </div>
+                                            <small class="text-warning mt-2 d-block">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                                Copy this key now — it won't be shown again in full.
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-0" id="newKeyModalFooter">
+                                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button class="btn btn-primary" id="generateKeyBtn" onclick="generateKey()">Generate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -1221,6 +1283,7 @@
             updateSubscriptionUI();
             loadWeeklyStats();
             loadDashboard();
+            initLicenseTab();
             
             // Check for payment callback
             checkPaymentCallback();
@@ -2175,6 +2238,7 @@
             <div class="sl-footer-col">
                 <h4>Resources</h4>
                 <a href="/guide">User Guide</a>
+                <a href="/self-host">Self-Host Guide</a>
                 <a href="/faq">FAQ</a>
                 <a href="/security-news">Security News</a>
                 <a href="/community">Community</a>
@@ -2203,5 +2267,122 @@
         document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
     </script>
     <script src="/static/js/inactivity-timeout.js"></script>
+    <script>
+        // ── License Key Management ───────────────────────────────────────────
+        function initLicenseTab() {
+            const tier = (currentUser.subscription_tier || 'free').toLowerCase();
+            if (tier === 'pro' || tier === 'enterprise') {
+                document.getElementById('licenseNavLink').style.display = '';
+                loadLicenseKeys();
+            }
+        }
+
+        async function loadLicenseKeys() {
+            const token = localStorage.getItem('auth_token');
+            try {
+                const res = await fetch('/api/license/keys', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                renderLicenseKeys(data.keys || []);
+            } catch (e) {
+                console.error('Failed to load license keys', e);
+            }
+        }
+
+        function renderLicenseKeys(keys) {
+            const container = document.getElementById('licenseKeysList');
+            const empty = document.getElementById('licenseKeysEmpty');
+            if (!keys.length) {
+                empty.style.display = '';
+                return;
+            }
+            empty.style.display = 'none';
+            const rows = keys.map(k => {
+                const created = new Date(k.created_at).toLocaleDateString();
+                const lastUsed = k.last_validated ? new Date(k.last_validated).toLocaleDateString() : 'Never';
+                const keyPreview = k.key.slice(0, 16) + '••••••••••••••••';
+                const statusClass = k.is_active ? 'success' : 'secondary';
+                const statusText = k.is_active ? 'Active' : 'Revoked';
+                return `
+                <div class="d-flex align-items-center justify-content-between py-3 border-bottom" style="border-color:rgba(255,255,255,.07)!important;">
+                    <div>
+                        <div class="fw-semibold" style="color:#fff;">${escHtml(k.label || 'Unnamed')}</div>
+                        <div class="font-monospace text-secondary" style="font-size:.8rem;">${keyPreview}</div>
+                        <div class="mt-1" style="font-size:.75rem; color:var(--text-secondary);">
+                            Created ${created} &nbsp;·&nbsp; Last used ${lastUsed}
+                            &nbsp;·&nbsp; <span class="badge bg-${statusClass}">${statusText}</span>
+                            &nbsp;·&nbsp; <span class="badge" style="background:rgba(139,92,246,.2);color:#a78bfa;">${k.tier}</span>
+                        </div>
+                    </div>
+                    ${k.is_active ? `<button class="btn btn-outline-danger btn-sm ms-3" onclick="revokeKey(${k.id})">Revoke</button>` : ''}
+                </div>`;
+            }).join('');
+            container.innerHTML = rows;
+        }
+
+        function escHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function openNewKeyModal() {
+            document.getElementById('newKeyLabel').value = '';
+            document.getElementById('newKeyAlert').className = 'alert d-none';
+            document.getElementById('newKeyResult').classList.add('d-none');
+            document.getElementById('generateKeyBtn').style.display = '';
+            new bootstrap.Modal(document.getElementById('newKeyModal')).show();
+        }
+
+        async function generateKey() {
+            const token = localStorage.getItem('auth_token');
+            const label = document.getElementById('newKeyLabel').value.trim();
+            const btn = document.getElementById('generateKeyBtn');
+            const alertEl = document.getElementById('newKeyAlert');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating…';
+            try {
+                const res = await fetch('/api/license/keys', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed');
+                document.getElementById('newKeyValue').value = data.key.key;
+                document.getElementById('newKeyResult').classList.remove('d-none');
+                btn.style.display = 'none';
+                loadLicenseKeys();
+            } catch (e) {
+                alertEl.className = 'alert alert-danger';
+                alertEl.textContent = e.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate';
+            }
+        }
+
+        function copyNewKey() {
+            const val = document.getElementById('newKeyValue').value;
+            navigator.clipboard.writeText(val).then(() => {
+                const btn = document.querySelector('#newKeyResult .btn-outline-secondary');
+                btn.innerHTML = '<i class="bi bi-check"></i>';
+                setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
+            });
+        }
+
+        async function revokeKey(id) {
+            if (!confirm('Revoke this key? The self-hosted instance using it will lose access.')) return;
+            const token = localStorage.getItem('auth_token');
+            try {
+                await fetch('/api/license/keys/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                loadLicenseKeys();
+            } catch (e) {
+                alert('Failed to revoke key: ' + e.message);
+            }
+        }
+    </script>
 </body>
 </html>

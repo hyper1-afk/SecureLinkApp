@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     checkLoginStatus();
     loadLastScanResult();
+    initSettings();
 
     clearBadgeBtn.addEventListener('click', function() {
         chrome.runtime.sendMessage({ action: 'clearBadge' }, function() {
@@ -245,5 +246,45 @@ document.addEventListener('DOMContentLoaded', () => {
     function capitalize(str) {
         if (!str) return str;
         return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    function initSettings() {
+        var settingsBtn   = document.getElementById('settings-btn');
+        var settingsPanel = document.getElementById('settings-panel');
+        var apiUrlInput   = document.getElementById('api-url-input');
+        var saveBtn       = document.getElementById('settings-save-btn');
+        var msg           = document.getElementById('settings-msg');
+
+        // Load current saved URL into input
+        chrome.storage.local.get(['customApiUrl'], function(data) {
+            if (data.customApiUrl) apiUrlInput.value = data.customApiUrl;
+        });
+
+        // Toggle panel
+        settingsBtn.addEventListener('click', function() {
+            var open = !settingsPanel.classList.contains('hidden');
+            settingsPanel.classList.toggle('hidden', open);
+            settingsBtn.classList.toggle('active', !open);
+        });
+
+        // Save URL
+        saveBtn.addEventListener('click', function() {
+            var url = apiUrlInput.value.trim().replace(/\/$/, '');
+            if (url && !url.startsWith('http')) {
+                msg.textContent = 'URL must start with http:// or https://';
+                msg.className = 'settings-msg error';
+                msg.classList.remove('hidden');
+                return;
+            }
+            chrome.storage.local.set({ customApiUrl: url || '' }, function() {
+                msg.textContent = url ? 'Saved — extension now points to ' + url : 'Reset to default (securelinkapp.com)';
+                msg.className = 'settings-msg';
+                msg.classList.remove('hidden');
+                setTimeout(function() { msg.classList.add('hidden'); }, 3000);
+            });
+        });
+
+        apiUrlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveBtn.click(); });
     }
 });

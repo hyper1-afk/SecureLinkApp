@@ -231,6 +231,35 @@ class DailyScanCount(Base):
     count = Column(Integer, default=0)
 
 
+class LicenseKey(Base):
+    """License keys for self-hosted SecureLink instances"""
+    __tablename__ = 'license_keys'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    key = Column(String(64), unique=True, nullable=False, index=True)
+    tier = Column(String(20), nullable=False)  # pro or enterprise
+    label = Column(String(100), nullable=True)  # user-defined name for the instance
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)  # None = never expires
+    last_validated = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'tier': self.tier,
+            'label': self.label or '',
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at is not None else None,
+            'last_validated': self.last_validated.isoformat() if self.last_validated is not None else None,
+        }
+
+
 class MonitoredAsset(Base):
     """Assets being monitored on the dark web (emails, domains, usernames, phones)"""
     __tablename__ = 'monitored_assets'
@@ -417,6 +446,10 @@ class AuthManager:
                 if 'dark_web_alert_email' not in columns:
                     conn.execute(text('ALTER TABLE users ADD COLUMN dark_web_alert_email BOOLEAN DEFAULT TRUE'))
                     conn.commit()
+
+        # Create license_keys table if it doesn't exist
+        if 'license_keys' not in inspector.get_table_names():
+            LicenseKey.__table__.create(self.engine)
     
     def get_session(self):
         return self.Session()
