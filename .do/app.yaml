@@ -1,0 +1,33 @@
+name: securelinkapp
+region: atl
+services:
+- name: securelinkapp
+  github:
+    repo: hyper1-afk/SecureLinkApp
+    branch: main
+    deploy_on_push: true
+  dockerfile_path: Dockerfile
+  http_port: 5000
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  routes:
+  - path: /
+  envs:
+  - key: FLASK_ENV
+    value: production
+  - key: SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    type: SECRET
+  - key: STRIPE_SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: STRIPE_PUBLISHABLE_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: APP_URL
+    value: https://securelinkapp.com
+  - key: APP_NAME
+    value: SecureLink
