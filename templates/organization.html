@@ -314,6 +314,59 @@
             border-radius: var(--radius-md); padding: 20px;
         }
         .gateway-api-box pre { margin: 0; font-size: 0.8rem; color: var(--text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+
+        /* ── Gateway setup guide ── */
+        .guide-tab-btn {
+            padding: 7px 16px; border-radius: 8px 8px 0 0; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent; border-bottom: none;
+            background: transparent; color: var(--text-muted); transition: all 0.2s;
+            position: relative; top: 1px;
+        }
+        .guide-tab-btn.active, .guide-tab-btn:hover {
+            background: rgba(16,185,129,0.1); color: #10b981;
+            border-color: rgba(16,185,129,0.25);
+        }
+        .guide-code {
+            background: rgba(0,0,0,0.35); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); padding: 16px 18px;
+            font-size: 0.78rem; color: #a3e7c8; overflow-x: auto;
+            white-space: pre-wrap; word-break: break-all; margin: 0;
+        }
+        .guide-code-block { border-radius: var(--radius-md); overflow: hidden; }
+        .code-lang-tabs { border-bottom: 1px solid var(--border-color); }
+        .code-lang-btn {
+            padding: 5px 14px; border-radius: 6px 6px 0 0; font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent; border-bottom: none;
+            background: transparent; color: var(--text-muted); transition: all 0.2s;
+            position: relative; top: 1px;
+        }
+        .code-lang-btn.active, .code-lang-btn:hover {
+            background: rgba(255,255,255,0.06); color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        .guide-tip {
+            background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+            border-radius: var(--radius-md); padding: 12px 16px;
+            font-size: 0.83rem; color: var(--text-secondary); display: flex; gap: 10px; align-items: flex-start;
+            margin-top: 12px;
+        }
+        .guide-policy-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); padding: 14px 16px;
+        }
+        .guide-trouble-table { width: 100%; }
+        .trouble-row {
+            display: grid; grid-template-columns: 90px 1fr 1fr; gap: 12px;
+            padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.82rem; color: var(--text-secondary); align-items: start;
+        }
+        .trouble-header { color: var(--text-muted); font-size: 0.75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.06em; }
+        .trouble-code { font-family: monospace; font-weight: 700; color: #f59e0b; }
+        @media (max-width: 600px) {
+            .trouble-row { grid-template-columns: 1fr; gap: 4px; }
+            .guide-policy-grid { grid-template-columns: 1fr !important; }
+        }
     </style>
 </head>
 <body>
@@ -600,35 +653,251 @@
                         </div>
                     </div>
 
-                    <!-- Gateway API Usage -->
-                    <div class="sl-card mt-4">
-                        <h3 class="h5 fw-semibold mb-2">
-                            <i class="bi bi-plug" style="color:#10b981;margin-right:8px"></i>Integrate with Your Network
-                        </h3>
-                        <p class="text-secondary-sl mb-4" style="font-size:0.85rem;">Point any tool, script, or network device at the gateway endpoint using your org API key. Returns ALLOW/BLOCK instantly.</p>
-                        <div class="gateway-api-box">
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="gw-api-grid">
-                                <div>
-                                    <p style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Request</p>
-<pre>curl -X POST <span id="gwApiEndpoint">https://securelinkapp.com</span>/api/gateway/check \
-  -H "X-API-Key: <span id="gwApiKeyPreview">YOUR_ORG_API_KEY</span>" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://suspicious-site.com", "user_id": 42}'</pre>
+                    <!-- Gateway Setup Guide -->
+                    <div class="sl-card mt-4" id="gatewayGuide">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                            <div>
+                                <h3 class="h5 fw-semibold mb-1">
+                                    <i class="bi bi-book" style="color:#10b981;margin-right:8px"></i>Setup &amp; Integration Guide
+                                </h3>
+                                <p class="text-secondary-sl mb-0" style="font-size:0.84rem;">Everything you need to integrate the SecureLink corporate gateway into your infrastructure.</p>
+                            </div>
+                            <span style="background:rgba(16,185,129,0.12);color:#10b981;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:0.05em;">ENTERPRISE</span>
+                        </div>
+
+                        <!-- Step tabs -->
+                        <div class="guide-tabs" style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border-color);margin-bottom:24px;padding-bottom:0;">
+                            <button class="guide-tab-btn active" onclick="showGuideTab('gStep1',this)">1&nbsp; Get API Key</button>
+                            <button class="guide-tab-btn" onclick="showGuideTab('gStep2',this)">2&nbsp; Configure Policy</button>
+                            <button class="guide-tab-btn" onclick="showGuideTab('gStep3',this)">3&nbsp; First Check</button>
+                            <button class="guide-tab-btn" onclick="showGuideTab('gStep4',this)">4&nbsp; Handle Response</button>
+                            <button class="guide-tab-btn" onclick="showGuideTab('gStep5',this)">5&nbsp; Monitor</button>
+                            <button class="guide-tab-btn" onclick="showGuideTab('gTrouble',this)"><i class="bi bi-wrench"></i>&nbsp; Troubleshoot</button>
+                        </div>
+
+                        <!-- Step 1: Get API Key -->
+                        <div id="gStep1" class="guide-step-content">
+                            <h6 class="fw-semibold mb-2" style="color:var(--text-primary);">Step 1 — Get Your Organisation API Key</h6>
+                            <p class="text-secondary-sl" style="font-size:0.87rem;">Every request to the gateway must include your organisation's unique API key. You can find it in the <strong>API Key</strong> tab of this dashboard.</p>
+                            <div class="guide-tip">
+                                <i class="bi bi-lightbulb-fill" style="color:#f59e0b;"></i>
+                                Treat this key like a password — rotate it immediately if it is ever exposed. The key grants access to your entire policy and audit log.
+                            </div>
+                            <p class="text-secondary-sl mt-3 mb-2" style="font-size:0.87rem;">Pass the key in the request header:</p>
+<pre class="guide-code">X-API-Key: <span id="gwApiKeyPreview">YOUR_ORG_API_KEY</span>
+
+# Alternatively, as a Bearer token:
+Authorization: Bearer YOUR_ORG_API_KEY</pre>
+                            <p class="text-secondary-sl mt-3" style="font-size:0.87rem;">The gateway endpoint you'll POST to:</p>
+<pre class="guide-code">POST <span id="gwApiEndpoint">https://securelinkapp.com</span>/api/gateway/check</pre>
+                        </div>
+
+                        <!-- Step 2: Configure Policy -->
+                        <div id="gStep2" class="guide-step-content d-none">
+                            <h6 class="fw-semibold mb-2" style="color:var(--text-primary);">Step 2 — Configure Your Gateway Policy</h6>
+                            <p class="text-secondary-sl" style="font-size:0.87rem;">Use the <strong>Policy</strong> panel above to control what the gateway allows and blocks. Changes take effect on the next API call — no restart needed.</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;" class="guide-policy-grid">
+                                <div class="guide-policy-card">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;"><i class="bi bi-shield-fill-exclamation" style="color:#f59e0b;margin-right:6px;"></i>Risk Threshold</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">URLs with a risk score above this value are blocked. Default is <code>0.5</code> (50%). Lower it for stricter security.</p>
                                 </div>
-                                <div>
-                                    <p style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Response</p>
-<pre>{
-  "verdict": "block",
-  "reason": "Risk score 0.85 exceeds threshold 0.50",
-  "risk_score": 0.85,
-  "risk_level": "high",
-  "threats": ["phishing"],
-  "log_id": 1042
-}</pre>
+                                <div class="guide-policy-card">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;"><i class="bi bi-tags-fill" style="color:#ef4444;margin-right:6px;"></i>Block Categories</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">Automatically block entire threat classes: phishing, malware, ransomware, cryptojacking, and more — regardless of risk score.</p>
+                                </div>
+                                <div class="guide-policy-card">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;"><i class="bi bi-ban" style="color:#ef4444;margin-right:6px;"></i>Custom Block List</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">Paste any domains you want hard-blocked, one per line. Takes priority over the risk threshold.</p>
+                                </div>
+                                <div class="guide-policy-card">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;"><i class="bi bi-check-circle-fill" style="color:#10b981;margin-right:6px;"></i>Allow List</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">Domains you explicitly trust (e.g., internal services) — always allowed, even if flagged by threat analysis.</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- Step 3: First Check — code tabs -->
+                        <div id="gStep3" class="guide-step-content d-none">
+                            <h6 class="fw-semibold mb-2" style="color:var(--text-primary);">Step 3 — Make Your First URL Check</h6>
+                            <p class="text-secondary-sl mb-3" style="font-size:0.87rem;">Send a POST request with the URL to evaluate. An optional <code>user_id</code> field tags the log entry with the employee who triggered the check.</p>
+
+                            <!-- Code language switcher -->
+                            <div class="code-lang-tabs" style="display:flex;gap:4px;margin-bottom:-1px;">
+                                <button class="code-lang-btn active" onclick="showCodeLang('curl',this)">cURL</button>
+                                <button class="code-lang-btn" onclick="showCodeLang('python',this)">Python</button>
+                                <button class="code-lang-btn" onclick="showCodeLang('nodejs',this)">Node.js</button>
+                                <button class="code-lang-btn" onclick="showCodeLang('php',this)">PHP</button>
+                            </div>
+
+                            <div id="codeLang-curl" class="guide-code-block">
+<pre class="guide-code">curl -X POST <span class="gwEndpointCode">https://securelinkapp.com</span>/api/gateway/check \
+  -H "X-API-Key: <span class="gwKeyCode">YOUR_ORG_API_KEY</span>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://suspicious-site.com", "user_id": 42}'</pre>
+                            </div>
+
+                            <div id="codeLang-python" class="guide-code-block d-none">
+<pre class="guide-code">import requests
+
+GATEWAY = "<span class="gwEndpointCode">https://securelinkapp.com</span>/api/gateway/check"
+API_KEY = "<span class="gwKeyCode">YOUR_ORG_API_KEY</span>"
+
+def check_url(url: str, user_id: int = None) -> dict:
+    resp = requests.post(
+        GATEWAY,
+        headers={"X-API-Key": API_KEY},
+        json={"url": url, "user_id": user_id},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+result = check_url("https://suspicious-site.com", user_id=42)
+if result["verdict"] == "block":
+    raise PermissionError(f"URL blocked: {result['reason']}")</pre>
+                            </div>
+
+                            <div id="codeLang-nodejs" class="guide-code-block d-none">
+<pre class="guide-code">const GATEWAY = "<span class="gwEndpointCode">https://securelinkapp.com</span>/api/gateway/check";
+const API_KEY = "<span class="gwKeyCode">YOUR_ORG_API_KEY</span>";
+
+async function checkUrl(url, userId = null) {
+  const res = await fetch(GATEWAY, {
+    method: "POST",
+    headers: {
+      "X-API-Key": API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url, user_id: userId }),
+  });
+  if (!res.ok) throw new Error(`Gateway error: ${res.status}`);
+  return res.json();
+}
+
+const result = await checkUrl("https://suspicious-site.com", 42);
+if (result.verdict === "block") {
+  throw new Error(`Blocked: ${result.reason}`);
+}</pre>
+                            </div>
+
+                            <div id="codeLang-php" class="guide-code-block d-none">
+<pre class="guide-code">&lt;?php
+$gateway = "<span class="gwEndpointCode">https://securelinkapp.com</span>/api/gateway/check";
+$apiKey  = "<span class="gwKeyCode">YOUR_ORG_API_KEY</span>";
+
+function checkUrl(string $url, ?int $userId = null): array {
+    global $gateway, $apiKey;
+    $ch = curl_init($gateway);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           =&gt; true,
+        CURLOPT_RETURNTRANSFER =&gt; true,
+        CURLOPT_HTTPHEADER     =&gt; [
+            "X-API-Key: $apiKey",
+            "Content-Type: application/json",
+        ],
+        CURLOPT_POSTFIELDS =&gt; json_encode(['url' =&gt; $url, 'user_id' =&gt; $userId]),
+    ]);
+    $body = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($body, true);
+}
+
+$result = checkUrl("https://suspicious-site.com", 42);
+if ($result['verdict'] === 'block') {
+    throw new RuntimeException("URL blocked: " . $result['reason']);
+}
+?&gt;</pre>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Handle Response -->
+                        <div id="gStep4" class="guide-step-content d-none">
+                            <h6 class="fw-semibold mb-2" style="color:var(--text-primary);">Step 4 — Handle the Response</h6>
+                            <p class="text-secondary-sl mb-3" style="font-size:0.87rem;">The gateway always returns JSON. Branch on <code>verdict</code> to allow or deny the request in your own application.</p>
+<pre class="guide-code">{
+  "verdict":    "block",           // "allow" or "block"
+  "reason":     "Risk score 0.85 exceeds threshold 0.50",
+  "risk_score": 0.85,              // 0.0 (safe) → 1.0 (critical)
+  "risk_level": "high",            // "safe" | "low" | "medium" | "high" | "critical"
+  "threats":    ["phishing"],      // list of detected threat categories
+  "warnings":   [],                // non-blocking advisory warnings
+  "log_id":     1042,              // audit log entry ID (null if logging disabled)
+  "org_id":     7                  // your organisation ID
+}</pre>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;" class="guide-policy-grid">
+                                <div class="guide-policy-card" style="border-left:3px solid #10b981;">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;color:#10b981;"><i class="bi bi-check-lg" style="margin-right:4px;"></i>verdict: "allow"</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">URL is safe under your policy. Let the user proceed.</p>
+                                </div>
+                                <div class="guide-policy-card" style="border-left:3px solid #ef4444;">
+                                    <p class="fw-semibold mb-1" style="font-size:0.85rem;color:#ef4444;"><i class="bi bi-x-lg" style="margin-right:4px;"></i>verdict: "block"</p>
+                                    <p class="text-secondary-sl" style="font-size:0.82rem;">URL violated your policy. Block the request and surface <code>reason</code> to the user.</p>
+                                </div>
+                            </div>
+                            <div class="guide-tip mt-3">
+                                <i class="bi bi-info-circle-fill" style="color:#3b82f6;"></i>
+                                The gateway is synchronous and typically responds in under 800 ms. Set a client timeout of at least 5 s to account for slow DNS lookups on unusual domains.
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Monitor -->
+                        <div id="gStep5" class="guide-step-content d-none">
+                            <h6 class="fw-semibold mb-2" style="color:var(--text-primary);">Step 5 — Monitor Activity</h6>
+                            <p class="text-secondary-sl mb-3" style="font-size:0.87rem;">Every URL check is logged in the <strong>Activity Log</strong> panel above (when logging is enabled in your policy). Use it to:</p>
+                            <ul class="text-secondary-sl" style="font-size:0.87rem;padding-left:20px;line-height:1.9;">
+                                <li>Review which domains are being blocked and why</li>
+                                <li>Correlate block events with employee IDs to spot suspicious behaviour</li>
+                                <li>Audit access before a security incident for forensic purposes</li>
+                                <li>Tune your risk threshold — if too many legitimate URLs are blocked, increase the value; lower it for stricter control</li>
+                            </ul>
+                            <p class="text-secondary-sl mb-2" style="font-size:0.87rem;">You can also receive real-time alerts via <strong>Webhooks</strong> (Slack, Discord, Teams) whenever a URL is blocked — configure them in the Webhooks tab.</p>
+                            <div class="guide-tip">
+                                <i class="bi bi-bell-fill" style="color:#f59e0b;"></i>
+                                Webhook alerts fire only on <code>block</code> verdicts, keeping your inbox clean while ensuring immediate notification of threats.
+                            </div>
+                        </div>
+
+                        <!-- Troubleshoot -->
+                        <div id="gTrouble" class="guide-step-content d-none">
+                            <h6 class="fw-semibold mb-3" style="color:var(--text-primary);"><i class="bi bi-wrench" style="margin-right:6px;"></i>Troubleshooting</h6>
+                            <div class="guide-trouble-table">
+                                <div class="trouble-row trouble-header">
+                                    <span>HTTP Status</span><span>Error</span><span>Fix</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">401</span>
+                                    <span>API key required / Invalid API key</span>
+                                    <span>Check the <code>X-API-Key</code> header is present and matches the key shown in the API Key tab.</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">403</span>
+                                    <span>Gateway requires an active Enterprise subscription</span>
+                                    <span>The organisation owner's account must have an active Enterprise plan. Visit <a href="/pricing" target="_blank">Pricing</a> to upgrade.</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">403</span>
+                                    <span>Enterprise subscription has expired</span>
+                                    <span>Renew the Enterprise subscription on the billing page to restore gateway access.</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">400</span>
+                                    <span>url is required / URL too long</span>
+                                    <span>Ensure the JSON body contains a valid <code>url</code> field (max 2048 chars).</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">429</span>
+                                    <span>Rate limit exceeded</span>
+                                    <span>The endpoint allows 120 requests per minute per IP. Add caching in your integration or throttle request frequency.</span>
+                                </div>
+                                <div class="trouble-row">
+                                    <span class="trouble-code">5xx</span>
+                                    <span>Server error</span>
+                                    <span>Retry with exponential back-off. If the error persists, check the SecureLink status page or contact support.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /#gatewayGuide -->
 
                 </div><!-- /#gatewayTab -->
 
@@ -1099,9 +1368,15 @@
         async function loadGatewayTab() {
             if (!currentOrg) return;
             await Promise.all([loadGatewayPolicy(), loadGatewayLogs()]);
-            // populate the API example key preview
+            // populate guide key + endpoint placeholders
+            const apiKey = currentOrg.api_key || 'YOUR_ORG_API_KEY';
+            const origin = window.location.origin;
             const preview = document.getElementById('gwApiKeyPreview');
-            if (preview && currentOrg.api_key) preview.textContent = currentOrg.api_key;
+            if (preview) preview.textContent = apiKey;
+            const endpoint = document.getElementById('gwApiEndpoint');
+            if (endpoint) endpoint.textContent = origin;
+            document.querySelectorAll('.gwKeyCode').forEach(el => el.textContent = apiKey);
+            document.querySelectorAll('.gwEndpointCode').forEach(el => el.textContent = origin);
         }
 
         async function loadGatewayPolicy() {
@@ -1221,6 +1496,24 @@
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             loadGatewayLogs();
+        }
+
+        // ─── Guide step tabs ───────────────────────────────────────
+        function showGuideTab(id, btn) {
+            document.querySelectorAll('.guide-step-content').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('.guide-tab-btn').forEach(b => b.classList.remove('active'));
+            const target = document.getElementById(id);
+            if (target) target.classList.remove('d-none');
+            if (btn) btn.classList.add('active');
+        }
+
+        // ─── Code language switcher ────────────────────────────────
+        function showCodeLang(lang, btn) {
+            document.querySelectorAll('.guide-code-block').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('.code-lang-btn').forEach(b => b.classList.remove('active'));
+            const target = document.getElementById('codeLang-' + lang);
+            if (target) target.classList.remove('d-none');
+            if (btn) btn.classList.add('active');
         }
 
         // ===================== END GATEWAY =====================

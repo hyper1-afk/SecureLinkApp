@@ -1128,6 +1128,7 @@ class Database:
                 return None
             result = org.to_dict()
             result['id'] = org.id
+            result['owner_id'] = org.owner_id
             result['settings'] = org.settings or {}
             result['custom_blocked_domains'] = org.custom_blocked_domains or []
             return result

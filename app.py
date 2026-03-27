@@ -4086,6 +4086,7 @@ def _apply_gateway_policy(url: str, result, policy: dict, org: dict) -> tuple:
 
 
 @app.route('/api/gateway/check', methods=['POST'])
+@limiter.limit("120 per minute")
 def gateway_check():
     """
     Corporate gateway endpoint — authenticate with org API key.
@@ -4108,6 +4109,13 @@ def gateway_check():
     org = db.get_org_by_api_key(api_key)
     if not org:
         return jsonify({'error': 'Invalid API key'}), 401
+
+    # ---------- Enterprise subscription check ----------
+    owner = auth_manager.get_user_by_id(org['owner_id'])
+    if not owner or owner.get('subscription_tier') != SubscriptionTier.ENTERPRISE.value:
+        return jsonify({'error': 'Gateway requires an active Enterprise subscription'}), 403
+    if not _subscription_is_active(owner):
+        return jsonify({'error': 'Enterprise subscription has expired. Please renew to continue using the gateway.'}), 403
 
     # ---------- Input validation ----------
     data = request.get_json(silent=True) or {}
