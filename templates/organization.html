@@ -477,6 +477,9 @@
                     <button onclick="showTab('api')" class="tab-btn" data-tab="api">
                         <i class="bi bi-key"></i> API Key
                     </button>
+                    <button onclick="showTab('licenses')" class="tab-btn" data-tab="licenses">
+                        <i class="bi bi-patch-check" style="color:#a78bfa;"></i> Licenses
+                    </button>
                 </div>
 
                 <!-- Members Tab -->
@@ -934,12 +937,124 @@ if ($result['verdict'] === 'block') {
   -d '{"url": "https://example.com"}'</code></pre>
                         </div>
                     </div>
-                </div>
+                </div><!-- /#apiTab -->
+
+                <!-- Licenses Tab -->
+                <div id="licensesTab" class="tab-content d-none">
+                    <!-- No plan yet -->
+                    <div id="licNoPlan" class="sl-card text-center d-none" style="padding:3rem 2rem;">
+                        <i class="bi bi-patch-check" style="font-size:3rem;color:#a78bfa;opacity:0.6;"></i>
+                        <h3 class="h5 fw-semibold mt-3 mb-2">No License Plan Active</h3>
+                        <p class="text-secondary-sl mb-4">Purchase named-user seats to assign Pro or Enterprise access to your team members.</p>
+                        <div class="d-flex gap-3 justify-content-center flex-wrap">
+                            <button onclick="openBuyModal('pro','monthly')" class="sl-btn sl-btn-outline">
+                                <i class="bi bi-rocket-takeoff"></i> Buy Pro Seats
+                            </button>
+                            <button onclick="openBuyModal('enterprise','monthly')" class="sl-btn sl-btn-primary">
+                                <i class="bi bi-building-fill-lock"></i> Buy Enterprise Seats
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Active plan overview -->
+                    <div id="licPlanCard" class="sl-card d-none">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                            <div>
+                                <h3 class="h5 fw-semibold mb-1">
+                                    <span id="licTierBadge" class="badge rounded-pill px-3 py-1" style="font-size:0.8rem;background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa40;">Enterprise</span>
+                                    &nbsp;License Plan
+                                </h3>
+                                <p class="text-secondary-sl mb-0" style="font-size:0.85rem;">
+                                    <span id="licBilling"></span> &nbsp;·&nbsp; Expires <span id="licExpiry"></span>
+                                </p>
+                            </div>
+                            <button onclick="openBuyModal(null,null,true)" class="sl-btn sl-btn-outline" style="font-size:0.85rem;">
+                                <i class="bi bi-cart-plus"></i> Add Seats
+                            </button>
+                        </div>
+
+                        <!-- Seat usage bar -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-1" style="font-size:0.82rem;color:var(--text-secondary);">
+                                <span>Seats Used</span>
+                                <span><span id="licUsed">0</span> / <span id="licTotal">0</span></span>
+                            </div>
+                            <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                                <div id="licUsageBar" style="height:100%;border-radius:4px;background:linear-gradient(90deg,#a78bfa,#7c3aed);width:0%;transition:width .4s;"></div>
+                            </div>
+                            <p class="mt-1 mb-0" id="licAvailMsg" style="font-size:0.78rem;color:#10b981;"></p>
+                        </div>
+
+                        <!-- Assign seat form -->
+                        <div class="mb-4" id="licAssignSection">
+                            <h4 class="fw-semibold mb-3" style="font-size:0.95rem;">Assign Seat</h4>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <input type="email" id="licAssignEmail" class="sl-input flex-grow-1" style="max-width:340px;" placeholder="user@company.com">
+                                <button onclick="assignLicSeat()" class="sl-btn sl-btn-primary" style="padding:10px 20px;white-space:nowrap;">
+                                    <i class="bi bi-person-check"></i> Assign Seat
+                                </button>
+                            </div>
+                            <p id="licAssignMsg" class="mt-2 mb-0" style="font-size:0.82rem;display:none;"></p>
+                        </div>
+
+                        <!-- Seats table -->
+                        <h4 class="fw-semibold mb-3" style="font-size:0.95rem;">Assigned Seats</h4>
+                        <div style="overflow-x:auto;">
+                            <table class="w-100" style="border-collapse:collapse;font-size:0.85rem;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                                        <th class="text-secondary-sl fw-normal py-2">Email</th>
+                                        <th class="text-secondary-sl fw-normal py-2">Name</th>
+                                        <th class="text-secondary-sl fw-normal py-2">Status</th>
+                                        <th class="text-secondary-sl fw-normal py-2">Assigned</th>
+                                        <th class="text-secondary-sl fw-normal py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="licSeatsBody">
+                                    <tr><td colspan="5" class="py-3 text-secondary-sl text-center">No seats assigned yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div><!-- /#licensesTab -->
+
             </div>
         </div>
     </div>
 
-    <!-- Create Org Modal -->
+    <!-- Buy Seats Modal -->
+    <div id="buySeatsModal" class="org-modal-overlay">
+        <div class="org-modal-box" style="max-width:480px;">
+            <h2 style="margin-bottom:1.2rem;"><i class="bi bi-patch-check" style="color:#a78bfa;"></i> Purchase Seats</h2>
+            <div class="d-flex flex-column gap-3">
+                <div>
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem;">Plan Tier</label>
+                    <select id="buyTier" class="sl-input" onchange="updateBuyPrice()">
+                        <option value="pro">Pro — <span></span></option>
+                        <option value="enterprise" selected>Enterprise</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem;">Billing Period</label>
+                    <select id="buyBilling" class="sl-input" onchange="updateBuyPrice()">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly (save ~17%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label text-secondary-sl" style="font-size:0.82rem;">Number of Seats</label>
+                    <input type="number" id="buySeatCount" class="sl-input" value="5" min="1" max="1000" oninput="updateBuyPrice()">
+                </div>
+                <div id="buyPricePreview" style="padding:12px 16px;border-radius:8px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);font-size:0.88rem;"></div>
+                <div class="d-flex gap-3 mt-1">
+                    <button onclick="hideBuyModal()" class="sl-btn sl-btn-outline flex-fill">Cancel</button>
+                    <button onclick="startLicCheckout()" class="sl-btn sl-btn-primary flex-fill">
+                        <i class="bi bi-credit-card"></i> Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="createOrgModal" class="org-modal-overlay">
         <div class="org-modal-box">
             <h2><i class="bi bi-building" style="color:var(--accent-color)"></i>Create Organization</h2>
@@ -1226,6 +1341,7 @@ if ($result['verdict'] === 'block') {
             document.getElementById(`${tab}Tab`).classList.remove('d-none');
             document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
             if (tab === 'gateway') loadGatewayTab();
+            if (tab === 'licenses') loadLicensesTab();
         }
 
         // Modals
@@ -1517,6 +1633,170 @@ if ($result['verdict'] === 'block') {
         }
 
         // ===================== END GATEWAY =====================
+
+        // ===================== LICENSES =====================
+        let _licSeatPrices = null;
+
+        async function loadLicensesTab() {
+            if (!currentOrg) return;
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/licenses`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) { console.error('licenses fetch failed', res.status); return; }
+                const data = await res.json();
+                _licSeatPrices = data.seat_prices || {};
+                renderLicPlan(data.plan, data.seats || []);
+            } catch(e) { console.error('loadLicensesTab', e); }
+        }
+
+        function renderLicPlan(plan, seats) {
+            const noPlan = document.getElementById('licNoPlan');
+            const planCard = document.getElementById('licPlanCard');
+            if (!plan) {
+                noPlan.classList.remove('d-none');
+                planCard.classList.add('d-none');
+                return;
+            }
+            noPlan.classList.add('d-none');
+            planCard.classList.remove('d-none');
+
+            // Tier badge
+            const tierBadge = document.getElementById('licTierBadge');
+            tierBadge.textContent = plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1);
+            tierBadge.style.background = plan.tier === 'enterprise' ? 'rgba(167,139,250,0.12)' : 'rgba(16,185,129,0.12)';
+            tierBadge.style.color      = plan.tier === 'enterprise' ? '#a78bfa' : '#10b981';
+            tierBadge.style.border     = plan.tier === 'enterprise' ? '1px solid rgba(167,139,250,0.3)' : '1px solid rgba(16,185,129,0.3)';
+
+            // Billing / expiry
+            document.getElementById('licBilling').textContent = plan.billing_period === 'yearly' ? 'Billed Yearly' : 'Billed Monthly';
+            document.getElementById('licExpiry').textContent  = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString() : 'Never';
+
+            // Seat usage
+            const used  = plan.seats_used  || 0;
+            const total = plan.seat_count  || 0;
+            const avail = plan.seats_available || 0;
+            document.getElementById('licUsed').textContent  = used;
+            document.getElementById('licTotal').textContent = total;
+            document.getElementById('licAvailMsg').textContent = avail > 0 ? `${avail} seat${avail !== 1 ? 's' : ''} available` : 'All seats in use';
+            document.getElementById('licUsageBar').style.width = total ? `${Math.min(100,(used/total)*100)}%` : '0%';
+
+            // Admin-only sections
+            const isAdmin = currentOrg.role === 'owner' || currentOrg.role === 'admin';
+            document.getElementById('licAssignSection').style.display = isAdmin ? '' : 'none';
+
+            // Seats table
+            const tbody = document.getElementById('licSeatsBody');
+            if (!seats.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-3 text-secondary-sl text-center">No seats assigned yet.</td></tr>';
+                return;
+            }
+            const statusColor = { active: '#10b981', pending: '#f59e0b', revoked: 'var(--text-secondary)' };
+            tbody.innerHTML = seats.map(s => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:10px 8px;">${escHtml(s.assigned_email)}</td>
+                    <td style="padding:10px 8px;color:var(--text-secondary);">${escHtml(s.user_full_name || (s.user_id ? '—' : 'Not registered'))}</td>
+                    <td style="padding:10px 8px;">
+                        <span style="color:${statusColor[s.status]||'inherit'};font-size:0.8rem;text-transform:capitalize;">${escHtml(s.status)}</span>
+                    </td>
+                    <td style="padding:10px 8px;color:var(--text-secondary);font-size:0.82rem;">${s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '—'}</td>
+                    <td style="padding:10px 8px;text-align:right;">
+                        ${isAdmin && s.status !== 'revoked' ? `<button onclick="revokeLicSeat(${s.id})" class="btn-icon-sm" title="Revoke seat" style="color:#ef4444;"><i class="bi bi-person-dash"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function assignLicSeat() {
+            if (!currentOrg) return;
+            const email = document.getElementById('licAssignEmail').value.trim();
+            const msgEl = document.getElementById('licAssignMsg');
+            msgEl.style.display = 'none';
+            if (!email) { showLicMsg(msgEl, 'Enter an email address.', false); return; }
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/licenses/assign`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    document.getElementById('licAssignEmail').value = '';
+                    showLicMsg(msgEl, data.message || 'Seat assigned.', true);
+                    loadLicensesTab();
+                } else {
+                    showLicMsg(msgEl, data.error || 'Failed to assign seat.', false);
+                }
+            } catch(e) { showLicMsg(msgEl, 'Network error.', false); }
+        }
+
+        async function revokeLicSeat(seatId) {
+            if (!currentOrg || !confirm('Revoke this seat? The user will lose their elevated access.')) return;
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/licenses/seats/${seatId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) loadLicensesTab();
+                else { const d = await res.json(); alert(d.error || 'Failed to revoke seat.'); }
+            } catch(e) { alert('Network error.'); }
+        }
+
+        function openBuyModal(tier, billing, isAdding) {
+            document.getElementById('buyTier').value    = tier    || 'enterprise';
+            document.getElementById('buyBilling').value = billing || 'monthly';
+            document.getElementById('buySeatCount').value = isAdding ? '1' : '5';
+            updateBuyPrice();
+            document.getElementById('buySeatsModal').classList.add('show');
+        }
+
+        function hideBuyModal() {
+            document.getElementById('buySeatsModal').classList.remove('show');
+        }
+
+        function updateBuyPrice() {
+            const tier    = document.getElementById('buyTier').value;
+            const billing = document.getElementById('buyBilling').value;
+            const seats   = parseInt(document.getElementById('buySeatCount').value) || 1;
+            const preview = document.getElementById('buyPricePreview');
+            if (!_licSeatPrices) { preview.textContent = ''; return; }
+            const prices  = (_licSeatPrices[tier] || {});
+            const ppSeat  = billing === 'yearly' ? (prices.yearly || 0) : (prices.monthly || 0);
+            const total   = (ppSeat * seats).toFixed(2);
+            const period  = billing === 'yearly' ? '/yr' : '/mo';
+            const saving  = billing === 'yearly' ? ` (≈$${(prices.yearly_monthly_equiv * seats).toFixed(2)}/mo)` : '';
+            preview.innerHTML = `<strong>$${total}${period}</strong> &nbsp;·&nbsp; $${ppSeat.toFixed(2)}/seat${period}${saving}`;
+        }
+
+        async function startLicCheckout() {
+            if (!currentOrg) return;
+            const tier           = document.getElementById('buyTier').value;
+            const billing_period = document.getElementById('buyBilling').value === 'yearly' ? 'yearly' : 'monthly';
+            const seat_count     = parseInt(document.getElementById('buySeatCount').value) || 1;
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/licenses/checkout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tier, billing_period, seat_count })
+                });
+                const data = await res.json();
+                if (!res.ok) { alert(data.error || 'Checkout failed.'); return; }
+                if (data.demo_mode) { hideBuyModal(); loadLicensesTab(); return; }
+                if (data.checkout_url) window.location.href = data.checkout_url;
+            } catch(e) { alert('Network error.'); }
+        }
+
+        function showLicMsg(el, text, success) {
+            el.textContent = text;
+            el.style.color  = success ? '#10b981' : '#ef4444';
+            el.style.display = '';
+        }
+
+        function escHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ===================== END LICENSES =====================
 
         // Initialize
         document.addEventListener('DOMContentLoaded', init);

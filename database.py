@@ -273,6 +273,85 @@ class OrgGatewayLog(Base):
         }
 
 
+# ==================== ORG NAMED-USER SEAT LICENSING ====================
+
+class OrgLicensePlan(Base):
+    """Adobe-style seat pool purchased by an organisation admin.
+
+    An organisation can have one active plan at a time.  The plan defines
+    *how many* named-user seats have been purchased and at which tier.
+    Individual seat assignments live in OrgLicenseSeat.
+    """
+    __tablename__ = 'org_license_plans'
+
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id  = Column(Integer, nullable=False, index=True)
+    tier             = Column(String(20), nullable=False)          # 'pro' | 'enterprise'
+    seat_count       = Column(Integer, nullable=False, default=1)
+    billing_period   = Column(String(10), default='monthly')       # 'monthly' | 'yearly'
+    stripe_subscription_id = Column(String(100), nullable=True)
+    stripe_customer_id     = Column(String(100), nullable=True)
+    purchased_by     = Column(Integer, nullable=False)            # user_id of org admin
+    is_active        = Column(Boolean, default=True)
+    expires_at       = Column(DateTime, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    seats = relationship('OrgLicenseSeat', back_populates='plan', cascade='all, delete-orphan')
+
+    def to_dict(self) -> Dict:
+        used = sum(1 for s in self.seats if s.status == 'active')
+        return {
+            'id': self.id,
+            'organization_id': self.organization_id,
+            'tier': self.tier,
+            'seat_count': self.seat_count,
+            'seats_used': used,
+            'seats_available': max(0, self.seat_count - used),
+            'billing_period': self.billing_period,
+            'stripe_subscription_id': self.stripe_subscription_id,
+            'is_active': self.is_active,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class OrgLicenseSeat(Base):
+    """A single named-user seat within an OrgLicensePlan.
+
+    status values:
+      'pending'  – assigned to an email address but user hasn't accepted / doesn't exist yet
+      'active'   – user found, subscription tier has been elevated
+      'revoked'  – admin removed the seat; user tier has been un-elevated
+    """
+    __tablename__ = 'org_license_seats'
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    plan_id         = Column(Integer, ForeignKey('org_license_plans.id'), nullable=False, index=True)
+    organization_id = Column(Integer, nullable=False, index=True)
+    assigned_email  = Column(String(255), nullable=False)
+    user_id         = Column(Integer, nullable=True)    # NULL until user account is matched
+    assigned_by     = Column(Integer, nullable=False)   # user_id of the org admin
+    status          = Column(String(10), default='active')  # 'pending' | 'active' | 'revoked'
+    assigned_at     = Column(DateTime, default=datetime.utcnow)
+    revoked_at      = Column(DateTime, nullable=True)
+
+    plan = relationship('OrgLicensePlan', back_populates='seats')
+
+    def to_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'plan_id': self.plan_id,
+            'organization_id': self.organization_id,
+            'assigned_email': self.assigned_email,
+            'user_id': self.user_id,
+            'assigned_by': self.assigned_by,
+            'status': self.status,
+            'assigned_at': self.assigned_at.isoformat() if self.assigned_at else None,
+            'revoked_at': self.revoked_at.isoformat() if self.revoked_at else None,
+        }
+
+
 # ==================== FORUM / COMMUNITY CHAT MODELS ====================
 
 class ForumCategory(Base):
@@ -1219,6 +1298,269 @@ class Database:
                 OrgGatewayLog.checked_at >= since
             ).count()
             return {'total': total, 'blocked': blocked, 'allowed': total - blocked, 'last_24h': today}
+        finally:
+            session.close()
+
+    # ============== Org Named-User Seat Licensing ==============
+
+    def create_org_license_plan(self, org_id: int, tier: str, seat_count: int,
+                                purchased_by: int, billing_period: str = 'monthly',
+                                stripe_subscription_id: str = None,
+                                stripe_customer_id: str = None,
+                                expires_at=None) -> Dict:
+        """Create or replace the active license plan for an org."""
+        session = self.get_session()
+        try:
+            # Deactivate any prior active plan
+            session.query(OrgLicensePlan).filter_by(
+                organization_id=org_id, is_active=True
+            ).update({'is_active': False})
+
+            plan = OrgLicensePlan(
+                organization_id=org_id,
+                tier=tier,
+                seat_count=seat_count,
+                billing_period=billing_period,
+                stripe_subscription_id=stripe_subscription_id,
+                stripe_customer_id=stripe_customer_id,
+                purchased_by=purchased_by,
+                expires_at=expires_at,
+            )
+            session.add(plan)
+            session.commit()
+            session.refresh(plan)
+            return plan.to_dict()
+        finally:
+            session.close()
+
+    def get_org_license_plan(self, org_id: int) -> Optional[Dict]:
+        """Return the active license plan for an org, or None."""
+        session = self.get_session()
+        try:
+            plan = session.query(OrgLicensePlan).filter_by(
+                organization_id=org_id, is_active=True
+            ).first()
+            return plan.to_dict() if plan else None
+        finally:
+            session.close()
+
+    def get_org_license_plan_by_stripe(self, stripe_sub_id: str) -> Optional[Dict]:
+        """Look up an active plan by Stripe subscription ID."""
+        session = self.get_session()
+        try:
+            plan = session.query(OrgLicensePlan).filter_by(
+                stripe_subscription_id=stripe_sub_id, is_active=True
+            ).first()
+            return plan.to_dict() if plan else None
+        finally:
+            session.close()
+
+    def get_org_seats(self, org_id: int) -> List[Dict]:
+        """Return all seats for an org with user display info."""
+        from auth import User as _User
+        session = self.get_session()
+        try:
+            seats = session.query(OrgLicenseSeat).filter_by(
+                organization_id=org_id
+            ).order_by(OrgLicenseSeat.assigned_at.desc()).all()
+            rows = []
+            for s in seats:
+                d = s.to_dict()
+                # Enrich with live user info if available
+                if s.user_id:
+                    u = session.query(_User).filter_by(id=s.user_id).first()
+                    if u:
+                        d['user_full_name'] = u.full_name or u.username
+                        d['user_email'] = u.email
+                        d['user_subscription_tier'] = u.subscription_tier
+                rows.append(d)
+            return rows
+        finally:
+            session.close()
+
+    def assign_org_seat(self, plan_id: int, org_id: int, email: str, assigned_by: int,
+                        tier: str) -> Dict:
+        """Assign a seat to a named user.
+
+        If the user account exists, their subscription tier is immediately
+        elevated to ``tier``.  If not, the seat is stored as 'pending' and
+        will be activated when they register.
+        """
+        from auth import User as _User
+        session = self.get_session()
+        try:
+            # Prevent double-assignment of the same active email in this org
+            existing = session.query(OrgLicenseSeat).filter_by(
+                organization_id=org_id,
+                assigned_email=email.lower(),
+                status='active',
+            ).first()
+            if existing:
+                return {'success': False, 'error': 'This email already has an active seat in this org'}
+
+            # Pending re-invite: check for pending slot and reuse
+            pending = session.query(OrgLicenseSeat).filter_by(
+                organization_id=org_id,
+                assigned_email=email.lower(),
+                status='pending',
+            ).first()
+            if pending:
+                seat = pending
+            else:
+                seat = OrgLicenseSeat(
+                    plan_id=plan_id,
+                    organization_id=org_id,
+                    assigned_email=email.lower(),
+                    assigned_by=assigned_by,
+                )
+                session.add(seat)
+
+            # Try to find matching user account
+            user = session.query(_User).filter(
+                _User.email == email.lower()
+            ).first()
+            if user:
+                seat.user_id = user.id
+                seat.status = 'active'
+                # Elevate their subscription tier (keep existing expires_at)
+                user.subscription_tier = tier
+            else:
+                seat.status = 'pending'
+
+            session.commit()
+            session.refresh(seat)
+            d = seat.to_dict()
+            if user:
+                d['user_full_name'] = user.full_name or user.username
+                d['user_email'] = user.email
+            return {'success': True, 'seat': d, 'activated': user is not None}
+        finally:
+            session.close()
+
+    def revoke_org_seat(self, seat_id: int, org_id: int) -> Dict:
+        """Revoke a seat.  If the user had been elevated by this seat only,
+        downgrade their subscription tier back to 'free'."""
+        from auth import User as _User
+        session = self.get_session()
+        try:
+            seat = session.query(OrgLicenseSeat).filter_by(
+                id=seat_id, organization_id=org_id
+            ).first()
+            if not seat:
+                return {'success': False, 'error': 'Seat not found'}
+            if seat.status == 'revoked':
+                return {'success': False, 'error': 'Seat is already revoked'}
+
+            seat.status = 'revoked'
+            seat.revoked_at = datetime.utcnow()
+
+            # Downgrade user only if they have no other active org seat
+            if seat.user_id:
+                other_active = session.query(OrgLicenseSeat).filter(
+                    OrgLicenseSeat.user_id == seat.user_id,
+                    OrgLicenseSeat.id != seat.id,
+                    OrgLicenseSeat.status == 'active',
+                ).count()
+                if not other_active:
+                    user = session.query(_User).filter_by(id=seat.user_id).first()
+                    if user:
+                        user.subscription_tier = 'free'
+                        user.subscription_expires = None
+
+            session.commit()
+            return {'success': True}
+        finally:
+            session.close()
+
+    def update_org_license_plan_seats(self, org_id: int, new_seat_count: int) -> bool:
+        """Adjust seat count on the active plan (e.g. after Stripe quantity change)."""
+        session = self.get_session()
+        try:
+            plan = session.query(OrgLicensePlan).filter_by(
+                organization_id=org_id, is_active=True
+            ).first()
+            if not plan:
+                return False
+            plan.seat_count = new_seat_count
+            plan.updated_at = datetime.utcnow()
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def expire_org_license_plan(self, stripe_sub_id: str) -> bool:
+        """Deactivate plan + revoke all active seats on subscription cancellation."""
+        from auth import User as _User
+        session = self.get_session()
+        try:
+            plan = session.query(OrgLicensePlan).filter_by(
+                stripe_subscription_id=stripe_sub_id, is_active=True
+            ).first()
+            if not plan:
+                return False
+            plan.is_active = False
+
+            # Revoke all active seats and downgrade users
+            active_seats = session.query(OrgLicenseSeat).filter_by(
+                plan_id=plan.id, status='active'
+            ).all()
+            affected_users = set()
+            for seat in active_seats:
+                seat.status = 'revoked'
+                seat.revoked_at = datetime.utcnow()
+                if seat.user_id:
+                    affected_users.add(seat.user_id)
+
+            for uid in affected_users:
+                # Only downgrade if no other active org seat covers them
+                other = session.query(OrgLicenseSeat).filter(
+                    OrgLicenseSeat.user_id == uid,
+                    OrgLicenseSeat.status == 'active',
+                ).count()
+                if not other:
+                    user = session.query(_User).filter_by(id=uid).first()
+                    if user:
+                        user.subscription_tier = 'free'
+                        user.subscription_expires = None
+
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def activate_pending_org_seats(self, email: str, user_id: int) -> int:
+        """When a new user verifies their email, activate any pending seats assigned to that email."""
+        from auth import User as _User
+        session = self.get_session()
+        try:
+            pending = session.query(OrgLicenseSeat).filter_by(
+                assigned_email=email.lower(), status='pending'
+            ).all()
+            activated = 0
+            for seat in pending:
+                plan = session.query(OrgLicensePlan).filter_by(
+                    id=seat.plan_id, is_active=True
+                ).first()
+                if not plan:
+                    continue
+                seat.user_id = user_id
+                seat.status  = 'active'
+                # Elevate user's subscription tier
+                user = session.query(_User).filter_by(id=user_id).first()
+                if user:
+                    tier_rank = {'free': 0, 'pro': 1, 'enterprise': 2}
+                    current = tier_rank.get(user.subscription_tier, 0)
+                    needed  = tier_rank.get(plan.tier, 0)
+                    if needed > current:
+                        user.subscription_tier    = plan.tier
+                        user.subscription_expires = plan.expires_at
+                activated += 1
+            if activated:
+                session.commit()
+            return activated
+        except Exception:
+            session.rollback()
+            return 0
         finally:
             session.close()
 

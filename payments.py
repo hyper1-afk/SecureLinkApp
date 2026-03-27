@@ -13,10 +13,29 @@ logger = logging.getLogger(__name__)
 
 # Stripe Price IDs - Replace with your actual Stripe Price IDs
 STRIPE_PRICES = {
-    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $14.99/month (needs new Stripe price)
-    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $149.99/year (needs new Stripe price)
-    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $59.99/month (needs new Stripe price)
-    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',    # $599.99/year (needs new Stripe price)
+    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $14.99/month
+    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $149.99/year
+    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $59.99/month
+    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',   # $599.99/year
+    # Team/seat-based prices (per-seat, quantity = seat count)
+    'team_pro_monthly':        'price_team_pro_monthly',        # $12.99/seat/month
+    'team_pro_yearly':         'price_team_pro_yearly',         # $129.99/seat/year
+    'team_enterprise_monthly': 'price_team_enterprise_monthly', # $49.99/seat/month
+    'team_enterprise_yearly':  'price_team_enterprise_yearly',  # $499.99/seat/year
+}
+
+# Per-seat prices shown in the UI
+TEAM_SEAT_PRICES = {
+    'pro': {
+        'monthly': 12.99,
+        'yearly':  129.99,
+        'yearly_monthly_equiv': round(129.99 / 12, 2),
+    },
+    'enterprise': {
+        'monthly': 49.99,
+        'yearly':  499.99,
+        'yearly_monthly_equiv': round(499.99 / 12, 2),
+    },
 }
 
 PLAN_PRICES = {
@@ -275,6 +294,74 @@ class PaymentManager:
                 }
             }
         }
+
+    def create_team_checkout_session(
+        self,
+        customer_id: str,
+        tier: str,
+        seat_count: int,
+        billing_period: str = 'monthly',
+        success_url: str = None,
+        cancel_url: str = None,
+        user_id: str = None,
+        org_id: str = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Create a Stripe Checkout session for a team/seat-based plan.
+
+        Uses per-seat pricing with ``seat_count`` as the line-item quantity.
+        Falls back to demo mode when Stripe is not configured.
+        """
+        if not self.is_configured():
+            logger.info("Stripe not configured — returning demo team checkout")
+            return {
+                'session_id': f'demo_team_{tier}_{seat_count}',
+                'url': None,
+                'demo_mode': True,
+            }
+
+        price_key = f'team_{tier}_{billing_period}'
+        price_id = STRIPE_PRICES.get(price_key)
+        if not price_id:
+            logger.error(f'Invalid team plan key: {price_key}')
+            return None
+
+        try:
+            session = stripe.checkout.Session.create(
+                customer=customer_id,
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': price_id,
+                    'quantity': seat_count,
+                }],
+                mode='subscription',
+                success_url=success_url or 'https://securelinkapp.com/organization?payment=success',
+                cancel_url=cancel_url or 'https://securelinkapp.com/organization?payment=cancelled',
+                metadata={
+                    'type': 'team_seats',
+                    'user_id': str(user_id),
+                    'org_id': str(org_id),
+                    'tier': tier,
+                    'seat_count': str(seat_count),
+                    'billing_period': billing_period,
+                },
+                subscription_data={
+                    'metadata': {
+                        'type': 'team_seats',
+                        'org_id': str(org_id),
+                        'tier': tier,
+                        'seat_count': str(seat_count),
+                    }
+                },
+            )
+            logger.info(f'Created team checkout session {session.id} ({seat_count}x {tier} seats)')
+            return {'session_id': session.id, 'url': session.url, 'demo_mode': False}
+        except stripe.error.StripeError as e:
+            logger.error(f'Failed to create team checkout session: {e}')
+            return None
+
+    def get_team_seat_prices(self) -> Dict[str, Any]:
+        """Return per-seat pricing for the UI."""
+        return TEAM_SEAT_PRICES
 
 
 # Singleton instance

@@ -487,6 +487,12 @@ def verify_email():
         return jsonify({'success': False, 'error': 'Verification token is required'}), 400
     
     result = auth_manager.verify_email(token)
+
+    # Activate any pending org license seats assigned to this email
+    if result.get('success') and result.get('user'):
+        verified_user = result['user']
+        db.activate_pending_org_seats(verified_user['email'], verified_user['id'])
+
     return jsonify(result)
 
 
@@ -1757,40 +1763,96 @@ def stripe_webhook():
     
     try:
         if event_type == 'checkout.session.completed':
-            # Payment successful - activate subscription
-            user_id = data.get('metadata', {}).get('user_id')
-            plan = data.get('metadata', {}).get('plan')
+            metadata       = data.get('metadata', {})
+            payment_type   = metadata.get('type')
             subscription_id = data.get('subscription')
-            
-            if user_id and plan:
-                expires_at = datetime.utcnow() + timedelta(days=30)
-                auth_manager.update_subscription(user_id, plan, expires_at)
-                if subscription_id:
-                    auth_manager.update_stripe_subscription_id(user_id, subscription_id)
-                logger.info(f"Activated {plan} subscription for user {user_id}")
-        
+
+            if payment_type == 'team_seats':
+                # ---- Org named-user seat plan purchased ----
+                org_id_meta   = metadata.get('org_id')
+                tier          = metadata.get('tier', 'enterprise')
+                seat_count    = int(metadata.get('seat_count', 1))
+                billing_period = metadata.get('billing_period', 'monthly')
+                purchased_by  = metadata.get('user_id')
+                customer_id   = data.get('customer')
+
+                if billing_period == 'yearly':
+                    expires_at = datetime.utcnow() + timedelta(days=365)
+                else:
+                    expires_at = datetime.utcnow() + timedelta(days=30)
+
+                if org_id_meta:
+                    plan = db.create_org_license_plan(
+                        org_id=int(org_id_meta),
+                        tier=tier,
+                        seat_count=seat_count,
+                        purchased_by=int(purchased_by) if purchased_by else None,
+                        billing_period=billing_period,
+                        stripe_subscription_id=subscription_id,
+                        stripe_customer_id=customer_id,
+                        expires_at=expires_at,
+                    )
+                    # Auto-assign a seat to the purchaser
+                    if purchased_by:
+                        buyer = auth_manager.get_user_by_id(int(purchased_by))
+                        if buyer:
+                            db.assign_org_seat(
+                                plan_id=plan['id'],
+                                org_id=int(org_id_meta),
+                                email=buyer['email'],
+                                assigned_by=int(purchased_by),
+                                tier=tier,
+                            )
+                    logger.info(f"Org {org_id_meta}: created {seat_count}-seat {tier} plan (sub {subscription_id})")
+            else:
+                # ---- Individual subscription purchased ----
+                user_id = metadata.get('user_id')
+                plan    = metadata.get('plan')
+                if user_id and plan:
+                    expires_at = datetime.utcnow() + timedelta(days=30)
+                    auth_manager.update_subscription(user_id, plan, expires_at)
+                    if subscription_id:
+                        auth_manager.update_stripe_subscription_id(user_id, subscription_id)
+                    logger.info(f"Activated {plan} subscription for user {user_id}")
+
         elif event_type == 'invoice.paid':
-            # Recurring payment successful - extend subscription by 30 days from now
+            # Recurring payment successful
             subscription_id = data.get('subscription')
             if subscription_id:
-                user = auth_manager.get_user_by_subscription_id(subscription_id)
-                if user:
-                    new_expires = datetime.utcnow() + timedelta(days=30)
-                    auth_manager.update_subscription(user['id'], user['subscription_tier'], new_expires)
-                    logger.info(f"Extended subscription for user {user['id']} (sub {subscription_id})")
+                # Check if this is an org team plan renewal
+                org_plan = db.get_org_license_plan_by_stripe(subscription_id)
+                if org_plan:
+                    billing_period = org_plan.get('billing_period', 'monthly')
+                    if billing_period == 'yearly':
+                        new_expires = datetime.utcnow() + timedelta(days=365)
+                    else:
+                        new_expires = datetime.utcnow() + timedelta(days=30)
+                    db.update_org_license_plan_seats(org_plan['organization_id'], org_plan['seat_count'])
+                    logger.info(f"Renewed org team plan {org_plan['id']} (sub {subscription_id})")
                 else:
-                    logger.warning(f"invoice.paid: no user found for subscription {subscription_id}")
+                    user = auth_manager.get_user_by_subscription_id(subscription_id)
+                    if user:
+                        new_expires = datetime.utcnow() + timedelta(days=30)
+                        auth_manager.update_subscription(user['id'], user['subscription_tier'], new_expires)
+                        logger.info(f"Extended subscription for user {user['id']} (sub {subscription_id})")
+                    else:
+                        logger.warning(f"invoice.paid: no user found for subscription {subscription_id}")
 
         elif event_type == 'customer.subscription.deleted':
-            # Subscription cancelled/expired - downgrade to free immediately
             subscription_id = data.get('id')
             if subscription_id:
-                user = auth_manager.get_user_by_subscription_id(subscription_id)
-                if user:
-                    auth_manager.update_subscription(user['id'], 'free', None)
-                    logger.info(f"Downgraded user {user['id']} to free (sub {subscription_id} deleted)")
+                # Check if this is an org team plan
+                org_plan = db.get_org_license_plan_by_stripe(subscription_id)
+                if org_plan:
+                    db.expire_org_license_plan(subscription_id)
+                    logger.info(f"Expired org team plan for sub {subscription_id}")
                 else:
-                    logger.warning(f"subscription.deleted: no user found for subscription {subscription_id}")
+                    user = auth_manager.get_user_by_subscription_id(subscription_id)
+                    if user:
+                        auth_manager.update_subscription(user['id'], 'free', None)
+                        logger.info(f"Downgraded user {user['id']} to free (sub {subscription_id} deleted)")
+                    else:
+                        logger.warning(f"subscription.deleted: no user found for subscription {subscription_id}")
         
         elif event_type == 'invoice.payment_failed':
             # Payment failed - notify user
@@ -4428,6 +4490,177 @@ def get_gateway_logs(org_id):
     logs  = db.get_gateway_logs(org_id, limit=limit, offset=offset, verdict_filter=verdict_filter)
     stats = db.get_gateway_stats(org_id)
     return jsonify({'logs': logs, 'stats': stats})
+
+
+# ============================================================================
+# ORG NAMED-USER SEAT LICENSING  (Adobe-style)
+# ============================================================================
+
+def _require_org_admin(org_id: int, user: dict):
+    """Return (member, error_response) — error_response is None when user is an org admin."""
+    if not db.is_organization_member(org_id, user.get('id')):
+        return None, (jsonify({'error': 'Access denied'}), 403)
+    member = db.get_organization_member(org_id, user.get('id'))
+    if not member or member.get('role') not in ('owner', 'admin'):
+        return None, (jsonify({'error': 'Only org admins can manage licenses'}), 403)
+    return member, None
+
+
+@app.route('/api/org/<int:org_id>/licenses', methods=['GET'])
+@require_enterprise
+def get_org_licenses(org_id):
+    """Return the active license plan + all seats for this org."""
+    user = request.current_user
+    if not db.is_organization_member(org_id, user.get('id')):
+        return jsonify({'error': 'Access denied'}), 403
+
+    plan  = db.get_org_license_plan(org_id)
+    seats = db.get_org_seats(org_id) if plan else []
+    from payments import TEAM_SEAT_PRICES
+    return jsonify({
+        'plan':  plan,
+        'seats': seats,
+        'seat_prices': TEAM_SEAT_PRICES,
+    })
+
+
+@app.route('/api/org/<int:org_id>/licenses/checkout', methods=['POST'])
+@require_enterprise
+def org_licenses_checkout(org_id):
+    """Create a Stripe checkout session to purchase team seats."""
+    user = request.current_user
+    member, err = _require_org_admin(org_id, user)
+    if err:
+        return err
+
+    data           = request.get_json(silent=True) or {}
+    tier           = str(data.get('tier', 'enterprise')).strip()
+    billing_period = str(data.get('billing_period', 'monthly')).strip()
+    try:
+        seat_count = int(data.get('seat_count', 1))
+    except (TypeError, ValueError):
+        seat_count = 1
+
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'tier must be pro or enterprise'}), 400
+    if billing_period not in ('monthly', 'yearly'):
+        return jsonify({'error': 'billing_period must be monthly or yearly'}), 400
+    if not (1 <= seat_count <= 1000):
+        return jsonify({'error': 'seat_count must be between 1 and 1000'}), 400
+
+    # Ensure Stripe customer exists for this user
+    customer_id = user.get('stripe_customer_id')
+    if not customer_id and payment_manager.is_configured():
+        customer_id = payment_manager.create_customer(
+            email=user.get('email'), name=user.get('full_name')
+        )
+        if customer_id:
+            auth_manager.update_stripe_customer_id(user['id'], customer_id)
+
+    base_url = request.host_url.rstrip('/')
+    session = payment_manager.create_team_checkout_session(
+        customer_id=customer_id or 'demo',
+        tier=tier,
+        seat_count=seat_count,
+        billing_period=billing_period,
+        success_url=f'{base_url}/organization?payment=success&org_id={org_id}',
+        cancel_url=f'{base_url}/organization?payment=cancelled&org_id={org_id}',
+        user_id=user['id'],
+        org_id=org_id,
+    )
+
+    if not session:
+        return jsonify({'error': 'Failed to create checkout session'}), 500
+
+    # Demo mode: provision immediately without Stripe
+    if session.get('demo_mode'):
+        from datetime import timedelta
+        expires_at = datetime.utcnow() + timedelta(days=30)
+        plan = db.create_org_license_plan(
+            org_id=org_id,
+            tier=tier,
+            seat_count=seat_count,
+            purchased_by=user['id'],
+            billing_period=billing_period,
+            expires_at=expires_at,
+        )
+        # Auto-assign a seat to the org owner
+        db.assign_org_seat(
+            plan_id=plan['id'],
+            org_id=org_id,
+            email=user['email'],
+            assigned_by=user['id'],
+            tier=tier,
+        )
+        return jsonify({'demo_mode': True, 'plan': plan})
+
+    return jsonify({'checkout_url': session['url'], 'session_id': session['session_id']})
+
+
+@app.route('/api/org/<int:org_id>/licenses/assign', methods=['POST'])
+@require_enterprise
+def assign_org_seat(org_id):
+    """Assign a seat to a named user (by email)."""
+    user = request.current_user
+    member, err = _require_org_admin(org_id, user)
+    if err:
+        return err
+
+    plan = db.get_org_license_plan(org_id)
+    if not plan:
+        return jsonify({'error': 'No active license plan found. Purchase seats first.'}), 404
+    if not plan.get('seats_available', 0):
+        return jsonify({'error': 'No seats available. Purchase additional seats to continue.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    email = str(data.get('email', '')).strip().lower()
+    import re as _re
+    if not email or not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        return jsonify({'error': 'A valid email address is required'}), 400
+
+    result = db.assign_org_seat(
+        plan_id=plan['id'],
+        org_id=org_id,
+        email=email,
+        assigned_by=user['id'],
+        tier=plan['tier'],
+    )
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'Failed to assign seat')}), 400
+
+    return jsonify({
+        'success': True,
+        'seat': result['seat'],
+        'activated': result.get('activated', False),
+        'message': (
+            f"Seat activated for {email}."
+            if result.get('activated')
+            else f"Seat reserved for {email}. They'll be activated when they create an account."
+        ),
+    }), 201
+
+
+@app.route('/api/org/<int:org_id>/licenses/seats/<int:seat_id>', methods=['DELETE'])
+@require_enterprise
+def revoke_org_seat(org_id, seat_id):
+    """Revoke a seat and downgrade the user if needed."""
+    user = request.current_user
+    member, err = _require_org_admin(org_id, user)
+    if err:
+        return err
+
+    result = db.revoke_org_seat(seat_id=seat_id, org_id=org_id)
+    if not result.get('success'):
+        return jsonify({'error': result.get('error', 'Failed to revoke seat')}), 400
+    return jsonify({'success': True})
+
+
+@app.route('/api/org/<int:org_id>/licenses/prices', methods=['GET'])
+@require_enterprise
+def get_org_license_prices(org_id):
+    """Return per-seat pricing for the checkout UI."""
+    from payments import TEAM_SEAT_PRICES
+    return jsonify({'seat_prices': TEAM_SEAT_PRICES})
 
 
 # ============================================================================
