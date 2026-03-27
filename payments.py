@@ -13,40 +13,46 @@ logger = logging.getLogger(__name__)
 
 # Stripe Price IDs - Replace with your actual Stripe Price IDs
 STRIPE_PRICES = {
-    'pro_monthly': 'price_1SwwuEPTu7BHdtL9Q7BIafqg',  # $14.99/month
-    'pro_yearly': 'price_1SwwuEPTu7BHdtL9lfo8A4ga',    # $149.99/year
-    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',  # $59.99/month
-    'enterprise_yearly': 'price_1SwwuFPTu7BHdtL9R1KpiIph',   # $599.99/year
-    # Team/seat-based prices (per-seat, quantity = seat count)
-    'team_pro_monthly':        'price_team_pro_monthly',        # $12.99/seat/month
-    'team_pro_yearly':         'price_team_pro_yearly',         # $129.99/seat/year
-    'team_enterprise_monthly': 'price_team_enterprise_monthly', # $49.99/seat/month
-    'team_enterprise_yearly':  'price_team_enterprise_yearly',  # $499.99/seat/year
+    'pro_monthly':        'price_1SwwuEPTu7BHdtL9Q7BIafqg',   # $19.99/month
+    'pro_yearly':         'price_1SwwuEPTu7BHdtL9lfo8A4ga',   # $199.99/year
+    'team_monthly':       'price_team_monthly_placeholder',    # $49.99/month
+    'team_yearly':        'price_team_yearly_placeholder',     # $499.99/year
+    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',   # $99.99/month
+    'enterprise_yearly':  'price_1SwwuFPTu7BHdtL9R1KpiIph',   # $999.99/year
+    # Org seat-based prices (per-seat, quantity = seat count)
+    'team_pro_monthly':        'price_team_pro_monthly',        # $15.99/seat/month
+    'team_pro_yearly':         'price_team_pro_yearly',         # $159.99/seat/year
+    'team_enterprise_monthly': 'price_team_enterprise_monthly', # $29.99/seat/month
+    'team_enterprise_yearly':  'price_team_enterprise_yearly',  # $299.99/seat/year
 }
 
-# Per-seat prices shown in the UI
+# Per-seat prices shown in the UI (org licensing)
 TEAM_SEAT_PRICES = {
     'pro': {
-        'monthly': 12.99,
-        'yearly':  129.99,
-        'yearly_monthly_equiv': round(129.99 / 12, 2),
+        'monthly': 15.99,
+        'yearly':  159.99,
+        'yearly_monthly_equiv': round(159.99 / 12, 2),
     },
     'enterprise': {
-        'monthly': 49.99,
-        'yearly':  499.99,
-        'yearly_monthly_equiv': round(499.99 / 12, 2),
+        'monthly': 29.99,
+        'yearly':  299.99,
+        'yearly_monthly_equiv': round(299.99 / 12, 2),
     },
 }
 
 PLAN_PRICES = {
     'pro': {
-        'monthly': 14.99,
-        'yearly': 149.99,
+        'monthly': 19.99,
+        'yearly': 199.99,
+    },
+    'team': {
+        'monthly': 49.99,
+        'yearly': 499.99,
     },
     'enterprise': {
-        'monthly': 59.99,
-        'yearly': 599.99,
-    }
+        'monthly': 99.99,
+        'yearly': 999.99,
+    },
 }
 
 

@@ -87,11 +87,17 @@
         
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            max-width: 1000px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            max-width: 1280px;
             margin: 0 auto;
             padding: 2rem 1rem 4rem;
+        }
+        @media (max-width: 1100px) {
+            .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .pricing-grid { grid-template-columns: 1fr; }
         }
         
         .pricing-card {
@@ -411,43 +417,24 @@
     <!-- Pricing Cards -->
     <div class="container">
         <div class="pricing-grid">
+
             <!-- Free Plan -->
             <div class="pricing-card">
                 <div class="plan-name">Free</div>
-                <div class="plan-description">Free forever</div>
+                <div class="plan-description">Get started, no card needed</div>
                 <div class="plan-price">
                     <span class="price-amount free">$0</span>
                     <span class="price-period">/ forever</span>
                 </div>
                 <ul class="features-list">
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Domain health check</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>SSL, SPF, DMARC &amp; header audit</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Dark web breach lookup</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Browser extension</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>7-day scan history</span>
-                    </li>
-                    <li class="text-muted">
-                        <i class="bi bi-x-circle-fill"></i>
-                        <span>Dark web monitoring &amp; alerts</span>
-                    </li>
-                    <li class="text-muted">
-                        <i class="bi bi-x-circle-fill"></i>
-                        <span>Attack surface monitoring</span>
-                    </li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Domain health check <em style="color:var(--text-secondary);font-size:0.85em;">(3/day)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>SSL, SPF, DMARC &amp; header audit</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>One-time dark web breach lookup</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Browser extension</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>7-day scan history</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Dark web monitoring &amp; alerts</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>API access</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Organization features</span></li>
                 </ul>
                 <a href="/login" class="plan-btn free">Get Started Free</a>
             </div>
@@ -456,88 +443,72 @@
             <div class="pricing-card popular">
                 <span class="popular-badge">Most Popular</span>
                 <div class="plan-name">Pro</div>
-                <div class="plan-description">For professionals &amp; small teams</div>
+                <div class="plan-description">For security-conscious professionals</div>
                 <div class="plan-price">
-                    <span class="price-amount pro">$14.99</span>
+                    <span class="price-amount pro">$19.99</span>
                     <span class="price-period">/ month</span>
                 </div>
                 <ul class="features-list">
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span><span class="highlight">Unlimited</span> domain health checks</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Full scan &amp; check history</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Dark web monitoring &amp; alerts</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Weekly security reports (PDF)</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>API access</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Export reports</span>
-                    </li>
-                    <li class="text-muted">
-                        <i class="bi bi-x-circle-fill"></i>
-                        <span>Attack surface monitoring</span>
-                    </li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Everything in Free</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span><span class="highlight">Unlimited</span> domain health checks</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Full scan &amp; check history</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Dark web monitoring &amp; alerts <em style="color:var(--text-secondary);font-size:0.85em;">(5 assets)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Weekly security reports (PDF)</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>API access &amp; export</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Security news feed</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Team &amp; org features</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Attack surface monitoring</span></li>
                 </ul>
                 <a href="/login" class="plan-btn pro">Upgrade to Pro</a>
             </div>
 
-            <!-- Enterprise Plan -->
-            <div class="pricing-card">
-                <div class="plan-name">Enterprise</div>
-                <div class="plan-description">For teams &amp; organizations</div>
+            <!-- Team Plan -->
+            <div class="pricing-card" style="border-color:rgba(16,185,129,0.35);">
+                <span class="popular-badge" style="background:linear-gradient(135deg,#10b981,#0ea5e9);">Best for Teams</span>
+                <div class="plan-name">Team</div>
+                <div class="plan-description">For small &amp; mid-size organizations</div>
                 <div class="plan-price">
-                    <span class="price-amount enterprise">$59.99</span>
+                    <span class="price-amount" style="background:linear-gradient(135deg,#10b981,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$49.99</span>
                     <span class="price-period">/ month</span>
                 </div>
                 <ul class="features-list">
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Everything in Pro</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Monitor up to <strong>25 domains</strong></span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Hourly scans with A–F security grade</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Intrusion detection (IDS)</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>DNS, SSL &amp; port change alerts</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>AI remediation recommendations</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Priority support</span>
-                    </li>
-                    <li>
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>Self-host on your own server</span>
-                    </li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Everything in Pro</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Organization dashboard</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Up to <strong>10 team members</strong></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Compliance Center <em style="color:var(--text-secondary);font-size:0.85em;">(SOC 2, ISO 27001, GDPR)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Webhook alerts <em style="color:var(--text-secondary);font-size:0.85em;">(Slack, Discord, Teams)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Dark web monitoring <em style="color:var(--text-secondary);font-size:0.85em;">(20 assets)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Attack surface monitoring <em style="color:var(--text-secondary);font-size:0.85em;">(5 domains)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Daily security reports (PDF)</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Network gateway</span></li>
+                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Intrusion detection (IDS)</span></li>
+                </ul>
+                <a href="/login" class="plan-btn" style="background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;">Get Team Plan</a>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card" style="border-color:rgba(139,92,246,0.35);">
+                <div class="plan-name" style="color:#a78bfa;">Enterprise</div>
+                <div class="plan-description">For large orgs &amp; infrastructure teams</div>
+                <div class="plan-price">
+                    <span class="price-amount enterprise">$99.99</span>
+                    <span class="price-period">/ month</span>
+                </div>
+                <ul class="features-list">
+                    <li><i class="bi bi-check-circle-fill"></i><span>Everything in Team</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span><strong>Network gateway</strong> — real-time URL blocking</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Intrusion detection (IDS)</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Hourly scans with A–F security grade</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Attack surface monitoring <em style="color:var(--text-secondary);font-size:0.85em;">(25 domains)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>DNS, SSL &amp; port change alerts</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>AI remediation recommendations</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Named-user seat licensing</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Self-host on your own server</span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Priority support</span></li>
                 </ul>
                 <a href="/login" class="plan-btn enterprise">Go Enterprise</a>
             </div>
+
         </div>
     </div>
 
@@ -545,29 +516,33 @@
     <div class="comparison-section">
         <h2>Compare Plans</h2>
         <table class="comparison-table">
+            <colgroup>
+                <col style="width:30%;">
+                <col style="width:17.5%;">
+                <col style="width:17.5%;">
+                <col style="width:17.5%;">
+                <col style="width:17.5%;">
+            </colgroup>
             <thead>
                 <tr>
                     <th>Feature</th>
                     <th>Free</th>
                     <th>Pro</th>
+                    <th>Team</th>
                     <th>Enterprise</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>Domain Health Check</td>
-                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td>3/day</td>
+                    <td>Unlimited</td>
                     <td>Unlimited</td>
                     <td>Unlimited</td>
                 </tr>
                 <tr>
                     <td>SSL / SPF / DMARC Audit</td>
                     <td><i class="bi bi-check-lg check"></i></td>
-                    <td><i class="bi bi-check-lg check"></i></td>
-                    <td><i class="bi bi-check-lg check"></i></td>
-                </tr>
-                <tr>
-                    <td>Dark Web Breach Lookup</td>
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
@@ -577,27 +552,74 @@
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Dark Web Breach Lookup</td>
+                    <td>One-time</td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
                     <td>Scan History</td>
                     <td>7 days</td>
                     <td>Full</td>
                     <td>Full</td>
+                    <td>Full</td>
                 </tr>
                 <tr>
                     <td>Dark Web Monitoring &amp; Alerts</td>
                     <td><span class="dash">—</span></td>
-                    <td><i class="bi bi-check-lg check"></i></td>
-                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td>5 assets</td>
+                    <td>20 assets</td>
+                    <td>Unlimited</td>
                 </tr>
                 <tr>
                     <td>Weekly PDF Reports</td>
                     <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
-                    <td>API Access</td>
+                    <td>Daily PDF Reports</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>API Access &amp; Export</td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Security News Feed</td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Organization Dashboard</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td>Up to 10 members</td>
+                    <td>Unlimited members</td>
+                </tr>
+                <tr>
+                    <td>Compliance Center</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Webhook Alerts (Slack, Discord, Teams)</td>
+                    <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                     <td><i class="bi bi-check-lg check"></i></td>
@@ -606,16 +628,26 @@
                     <td>Attack Surface Monitoring</td>
                     <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
+                    <td>5 domains</td>
                     <td>25 domains (hourly)</td>
                 </tr>
                 <tr>
-                    <td>Intrusion Detection (IDS)</td>
+                    <td>Network Gateway</td>
+                    <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
-                    <td>DNS / SSL / Port Alerts</td>
+                    <td>Intrusion Detection (IDS)</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>DNS / SSL / Port Change Alerts</td>
+                    <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
@@ -624,10 +656,19 @@
                     <td>AI Remediation Recommendations</td>
                     <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                </tr>
+                <tr>
+                    <td>Named-User Seat Licensing</td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
+                    <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
                     <td>Self-Hosting</td>
+                    <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><span class="dash">—</span></td>
                     <td><i class="bi bi-check-lg check"></i></td>
@@ -635,6 +676,7 @@
                 <tr>
                     <td>Support</td>
                     <td>Community</td>
+                    <td>Email</td>
                     <td>Email</td>
                     <td>Priority</td>
                 </tr>
@@ -702,7 +744,7 @@
                 <i class="bi bi-chevron-down"></i>
             </div>
             <div class="faq-answer">
-                Yes — deploying SecureLink on your own infrastructure is free. The core platform (URL scanning, domain health checks, user accounts, browser extension) costs nothing to run. Premium features like Dark Web Monitoring, Attack Surface Monitoring, and AI Remediation require an active Pro or Enterprise license tied to each user's account. <a href="/self-host" style="color: var(--primary-color);">See the self-hosting guide →</a>
+                Yes — deploying SecureLink on your own infrastructure is free. The core platform costs nothing to run. Premium features like Dark Web Monitoring, Compliance Center, Network Gateway, and AI Remediation require an active Pro, Team, or Enterprise license tied to each user's account. <a href="/self-host" style="color: var(--primary-color);">See the self-hosting guide →</a>
             </div>
         </div>
     </div>

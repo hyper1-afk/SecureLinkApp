@@ -314,8 +314,14 @@
             border-top: 1px solid var(--border);
         }
         .pricing-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 24px; max-width: 1060px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 24px; max-width: 1280px; margin: 0 auto;
+        }
+        .price-card.team {
+            border-color: rgba(16,185,129,0.35);
+        }
+        .price-card.enterprise-card {
+            border-color: rgba(139,92,246,0.35);
         }
         .price-card {
             background: var(--bg-card); border: 1px solid var(--border);
@@ -405,7 +411,8 @@
 
         /* ===== Responsive ===== */
         @media (max-width: 1024px) {
-            .features-grid, .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .pricing-grid { grid-template-columns: repeat(2, 1fr); }
             .showcase-inner { grid-template-columns: 1fr; gap: 48px; }
             .footer-inner { grid-template-columns: 1fr 1fr; }
         }
@@ -1309,51 +1316,69 @@
             <p>Start free and upgrade as your security needs grow</p>
         </div>
         <div class="pricing-grid">
+            <!-- Free -->
             <div class="price-card fade-up">
                 <h3>Free</h3>
                 <div class="price">$0</div>
-                <div class="price-desc">Free forever</div>
+                <div class="price-desc">Free forever, no card required</div>
                 <ul class="price-features">
                     <li><i class="bi bi-check-circle-fill"></i> Domain health check (3/day)</li>
                     <li><i class="bi bi-check-circle-fill"></i> SSL, SPF, DMARC &amp; header audit</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Dark web breach lookup</li>
+                    <li><i class="bi bi-check-circle-fill"></i> One-time dark web breach lookup</li>
                     <li><i class="bi bi-check-circle-fill"></i> Browser extension</li>
                     <li><i class="bi bi-check-circle-fill"></i> 7-day scan history</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Dark web monitoring &amp; alerts</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Attack surface monitoring</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Dark web monitoring</li>
+                    <li><i class="bi bi-x-circle-fill"></i> API access</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Get Started</a>
             </div>
+            <!-- Pro -->
             <div class="price-card featured fade-up">
                 <h3>Pro</h3>
-                <div class="price">$14.99 <span>/mo</span></div>
-                <div class="price-desc">For professionals &amp; small teams</div>
+                <div class="price">$19.99 <span>/mo</span></div>
+                <div class="price-desc">For security-conscious professionals</div>
                 <ul class="price-features">
                     <li><i class="bi bi-check-circle-fill"></i> Unlimited domain health checks</li>
                     <li><i class="bi bi-check-circle-fill"></i> Full scan &amp; check history</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Dark web monitoring &amp; alerts</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Dark web monitoring &amp; alerts (5 assets)</li>
                     <li><i class="bi bi-check-circle-fill"></i> Weekly security reports (PDF)</li>
-                    <li><i class="bi bi-check-circle-fill"></i> API access</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Export reports</li>
-                    <li><i class="bi bi-x-circle-fill"></i> Attack surface monitoring</li>
+                    <li><i class="bi bi-check-circle-fill"></i> API access &amp; export</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Security news feed</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Team &amp; org features</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-primary">Upgrade to Pro</a>
             </div>
-            <div class="price-card fade-up">
-                <h3>Enterprise</h3>
-                <div class="price">$59.99 <span>/mo</span></div>
-                <div class="price-desc">For teams &amp; organizations</div>
+            <!-- Team -->
+            <div class="price-card team fade-up">
+                <h3 style="background:linear-gradient(135deg,#10b981,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Team</h3>
+                <div class="price" style="background:linear-gradient(135deg,#10b981,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$49.99 <span style="-webkit-text-fill-color:var(--text-secondary)">/mo</span></div>
+                <div class="price-desc">For small &amp; mid-size organizations</div>
                 <ul class="price-features">
                     <li><i class="bi bi-check-circle-fill"></i> Everything in Pro</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Monitor up to 25 of your domains</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Hourly scans with A–F security grade</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Intrusion detection (IDS)</li>
-                    <li><i class="bi bi-check-circle-fill"></i> DNS, SSL &amp; port change alerts</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Daily security reports (PDF)</li>
-                    <li><i class="bi bi-check-circle-fill"></i> AI remediation recommendations</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Organization dashboard (10 members)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Compliance Center</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Webhook alerts (Slack, Discord, Teams)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Attack surface monitoring (5 domains)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Daily PDF reports</li>
+                    <li><i class="bi bi-x-circle-fill"></i> Network gateway &amp; IDS</li>
                 </ul>
-                <a href="/login?tab=register" class="btn-plan btn-plan-outline">Go Enterprise</a>
+                <a href="/login?tab=register" class="btn-plan" style="background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;border:none;">Get Team Plan</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="price-card enterprise-card fade-up">
+                <h3 style="color:#a78bfa;">Enterprise</h3>
+                <div class="price" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">$99.99 <span style="-webkit-text-fill-color:var(--text-secondary)">/mo</span></div>
+                <div class="price-desc">For large orgs &amp; infrastructure teams</div>
+                <ul class="price-features">
+                    <li><i class="bi bi-check-circle-fill"></i> Everything in Team</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Network gateway (real-time URL blocking)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Intrusion detection (IDS)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Hourly scans &amp; A–F security grade</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Attack surface (25 domains)</li>
+                    <li><i class="bi bi-check-circle-fill"></i> AI remediation &amp; DNS/SSL/port alerts</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Self-host + priority support</li>
+                </ul>
+                <a href="/login?tab=register" class="btn-plan btn-plan-outline" style="border-color:rgba(139,92,246,0.5);color:#a78bfa;">Go Enterprise</a>
             </div>
         </div>
     </section>
