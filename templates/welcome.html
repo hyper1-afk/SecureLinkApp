@@ -1030,6 +1030,154 @@
         </div>
     </section>
 
+    <!-- Gateway Section -->
+    <section class="gateway-section">
+        <div class="gateway-inner">
+            <div class="fade-up">
+                <div class="gateway-visual">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+                        <div style="display:flex;gap:7px;">
+                            <div class="terminal-dot red"></div>
+                            <div class="terminal-dot yellow"></div>
+                            <div class="terminal-dot green"></div>
+                        </div>
+                        <span style="color:#4b5563;font-size:0.78rem;font-family:monospace;margin-left:8px;">gateway — live traffic</span>
+                    </div>
+                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:14px;font-family:monospace;">POST /api/gateway/check &nbsp;·&nbsp; real-time verdict</div>
+                    <div class="gw-flow">
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://docs.company.com/onboarding</span>
+                            <span class="gw-reason">clean</span>
+                        </div>
+                        <div class="gw-row block">
+                            <span class="gw-verdict block">✗ BLOCK</span>
+                            <span class="gw-url">http://paypa1-secure.ru/login</span>
+                            <span class="gw-reason">phishing</span>
+                        </div>
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://github.com/hyper1-afk/SecureLinkApp</span>
+                            <span class="gw-reason">trusted</span>
+                        </div>
+                        <div class="gw-row block">
+                            <span class="gw-verdict block">✗ BLOCK</span>
+                            <span class="gw-url">https://bit.ly/3xK9mQ2</span>
+                            <span class="gw-reason">malware redirect</span>
+                        </div>
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://stripe.com/docs/api</span>
+                            <span class="gw-reason">clean</span>
+                        </div>
+                        <div class="gw-row pending">
+                            <span style="color:#f59e0b;font-weight:700;font-size:0.72rem;text-transform:uppercase;min-width:44px;">⟳ CHECK</span>
+                            <span class="gw-url">https://new-vendor-portal.io/invoice</span>
+                            <span class="gw-reason">scanning…</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gateway-callout">
+                    <i class="bi bi-shield-fill-check"></i>
+                    <p><strong>Requires an Enterprise account.</strong> The gateway is available to organizations on the Enterprise plan — includes policy controls, audit logs, and team seat management.</p>
+                </div>
+            </div>
+            <div class="gateway-content fade-up">
+                <div class="gateway-badge"><i class="bi bi-shield-fill-check"></i> Enterprise Feature</div>
+                <h2>Block Threats at the<br><span>Network Gateway.</span></h2>
+                <p>Integrate SecureLink's real-time threat engine directly into your infrastructure. Every URL your users or systems touch is checked before it loads — no browser extension required.</p>
+                <ul class="gateway-perks">
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-arrow-repeat"></i></div>
+                        <div><strong>Real-time verdicts in &lt;800ms</strong> — synchronous API call returns allow/block inline</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-sliders"></i></div>
+                        <div><strong>Configurable policy</strong> — set custom block rules, allow-lists, and threat categories per org</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-journal-code"></i></div>
+                        <div><strong>Full audit log</strong> — every check is recorded with verdict, reason, and timestamp</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-bell-fill"></i></div>
+                        <div><strong>Instant webhooks</strong> — push blocked-URL alerts to Slack, Discord, or Teams</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
+                        <div><strong>Drop-in for any stack</strong> — one REST call, SDKs for Python, Node.js, PHP, and cURL</div>
+                    </li>
+                </ul>
+                <a href="/pricing" class="btn-gateway">
+                    <i class="bi bi-briefcase-fill"></i> Get Enterprise Access
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="self-host-section">
+        <div class="self-host-inner">
+            <div class="self-host-content fade-up">
+                <div class="self-host-badge"><i class="bi bi-server"></i> Self-Hosting Available</div>
+                <h2>Prefer to <span>Own Your Data?</span><br>Self-Host SecureLink.</h2>
+                <p>Run the entire SecureLink platform on your own server or private network. Full control, zero telemetry, and no usage limits — just you and your infrastructure.</p>
+                <ul class="self-host-perks">
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-box-fill"></i></div>
+                        <div><strong>Docker-ready in minutes</strong> — one <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.85em;">docker-compose up</code> and you're live</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-lock-fill"></i></div>
+                        <div><strong>Complete data privacy</strong> — your scans, users, and breach data never leave your server</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-infinity"></i></div>
+                        <div><strong>No usage limits</strong> — unlimited domain scans, users, and API calls</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
+                        <div><strong>Full source access</strong> — customize every feature to fit your organization</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-building"></i></div>
+                        <div><strong>Perfect for internal teams</strong> — deploy on-prem, air-gapped, or on any cloud provider</div>
+                    </li>
+                </ul>
+                <a href="/self-host" class="btn-self-host">
+                    <i class="bi bi-server"></i> Read the Self-Host Guide
+                </a>
+            </div>
+            <div class="fade-up">
+                <div class="self-host-terminal">
+                    <div class="terminal-bar">
+                        <div class="terminal-dot red"></div>
+                        <div class="terminal-dot yellow"></div>
+                        <div class="terminal-dot green"></div>
+                        <span class="terminal-title">terminal — your-server</span>
+                    </div>
+                    <div class="t-comment"># 1. Clone the repo</div>
+                    <div class="t-cmd"><span class="t-key">git</span> clone https://github.com/hyper1-afk/SecureLinkApp</div>
+                    <div class="t-cmd"><span class="t-key">cd</span> SecureLinkApp</div>
+                    <br>
+                    <div class="t-comment"># 2. Configure your environment</div>
+                    <div class="t-cmd"><span class="t-key">cp</span> .env.example .env</div>
+                    <div class="t-cmd"><span class="t-key">nano</span> .env <span class="t-comment"># set SECRET_KEY, DATABASE_URL…</span></div>
+                    <br>
+                    <div class="t-comment"># 3. Launch with Docker Compose</div>
+                    <div class="t-cmd"><span class="t-key">docker compose</span> up -d</div>
+                    <br>
+                    <div class="t-out">Starting securelink_db     ... done</div>
+                    <div class="t-out">Starting securelink_app    ... done</div>
+                    <div class="t-success">✓ SecureLink is live on http://localhost:5000</div>
+                </div>
+                <div class="self-host-callout">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <p><strong>Average setup time: under 10 minutes.</strong> Full Nginx reverse proxy config, SSL setup, and environment variable reference included in the guide.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Attack Surface Showcase -->
     <section class="showcase" id="attack-surface">
         <div class="showcase-inner">
@@ -1206,155 +1354,6 @@
                     <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Go Enterprise</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Self-Host Section -->
-    <!-- Gateway Section -->
-    <section class="gateway-section">
-        <div class="gateway-inner">
-            <div class="fade-up">
-                <div class="gateway-visual">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
-                        <div style="display:flex;gap:7px;">
-                            <div class="terminal-dot red"></div>
-                            <div class="terminal-dot yellow"></div>
-                            <div class="terminal-dot green"></div>
-                        </div>
-                        <span style="color:#4b5563;font-size:0.78rem;font-family:monospace;margin-left:8px;">gateway — live traffic</span>
-                    </div>
-                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:14px;font-family:monospace;">POST /api/gateway/check &nbsp;·&nbsp; real-time verdict</div>
-                    <div class="gw-flow">
-                        <div class="gw-row allow">
-                            <span class="gw-verdict allow">✓ ALLOW</span>
-                            <span class="gw-url">https://docs.company.com/onboarding</span>
-                            <span class="gw-reason">clean</span>
-                        </div>
-                        <div class="gw-row block">
-                            <span class="gw-verdict block">✗ BLOCK</span>
-                            <span class="gw-url">http://paypa1-secure.ru/login</span>
-                            <span class="gw-reason">phishing</span>
-                        </div>
-                        <div class="gw-row allow">
-                            <span class="gw-verdict allow">✓ ALLOW</span>
-                            <span class="gw-url">https://github.com/hyper1-afk/SecureLinkApp</span>
-                            <span class="gw-reason">trusted</span>
-                        </div>
-                        <div class="gw-row block">
-                            <span class="gw-verdict block">✗ BLOCK</span>
-                            <span class="gw-url">https://bit.ly/3xK9mQ2</span>
-                            <span class="gw-reason">malware redirect</span>
-                        </div>
-                        <div class="gw-row allow">
-                            <span class="gw-verdict allow">✓ ALLOW</span>
-                            <span class="gw-url">https://stripe.com/docs/api</span>
-                            <span class="gw-reason">clean</span>
-                        </div>
-                        <div class="gw-row pending">
-                            <span style="color:#f59e0b;font-weight:700;font-size:0.72rem;text-transform:uppercase;min-width:44px;">⟳ CHECK</span>
-                            <span class="gw-url">https://new-vendor-portal.io/invoice</span>
-                            <span class="gw-reason">scanning…</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="gateway-callout">
-                    <i class="bi bi-shield-fill-check"></i>
-                    <p><strong>Requires an Enterprise account.</strong> The gateway is available to organizations on the Enterprise plan — includes policy controls, audit logs, and team seat management.</p>
-                </div>
-            </div>
-            <div class="gateway-content fade-up">
-                <div class="gateway-badge"><i class="bi bi-shield-fill-check"></i> Enterprise Feature</div>
-                <h2>Block Threats at the<br><span>Network Gateway.</span></h2>
-                <p>Integrate SecureLink's real-time threat engine directly into your infrastructure. Every URL your users or systems touch is checked before it loads — no browser extension required.</p>
-                <ul class="gateway-perks">
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-arrow-repeat"></i></div>
-                        <div><strong>Real-time verdicts in &lt;800ms</strong> — synchronous API call returns allow/block inline</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-sliders"></i></div>
-                        <div><strong>Configurable policy</strong> — set custom block rules, allow-lists, and threat categories per org</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-journal-code"></i></div>
-                        <div><strong>Full audit log</strong> — every check is recorded with verdict, reason, and timestamp</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-bell-fill"></i></div>
-                        <div><strong>Instant webhooks</strong> — push blocked-URL alerts to Slack, Discord, or Teams</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
-                        <div><strong>Drop-in for any stack</strong> — one REST call, SDKs for Python, Node.js, PHP, and cURL</div>
-                    </li>
-                </ul>
-                <a href="/pricing" class="btn-gateway">
-                    <i class="bi bi-briefcase-fill"></i> Get Enterprise Access
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <section class="self-host-section">
-        <div class="self-host-inner">
-            <div class="self-host-content fade-up">
-                <div class="self-host-badge"><i class="bi bi-server"></i> Self-Hosting Available</div>
-                <h2>Prefer to <span>Own Your Data?</span><br>Self-Host SecureLink.</h2>
-                <p>Run the entire SecureLink platform on your own server or private network. Full control, zero telemetry, and no usage limits — just you and your infrastructure.</p>
-                <ul class="self-host-perks">
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-box-fill"></i></div>
-                        <div><strong>Docker-ready in minutes</strong> — one <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.85em;">docker-compose up</code> and you're live</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-lock-fill"></i></div>
-                        <div><strong>Complete data privacy</strong> — your scans, users, and breach data never leave your server</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-infinity"></i></div>
-                        <div><strong>No usage limits</strong> — unlimited domain scans, users, and API calls</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
-                        <div><strong>Full source access</strong> — customize every feature to fit your organization</div>
-                    </li>
-                    <li>
-                        <div class="perk-icon"><i class="bi bi-building"></i></div>
-                        <div><strong>Perfect for internal teams</strong> — deploy on-prem, air-gapped, or on any cloud provider</div>
-                    </li>
-                </ul>
-                <a href="/self-host" class="btn-self-host">
-                    <i class="bi bi-server"></i> Read the Self-Host Guide
-                </a>
-            </div>
-            <div class="fade-up">
-                <div class="self-host-terminal">
-                    <div class="terminal-bar">
-                        <div class="terminal-dot red"></div>
-                        <div class="terminal-dot yellow"></div>
-                        <div class="terminal-dot green"></div>
-                        <span class="terminal-title">terminal — your-server</span>
-                    </div>
-                    <div class="t-comment"># 1. Clone the repo</div>
-                    <div class="t-cmd"><span class="t-key">git</span> clone https://github.com/your-org/SecureLinkApp</div>
-                    <div class="t-cmd"><span class="t-key">cd</span> SecureLinkApp</div>
-                    <br>
-                    <div class="t-comment"># 2. Configure your environment</div>
-                    <div class="t-cmd"><span class="t-key">cp</span> .env.example .env</div>
-                    <div class="t-cmd"><span class="t-key">nano</span> .env <span class="t-comment"># set SECRET_KEY, DATABASE_URL…</span></div>
-                    <br>
-                    <div class="t-comment"># 3. Launch with Docker Compose</div>
-                    <div class="t-cmd"><span class="t-key">docker compose</span> up -d</div>
-                    <br>
-                    <div class="t-out">Starting securelink_db     ... done</div>
-                    <div class="t-out">Starting securelink_app    ... done</div>
-                    <div class="t-success">✓ SecureLink is live on http://localhost:5000</div>
-                </div>
-                <div class="self-host-callout">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                    <p><strong>Average setup time: under 10 minutes.</strong> Full Nginx reverse proxy config, SSL setup, and environment variable reference included in the guide.</p>
-                </div>
             </div>
         </div>
     </section>
