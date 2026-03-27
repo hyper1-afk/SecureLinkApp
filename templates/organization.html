@@ -272,6 +272,48 @@
         .btn-icon-sm:hover { background: rgba(255,255,255,0.1); }
         .btn-icon-sm.primary { background: var(--primary-color); border-color: var(--primary-color); }
         .btn-icon-sm.primary:hover { background: var(--primary-dark); }
+
+        /* === Gateway === */
+        .verdict-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 6px;
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .verdict-allow { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+        .verdict-block { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+        .log-row {
+            display: grid; grid-template-columns: 1fr auto auto;
+            gap: 12px; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        .log-row:last-child { border-bottom: none; }
+        .log-url { color: var(--text-primary); font-weight: 500; word-break: break-all; }
+        .log-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .policy-section { margin-bottom: 28px; }
+        .policy-section h4 { font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .category-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cat-toggle {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.04); color: var(--text-muted); transition: all 0.2s;
+        }
+        .cat-toggle.active { background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.35); }
+        .gateway-stat-chip {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px 16px; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); text-align: center; gap: 4px;
+        }
+        .gsc-val { font-size: 1.8rem; font-weight: 900; letter-spacing: -0.03em; }
+        .gsc-label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-btn { padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border-color); background: rgba(255,255,255,0.04); color: var(--text-muted); transition: all 0.2s; }
+        .filter-btn.active { background: rgba(14,165,233,0.12); color: var(--primary-color); border-color: rgba(14,165,233,0.3); }
+        .gateway-api-box {
+            background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
+            border-radius: var(--radius-md); padding: 20px;
+        }
+        .gateway-api-box pre { margin: 0; font-size: 0.8rem; color: var(--text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -327,7 +369,7 @@
                 </div>
 
                 <!-- Stats Row -->
-                <div class="org-stats-grid">
+                <div class="org-stats-grid" style="grid-template-columns: repeat(6, 1fr);">
                     <div class="stat-card">
                         <p class="stat-label">Total Scans</p>
                         <p class="stat-value" id="totalScans">-</p>
@@ -343,6 +385,14 @@
                     <div class="stat-card">
                         <p class="stat-label">This Week</p>
                         <p class="stat-value stat-success" id="weeklyScans">-</p>
+                    </div>
+                    <div class="stat-card" style="border-color:rgba(239,68,68,0.3);">
+                        <p class="stat-label">Gateway Blocked</p>
+                        <p class="stat-value stat-danger" id="gwBlocked">-</p>
+                    </div>
+                    <div class="stat-card" style="border-color:rgba(14,165,233,0.3);">
+                        <p class="stat-label">Gateway (24h)</p>
+                        <p class="stat-value stat-primary" id="gwToday">-</p>
                     </div>
                 </div>
 
@@ -364,6 +414,9 @@
                 <div class="org-tabs">
                     <button onclick="showTab('members')" class="tab-btn active" data-tab="members">
                         <i class="bi bi-people"></i> Members
+                    </button>
+                    <button onclick="showTab('gateway')" class="tab-btn" data-tab="gateway">
+                        <i class="bi bi-shield-fill-check" style="color:#10b981;"></i> Gateway
                     </button>
                     <button onclick="showTab('webhooks')" class="tab-btn" data-tab="webhooks">
                         <i class="bi bi-broadcast"></i> Webhooks
@@ -441,6 +494,143 @@
                         </form>
                     </div>
                 </div>
+
+                <!-- Gateway Tab -->
+                <div id="gatewayTab" class="tab-content d-none">
+
+                    <!-- Two-column layout: Policy + Log -->
+                    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:20px;" class="gateway-grid">
+
+                        <!-- Policy Panel -->
+                        <div class="sl-card">
+                            <h3 class="h5 fw-semibold mb-1">
+                                <i class="bi bi-sliders" style="color:#10b981;margin-right:8px"></i>Firewall Policy
+                            </h3>
+                            <p class="text-secondary-sl mb-4" style="font-size:0.85rem;">Set what gets blocked. Changes take effect immediately.</p>
+
+                            <form id="policyForm" class="d-flex flex-column gap-3">
+
+                                <div class="policy-section">
+                                    <h4>Risk Threshold</h4>
+                                    <p class="text-secondary-sl mb-2" style="font-size:0.8rem;">Block URLs with a risk score at or above this value.</p>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <input type="range" id="riskThreshold" min="0" max="1" step="0.05" value="0.5"
+                                               class="form-range flex-fill" oninput="document.getElementById('thresholdLabel').textContent = (this.value*100).toFixed(0)+'%'">
+                                        <span class="fw-bold" style="min-width:40px;color:#f59e0b;" id="thresholdLabel">50%</span>
+                                    </div>
+                                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Recommended: 50% (medium). Lower = stricter.</p>
+                                </div>
+
+                                <div class="policy-section">
+                                    <h4>Block Categories</h4>
+                                    <div class="category-grid" id="blockCats">
+                                        <button type="button" class="cat-toggle active" data-cat="phishing"><i class="bi bi-fish"></i> Phishing</button>
+                                        <button type="button" class="cat-toggle active" data-cat="malware"><i class="bi bi-bug"></i> Malware</button>
+                                        <button type="button" class="cat-toggle active" data-cat="ransomware"><i class="bi bi-lock"></i> Ransomware</button>
+                                        <button type="button" class="cat-toggle active" data-cat="credential_harvesting"><i class="bi bi-person-x"></i> Cred. Harvesting</button>
+                                        <button type="button" class="cat-toggle active" data-cat="typosquatting"><i class="bi bi-keyboard"></i> Typosquatting</button>
+                                        <button type="button" class="cat-toggle active" data-cat="suspicious_redirect"><i class="bi bi-arrow-left-right"></i> Suspicious Redirect</button>
+                                        <button type="button" class="cat-toggle" data-cat="adult_content"><i class="bi bi-slash-circle"></i> Adult Content</button>
+                                        <button type="button" class="cat-toggle" data-cat="gambling"><i class="bi bi-dice-5"></i> Gambling</button>
+                                    </div>
+                                </div>
+
+                                <div class="policy-section">
+                                    <h4>Custom Blocked Domains</h4>
+                                    <textarea id="customBlocked" class="sl-input" rows="3"
+                                        placeholder="one domain per line&#10;example.com&#10;malicious-site.net"
+                                        style="font-family:monospace;font-size:0.82rem;"></textarea>
+                                </div>
+
+                                <div class="policy-section mb-0">
+                                    <h4>Custom Allowed Domains (Allowlist)</h4>
+                                    <textarea id="customAllowed" class="sl-input" rows="2"
+                                        placeholder="one domain per line&#10;trusted-vendor.com"
+                                        style="font-family:monospace;font-size:0.82rem;"></textarea>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <input type="checkbox" id="logAllowed" checked class="form-check-input" style="width:18px;height:18px;">
+                                    <label for="logAllowed" class="text-secondary-sl" style="font-size:0.85rem;">Log allowed requests (full audit trail)</label>
+                                </div>
+
+                                <button type="submit" class="sl-btn sl-btn-primary">
+                                    <i class="bi bi-check-lg"></i> Save Policy
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Activity Log Panel -->
+                        <div class="sl-card d-flex flex-column" style="min-height:520px;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h5 fw-semibold mb-0">
+                                    <i class="bi bi-activity" style="color:var(--primary-color);margin-right:8px"></i>Activity Log
+                                </h3>
+                                <button onclick="loadGatewayLogs()" class="btn-icon-sm" title="Refresh">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+
+                            <!-- Mini stats -->
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+                                <div class="gateway-stat-chip">
+                                    <span class="gsc-val" id="gwStatTotal" style="color:var(--text-primary);">-</span>
+                                    <span class="gsc-label">Total</span>
+                                </div>
+                                <div class="gateway-stat-chip">
+                                    <span class="gsc-val" id="gwStatBlocked" style="color:#ef4444;">-</span>
+                                    <span class="gsc-label">Blocked</span>
+                                </div>
+                                <div class="gateway-stat-chip">
+                                    <span class="gsc-val" id="gwStatAllowed" style="color:#10b981;">-</span>
+                                    <span class="gsc-label">Allowed</span>
+                                </div>
+                            </div>
+
+                            <!-- Filter bar -->
+                            <div class="filter-bar">
+                                <button class="filter-btn active" data-filter="" onclick="filterLogs(this, '')">All</button>
+                                <button class="filter-btn" data-filter="block" onclick="filterLogs(this, 'block')">Blocked</button>
+                                <button class="filter-btn" data-filter="allow" onclick="filterLogs(this, 'allow')">Allowed</button>
+                            </div>
+
+                            <div id="gatewayLogList" style="flex:1;overflow-y:auto;max-height:380px;">
+                                <p class="text-secondary-sl" style="font-size:0.85rem;">Load the Gateway tab to see activity.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gateway API Usage -->
+                    <div class="sl-card mt-4">
+                        <h3 class="h5 fw-semibold mb-2">
+                            <i class="bi bi-plug" style="color:#10b981;margin-right:8px"></i>Integrate with Your Network
+                        </h3>
+                        <p class="text-secondary-sl mb-4" style="font-size:0.85rem;">Point any tool, script, or network device at the gateway endpoint using your org API key. Returns ALLOW/BLOCK instantly.</p>
+                        <div class="gateway-api-box">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="gw-api-grid">
+                                <div>
+                                    <p style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Request</p>
+<pre>curl -X POST <span id="gwApiEndpoint">https://securelinkapp.com</span>/api/gateway/check \
+  -H "X-API-Key: <span id="gwApiKeyPreview">YOUR_ORG_API_KEY</span>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://suspicious-site.com", "user_id": 42}'</pre>
+                                </div>
+                                <div>
+                                    <p style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Response</p>
+<pre>{
+  "verdict": "block",
+  "reason": "Risk score 0.85 exceeds threshold 0.50",
+  "risk_score": 0.85,
+  "risk_level": "high",
+  "threats": ["phishing"],
+  "log_id": 1042
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /#gatewayTab -->
 
                 <!-- API Tab -->
                 <div id="apiTab" class="tab-content d-none">
@@ -763,12 +953,10 @@
         // Tab switching
         function showTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('active');
-            });
-
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`${tab}Tab`).classList.remove('d-none');
             document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            if (tab === 'gateway') loadGatewayTab();
         }
 
         // Modals
@@ -903,6 +1091,139 @@
                 alert('API key copied to clipboard!');
             }
         }
+
+        // ===================== GATEWAY =====================
+
+        let gwVerdictFilter = '';
+
+        async function loadGatewayTab() {
+            if (!currentOrg) return;
+            await Promise.all([loadGatewayPolicy(), loadGatewayLogs()]);
+            // populate the API example key preview
+            const preview = document.getElementById('gwApiKeyPreview');
+            if (preview && currentOrg.api_key) preview.textContent = currentOrg.api_key;
+        }
+
+        async function loadGatewayPolicy() {
+            if (!currentOrg) return;
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/policy`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const p = data.policy || {};
+
+                const threshold = parseFloat(p.risk_threshold ?? 0.5);
+                document.getElementById('riskThreshold').value = threshold;
+                document.getElementById('thresholdLabel').textContent = Math.round(threshold * 100) + '%';
+
+                const blockCats = new Set(p.block_categories || []);
+                document.querySelectorAll('#blockCats .cat-toggle').forEach(btn => {
+                    btn.classList.toggle('active', blockCats.has(btn.dataset.cat));
+                });
+
+                document.getElementById('customBlocked').value = (p.custom_blocked_domains || []).join('\n');
+                document.getElementById('customAllowed').value = (p.custom_allowed_domains || []).join('\n');
+                document.getElementById('logAllowed').checked = p.log_allowed !== false;
+            } catch(e) { console.error('Policy load error', e); }
+        }
+
+        document.getElementById('blockCats').addEventListener('click', e => {
+            const btn = e.target.closest('.cat-toggle');
+            if (btn) btn.classList.toggle('active');
+        });
+
+        document.getElementById('policyForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            if (!currentOrg) return;
+
+            const activeCats = [...document.querySelectorAll('#blockCats .cat-toggle.active')]
+                                  .map(b => b.dataset.cat);
+            const parseLines = id => document.getElementById(id).value
+                .split('\n').map(s => s.trim()).filter(Boolean);
+
+            const policy = {
+                risk_threshold: parseFloat(document.getElementById('riskThreshold').value),
+                block_categories: activeCats,
+                custom_blocked_domains: parseLines('customBlocked'),
+                custom_allowed_domains: parseLines('customAllowed'),
+                log_allowed: document.getElementById('logAllowed').checked,
+            };
+
+            try {
+                const res = await fetch(`/api/org/${currentOrg.id}/policy`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(policy)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Policy saved!');
+                } else {
+                    alert(data.error || 'Failed to save policy');
+                }
+            } catch(e) { alert('Error saving policy'); }
+        });
+
+        async function loadGatewayLogs() {
+            if (!currentOrg) return;
+            const list = document.getElementById('gatewayLogList');
+            list.innerHTML = '<p class="text-secondary-sl" style="font-size:0.85rem;">Loading...</p>';
+
+            try {
+                const params = gwVerdictFilter ? `?verdict=${gwVerdictFilter}` : '';
+                const res = await fetch(`/api/org/${currentOrg.id}/gateway/logs${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const stats = data.stats || {};
+                const logs  = data.logs  || [];
+
+                // Update mini stat chips
+                document.getElementById('gwStatTotal').textContent   = stats.total   ?? '-';
+                document.getElementById('gwStatBlocked').textContent = stats.blocked ?? '-';
+                document.getElementById('gwStatAllowed').textContent = stats.allowed ?? '-';
+                // Update header chips
+                document.getElementById('gwBlocked').textContent = stats.blocked ?? '-';
+                document.getElementById('gwToday').textContent   = stats.last_24h ?? '-';
+
+                if (!logs.length) {
+                    list.innerHTML = '<p class="text-secondary-sl" style="font-size:0.85rem;">No activity yet. Gateway checks will appear here.</p>';
+                    return;
+                }
+
+                list.innerHTML = logs.map(log => {
+                    const ts  = new Date(log.checked_at).toLocaleString();
+                    const url = log.url.length > 60 ? log.url.slice(0, 60) + '…' : log.url;
+                    const badge = log.verdict === 'block'
+                        ? `<span class="verdict-badge verdict-block"><i class="bi bi-x-circle-fill"></i> BLOCK</span>`
+                        : `<span class="verdict-badge verdict-allow"><i class="bi bi-check-circle-fill"></i> ALLOW</span>`;
+                    const reason = log.block_reason ? `<span style="color:#ef4444;font-size:0.75rem;"> — ${log.block_reason}</span>` : '';
+                    return `
+                        <div class="log-row">
+                            <div>
+                                <div class="log-url" title="${log.url}">${url}${reason}</div>
+                                <div class="log-meta">${log.domain} &bull; ${ts}${log.user_id ? ' &bull; uid:'+log.user_id : ''}</div>
+                            </div>
+                            <span style="font-size:0.78rem;color:var(--text-muted);">${log.risk_level || ''}</span>
+                            ${badge}
+                        </div>
+                    `;
+                }).join('');
+
+            } catch(e) {
+                list.innerHTML = '<p style="color:var(--danger-color)">Error loading logs.</p>';
+            }
+        }
+
+        function filterLogs(btn, verdict) {
+            gwVerdictFilter = verdict;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadGatewayLogs();
+        }
+
+        // ===================== END GATEWAY =====================
 
         // Initialize
         document.addEventListener('DOMContentLoaded', init);

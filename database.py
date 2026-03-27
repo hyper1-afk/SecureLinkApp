@@ -237,6 +237,42 @@ class ThreatEvent(Base):
         }
 
 
+# ==================== CORPORATE GATEWAY LOG ====================
+
+class OrgGatewayLog(Base):
+    """Audit log for all corporate gateway URL checks"""
+    __tablename__ = 'org_gateway_logs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, nullable=True, index=True)   # NULL = anonymous API key call
+    url = Column(String(2048), nullable=False)
+    domain = Column(String(255), nullable=True, index=True)
+    verdict = Column(String(10), nullable=False)           # 'allow' | 'block'
+    block_reason = Column(String(255), nullable=True)      # why it was blocked
+    risk_score = Column(Float, nullable=True)
+    risk_level = Column(String(20), nullable=True)
+    threats = Column(JSON, default=list)
+    source_ip = Column(String(64), nullable=True)
+    checked_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'organization_id': self.organization_id,
+            'user_id': self.user_id,
+            'url': self.url,
+            'domain': self.domain,
+            'verdict': self.verdict,
+            'block_reason': self.block_reason,
+            'risk_score': self.risk_score,
+            'risk_level': self.risk_level,
+            'threats': self.threats or [],
+            'source_ip': self.source_ip,
+            'checked_at': self.checked_at.isoformat() if self.checked_at else None,
+        }
+
+
 # ==================== FORUM / COMMUNITY CHAT MODELS ====================
 
 class ForumCategory(Base):
@@ -1080,7 +1116,111 @@ class Database:
             }
         finally:
             session.close()
-    
+
+    # ============== Corporate Gateway Methods ==============
+
+    def get_org_by_api_key(self, api_key: str) -> Optional[Dict]:
+        """Look up an organization by its API key"""
+        session = self.get_session()
+        try:
+            org = session.query(Organization).filter(Organization.api_key == api_key).first()
+            if not org:
+                return None
+            result = org.to_dict()
+            result['id'] = org.id
+            result['settings'] = org.settings or {}
+            result['custom_blocked_domains'] = org.custom_blocked_domains or []
+            return result
+        finally:
+            session.close()
+
+    def get_org_policy(self, org_id: int) -> Dict:
+        """Return the policy config stored in org.settings"""
+        session = self.get_session()
+        try:
+            org = session.query(Organization).filter(Organization.id == org_id).first()
+            if not org:
+                return {}
+            settings = org.settings or {}
+            return settings.get('policy', {})
+        finally:
+            session.close()
+
+    def set_org_policy(self, org_id: int, policy: Dict) -> bool:
+        """Persist policy config into org.settings['policy']"""
+        session = self.get_session()
+        try:
+            org = session.query(Organization).filter(Organization.id == org_id).first()
+            if not org:
+                return False
+            settings = dict(org.settings or {})
+            settings['policy'] = policy
+            org.settings = settings
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def log_gateway_check(self, org_id: int, url: str, verdict: str,
+                          block_reason: str = None, risk_score: float = None,
+                          risk_level: str = None, threats: list = None,
+                          user_id: int = None, source_ip: str = None) -> int:
+        """Write one row to org_gateway_logs; returns the new row id"""
+        from urllib.parse import urlparse
+        session = self.get_session()
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc or url
+            entry = OrgGatewayLog(
+                organization_id=org_id,
+                user_id=user_id,
+                url=url,
+                domain=domain,
+                verdict=verdict,
+                block_reason=block_reason,
+                risk_score=risk_score,
+                risk_level=risk_level,
+                threats=threats or [],
+                source_ip=source_ip,
+            )
+            session.add(entry)
+            session.commit()
+            return entry.id
+        finally:
+            session.close()
+
+    def get_gateway_logs(self, org_id: int, limit: int = 100, offset: int = 0,
+                         verdict_filter: str = None) -> List[Dict]:
+        """Paginated gateway audit log for an org"""
+        session = self.get_session()
+        try:
+            q = session.query(OrgGatewayLog).filter(OrgGatewayLog.organization_id == org_id)
+            if verdict_filter in ('allow', 'block'):
+                q = q.filter(OrgGatewayLog.verdict == verdict_filter)
+            logs = q.order_by(OrgGatewayLog.checked_at.desc()).offset(offset).limit(limit).all()
+            return [l.to_dict() for l in logs]
+        finally:
+            session.close()
+
+    def get_gateway_stats(self, org_id: int) -> Dict:
+        """Summary stats for the gateway dashboard widget"""
+        session = self.get_session()
+        try:
+            total   = session.query(OrgGatewayLog).filter(OrgGatewayLog.organization_id == org_id).count()
+            blocked = session.query(OrgGatewayLog).filter(
+                OrgGatewayLog.organization_id == org_id,
+                OrgGatewayLog.verdict == 'block'
+            ).count()
+            from datetime import timedelta
+            since = datetime.utcnow() - timedelta(hours=24)
+            today = session.query(OrgGatewayLog).filter(
+                OrgGatewayLog.organization_id == org_id,
+                OrgGatewayLog.checked_at >= since
+            ).count()
+            return {'total': total, 'blocked': blocked, 'allowed': total - blocked, 'last_24h': today}
+        finally:
+            session.close()
+
     # ============== Threat Map Methods ==============
     
     def record_threat_event(self, threat_type: str, url: str = None, country_code: str = None,

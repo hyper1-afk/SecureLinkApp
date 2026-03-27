@@ -4035,6 +4035,205 @@ def get_organization_stats(org_id):
 
 
 # ============================================================================
+# CORPORATE GATEWAY — Zscaler-style URL firewall
+# ============================================================================
+
+# Default policy applied when no org policy has been configured
+_DEFAULT_POLICY = {
+    'risk_threshold': 0.5,       # block if risk_score >= this value (0.0–1.0)
+    'block_categories': [        # threat categories that are always blocked
+        'phishing', 'malware', 'ransomware', 'credential_harvesting',
+        'typosquatting', 'suspicious_redirect',
+    ],
+    'custom_blocked_domains': [],
+    'custom_allowed_domains': [],
+    'log_allowed': True,         # also log ALLOW verdicts (full audit trail)
+}
+
+
+def _apply_gateway_policy(url: str, result, policy: dict, org: dict) -> tuple:
+    """
+    Apply org policy to a VerificationResult.
+    Returns (verdict: 'allow'|'block', reason: str|None).
+    """
+    from urllib.parse import urlparse
+    domain = urlparse(url).netloc.lower().lstrip('www.')
+
+    # 1. Custom allow-list — always pass, skip further checks
+    allowed_domains = policy.get('custom_allowed_domains', [])
+    if any(domain == d.lower().lstrip('www.') for d in allowed_domains):
+        return 'allow', None
+
+    # 2. Custom block-list (org-level + policy-level)
+    blocked_domains = list(policy.get('custom_blocked_domains', []))
+    blocked_domains += org.get('custom_blocked_domains', [])
+    if any(domain == d.lower().lstrip('www.') for d in blocked_domains):
+        return 'block', f'Domain explicitly blocked by org policy: {domain}'
+
+    # 3. Threat category blocks
+    block_cats = set(policy.get('block_categories', []))
+    for threat in (result.threats_detected or []):
+        threat_key = threat.lower().replace(' ', '_')
+        if threat_key in block_cats:
+            return 'block', f'Blocked category: {threat}'
+
+    # 4. Risk-score threshold
+    threshold = float(policy.get('risk_threshold', 0.5))
+    if result.risk_score >= threshold:
+        return 'block', f'Risk score {result.risk_score:.2f} exceeds threshold {threshold:.2f}'
+
+    return 'allow', None
+
+
+@app.route('/api/gateway/check', methods=['POST'])
+def gateway_check():
+    """
+    Corporate gateway endpoint — authenticate with org API key.
+
+    POST body (JSON):
+        { "url": "https://example.com", "user_id": 42 }   # user_id optional
+
+    Returns:
+        { "verdict": "allow"|"block", "reason": "...", "risk_score": 0.0,
+          "risk_level": "safe", "threats": [], "log_id": 123 }
+    """
+    # ---------- API key authentication ----------
+    api_key = (
+        request.headers.get('X-API-Key') or
+        request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    )
+    if not api_key:
+        return jsonify({'error': 'API key required (X-API-Key header)'}), 401
+
+    org = db.get_org_by_api_key(api_key)
+    if not org:
+        return jsonify({'error': 'Invalid API key'}), 401
+
+    # ---------- Input validation ----------
+    data = request.get_json(silent=True) or {}
+    url = (data.get('url') or '').strip()
+    if not url:
+        return jsonify({'error': 'url is required'}), 400
+    if len(url) > 2048:
+        return jsonify({'error': 'URL too long'}), 400
+
+    caller_user_id = data.get('user_id')
+    source_ip = _get_client_ip()
+
+    # ---------- Threat analysis ----------
+    result = verifier.verify_link(url)
+
+    # ---------- Policy enforcement ----------
+    policy = {**_DEFAULT_POLICY, **db.get_org_policy(org['id'])}
+    verdict, reason = _apply_gateway_policy(url, result, policy, org)
+
+    # ---------- Audit log ----------
+    log_allowed = policy.get('log_allowed', True)
+    log_id = None
+    if verdict == 'block' or log_allowed:
+        log_id = db.log_gateway_check(
+            org_id=org['id'],
+            url=url,
+            verdict=verdict,
+            block_reason=reason,
+            risk_score=result.risk_score,
+            risk_level=result.risk_level.value,
+            threats=result.threats_detected,
+            user_id=caller_user_id,
+            source_ip=source_ip,
+        )
+
+    # ---------- Webhook alert on block ----------
+    if verdict == 'block' and (org.get('has_slack') or org.get('has_discord') or org.get('has_teams')):
+        full_org = db.get_organization(org['id'])
+        threat_data = {
+            'url': url,
+            'risk_score': result.risk_score * 100,
+            'threat_types': result.threats_detected,
+            'verified_by': f'gateway (user_id={caller_user_id})',
+            'block_reason': reason,
+        }
+        if full_org.get('slack_webhook'):
+            send_slack_notification(full_org['slack_webhook'], threat_data)
+        if full_org.get('discord_webhook'):
+            send_discord_notification(full_org['discord_webhook'], threat_data)
+        if full_org.get('teams_webhook'):
+            send_teams_notification(full_org['teams_webhook'], threat_data)
+
+    return jsonify({
+        'verdict': verdict,
+        'reason': reason,
+        'risk_score': round(result.risk_score, 4),
+        'risk_level': result.risk_level.value,
+        'threats': result.threats_detected,
+        'warnings': result.warnings,
+        'log_id': log_id,
+        'org_id': org['id'],
+    })
+
+
+@app.route('/api/org/<int:org_id>/policy', methods=['GET'])
+@require_enterprise
+def get_org_policy(org_id):
+    """Return the current gateway policy for an org"""
+    user = request.current_user
+    if not db.is_organization_member(org_id, user.get('id')):
+        return jsonify({'error': 'Access denied'}), 403
+    policy = {**_DEFAULT_POLICY, **db.get_org_policy(org_id)}
+    return jsonify({'policy': policy})
+
+
+@app.route('/api/org/<int:org_id>/policy', methods=['PUT'])
+@require_enterprise
+def set_org_policy(org_id):
+    """Update gateway policy for an org (admin only)"""
+    user = request.current_user
+    member = db.get_organization_member(org_id, user.get('id'))
+    if not member or member.get('role') not in ('admin', 'owner'):
+        return jsonify({'error': 'Only admins can update policy'}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    # Validate risk_threshold range
+    threshold = data.get('risk_threshold', _DEFAULT_POLICY['risk_threshold'])
+    try:
+        threshold = float(threshold)
+        if not (0.0 <= threshold <= 1.0):
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({'error': 'risk_threshold must be a float between 0.0 and 1.0'}), 400
+
+    policy = {
+        'risk_threshold': threshold,
+        'block_categories': [str(c) for c in data.get('block_categories', _DEFAULT_POLICY['block_categories'])],
+        'custom_blocked_domains': [str(d) for d in data.get('custom_blocked_domains', [])],
+        'custom_allowed_domains': [str(d) for d in data.get('custom_allowed_domains', [])],
+        'log_allowed': bool(data.get('log_allowed', True)),
+    }
+
+    if db.set_org_policy(org_id, policy):
+        return jsonify({'success': True, 'policy': policy})
+    return jsonify({'error': 'Failed to save policy'}), 500
+
+
+@app.route('/api/org/<int:org_id>/gateway/logs', methods=['GET'])
+@require_enterprise
+def get_gateway_logs(org_id):
+    """Paginated audit log of all gateway checks for an org"""
+    user = request.current_user
+    if not db.is_organization_member(org_id, user.get('id')):
+        return jsonify({'error': 'Access denied'}), 403
+
+    limit  = min(int(request.args.get('limit', 50)), 200)
+    offset = int(request.args.get('offset', 0))
+    verdict_filter = request.args.get('verdict')   # 'allow' | 'block'
+
+    logs  = db.get_gateway_logs(org_id, limit=limit, offset=offset, verdict_filter=verdict_filter)
+    stats = db.get_gateway_stats(org_id)
+    return jsonify({'logs': logs, 'stats': stats})
+
+
+# ============================================================================
 # AI THREAT EXPLANATION ROUTE
 # ============================================================================
 
