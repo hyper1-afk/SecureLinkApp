@@ -571,6 +571,88 @@
             .self-host-content h2 { font-size: 2rem; }
         }
 
+        /* ===== Gateway Section ===== */
+        .gateway-section {
+            position: relative; z-index: 1;
+            padding: 100px 24px;
+            overflow: hidden;
+        }
+        .gateway-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+        }
+        .gateway-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 5px 14px; border-radius: 20px;
+            background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.25);
+            color: #a78bfa; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; margin-bottom: 20px;
+        }
+        .gateway-content h2 {
+            font-size: 2.6rem; font-weight: 900; letter-spacing: -0.04em;
+            color: var(--text-primary); line-height: 1.1; margin-bottom: 18px;
+        }
+        .gateway-content h2 span {
+            background: linear-gradient(135deg, #8b5cf6, #38bdf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .gateway-content p {
+            font-size: 1.05rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 32px;
+        }
+        .gateway-perks { list-style: none; padding: 0; margin: 0 0 36px; display: flex; flex-direction: column; gap: 14px; }
+        .gateway-perks li {
+            display: flex; align-items: flex-start; gap: 14px;
+            font-size: 0.92rem; color: var(--text-secondary);
+        }
+        .gateway-perks li .perk-icon {
+            width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(139,92,246,0.12); color: #a78bfa; font-size: 0.9rem;
+        }
+        .gateway-perks li strong { color: var(--text-primary); }
+        .btn-gateway {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 15px 32px; border-radius: 14px; font-size: 0.95rem; font-weight: 700;
+            text-decoration: none; transition: all 0.3s;
+            background: linear-gradient(135deg, #8b5cf6, #38bdf8);
+            color: #fff; border: none;
+        }
+        .btn-gateway:hover { box-shadow: 0 8px 28px rgba(139,92,246,0.35); transform: translateY(-2px); color: #fff; }
+        .gateway-visual {
+            background: #0d1117; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px; padding: 28px; position: relative; overflow: hidden;
+        }
+        .gateway-visual::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #8b5cf6, #38bdf8, #10b981);
+        }
+        .gw-flow { display: flex; flex-direction: column; gap: 10px; }
+        .gw-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 12px 14px; border-radius: 10px;
+            font-size: 0.82rem; font-family: 'JetBrains Mono','Fira Code','Courier New',monospace;
+        }
+        .gw-row.allow { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.18); }
+        .gw-row.block { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.18); }
+        .gw-row.pending { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+        .gw-verdict { font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; min-width: 44px; }
+        .gw-verdict.allow { color: #10b981; }
+        .gw-verdict.block { color: #ef4444; }
+        .gw-url { color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gw-reason { font-size: 0.72rem; color: #6b7280; flex-shrink: 0; }
+        .gateway-callout {
+            margin-top: 24px; padding: 16px 20px;
+            background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.18);
+            border-radius: 12px; display: flex; align-items: center; gap: 14px;
+        }
+        .gateway-callout i { font-size: 1.4rem; color: #a78bfa; flex-shrink: 0; }
+        .gateway-callout p { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+        .gateway-callout p strong { color: var(--text-primary); }
+        @media (max-width: 900px) {
+            .gateway-inner { grid-template-columns: 1fr; gap: 48px; }
+            .gateway-content h2 { font-size: 2rem; }
+        }
+
         /* ===== Hero Enhancements ===== */
         @keyframes pulse-ring {
             0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
@@ -1129,6 +1211,91 @@
     </section>
 
     <!-- Self-Host Section -->
+    <!-- Gateway Section -->
+    <section class="gateway-section">
+        <div class="gateway-inner">
+            <div class="fade-up">
+                <div class="gateway-visual">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+                        <div style="display:flex;gap:7px;">
+                            <div class="terminal-dot red"></div>
+                            <div class="terminal-dot yellow"></div>
+                            <div class="terminal-dot green"></div>
+                        </div>
+                        <span style="color:#4b5563;font-size:0.78rem;font-family:monospace;margin-left:8px;">gateway — live traffic</span>
+                    </div>
+                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:14px;font-family:monospace;">POST /api/gateway/check &nbsp;·&nbsp; real-time verdict</div>
+                    <div class="gw-flow">
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://docs.company.com/onboarding</span>
+                            <span class="gw-reason">clean</span>
+                        </div>
+                        <div class="gw-row block">
+                            <span class="gw-verdict block">✗ BLOCK</span>
+                            <span class="gw-url">http://paypa1-secure.ru/login</span>
+                            <span class="gw-reason">phishing</span>
+                        </div>
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://github.com/hyper1-afk/SecureLinkApp</span>
+                            <span class="gw-reason">trusted</span>
+                        </div>
+                        <div class="gw-row block">
+                            <span class="gw-verdict block">✗ BLOCK</span>
+                            <span class="gw-url">https://bit.ly/3xK9mQ2</span>
+                            <span class="gw-reason">malware redirect</span>
+                        </div>
+                        <div class="gw-row allow">
+                            <span class="gw-verdict allow">✓ ALLOW</span>
+                            <span class="gw-url">https://stripe.com/docs/api</span>
+                            <span class="gw-reason">clean</span>
+                        </div>
+                        <div class="gw-row pending">
+                            <span style="color:#f59e0b;font-weight:700;font-size:0.72rem;text-transform:uppercase;min-width:44px;">⟳ CHECK</span>
+                            <span class="gw-url">https://new-vendor-portal.io/invoice</span>
+                            <span class="gw-reason">scanning…</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gateway-callout">
+                    <i class="bi bi-shield-fill-check"></i>
+                    <p><strong>Requires an Enterprise account.</strong> The gateway is available to organizations on the Enterprise plan — includes policy controls, audit logs, and team seat management.</p>
+                </div>
+            </div>
+            <div class="gateway-content fade-up">
+                <div class="gateway-badge"><i class="bi bi-shield-fill-check"></i> Enterprise Feature</div>
+                <h2>Block Threats at the<br><span>Network Gateway.</span></h2>
+                <p>Integrate SecureLink's real-time threat engine directly into your infrastructure. Every URL your users or systems touch is checked before it loads — no browser extension required.</p>
+                <ul class="gateway-perks">
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-arrow-repeat"></i></div>
+                        <div><strong>Real-time verdicts in &lt;800ms</strong> — synchronous API call returns allow/block inline</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-sliders"></i></div>
+                        <div><strong>Configurable policy</strong> — set custom block rules, allow-lists, and threat categories per org</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-journal-code"></i></div>
+                        <div><strong>Full audit log</strong> — every check is recorded with verdict, reason, and timestamp</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-bell-fill"></i></div>
+                        <div><strong>Instant webhooks</strong> — push blocked-URL alerts to Slack, Discord, or Teams</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
+                        <div><strong>Drop-in for any stack</strong> — one REST call, SDKs for Python, Node.js, PHP, and cURL</div>
+                    </li>
+                </ul>
+                <a href="/pricing" class="btn-gateway">
+                    <i class="bi bi-briefcase-fill"></i> Get Enterprise Access
+                </a>
+            </div>
+        </div>
+    </section>
+
     <section class="self-host-section">
         <div class="self-host-inner">
             <div class="self-host-content fade-up">
