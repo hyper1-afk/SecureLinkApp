@@ -487,6 +487,89 @@
             .tool-btn { width: 100%; justify-content: center; }
             .tool-card { padding: 24px 18px; }
         }
+
+        /* ===== Self-Host Section ===== */
+        .self-host-section {
+            position: relative; z-index: 1;
+            padding: 100px 24px;
+            overflow: hidden;
+        }
+        .self-host-inner {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+        }
+        .self-host-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 5px 14px; border-radius: 20px;
+            background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25);
+            color: #10b981; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; margin-bottom: 20px;
+        }
+        .self-host-content h2 {
+            font-size: 2.6rem; font-weight: 900; letter-spacing: -0.04em;
+            color: var(--text-primary); line-height: 1.1; margin-bottom: 18px;
+        }
+        .self-host-content h2 span {
+            background: linear-gradient(135deg, #10b981, #0ea5e9);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .self-host-content p {
+            font-size: 1.05rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 32px;
+        }
+        .self-host-perks { list-style: none; padding: 0; margin: 0 0 36px; display: flex; flex-direction: column; gap: 14px; }
+        .self-host-perks li {
+            display: flex; align-items: flex-start; gap: 14px;
+            font-size: 0.92rem; color: var(--text-secondary);
+        }
+        .self-host-perks li .perk-icon {
+            width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(16,185,129,0.12); color: #10b981; font-size: 0.9rem;
+        }
+        .self-host-perks li strong { color: var(--text-primary); }
+        .btn-self-host {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 15px 32px; border-radius: 14px; font-size: 0.95rem; font-weight: 700;
+            text-decoration: none; transition: all 0.3s;
+            background: linear-gradient(135deg, #10b981, #0ea5e9);
+            color: #fff; border: none;
+        }
+        .btn-self-host:hover { box-shadow: 0 8px 28px rgba(16,185,129,0.35); transform: translateY(-2px); color: #fff; }
+        .self-host-terminal {
+            background: #0d1117; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px; padding: 28px; font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.82rem; line-height: 1.8; position: relative; overflow: hidden;
+        }
+        .self-host-terminal::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #10b981, #0ea5e9, #8b5cf6);
+        }
+        .terminal-bar {
+            display: flex; align-items: center; gap: 7px; margin-bottom: 20px;
+        }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-dot.red { background: #ef4444; }
+        .terminal-dot.yellow { background: #f59e0b; }
+        .terminal-dot.green { background: #10b981; }
+        .terminal-title { color: #4b5563; font-size: 0.78rem; margin-left: 8px; }
+        .t-comment { color: #4b5563; }
+        .t-cmd { color: #e2e8f0; }
+        .t-cmd span.t-key { color: #10b981; }
+        .t-cmd span.t-val { color: #38bdf8; }
+        .t-out { color: #6b7280; }
+        .t-success { color: #10b981; font-weight: 600; }
+        .self-host-callout {
+            margin-top: 24px; padding: 16px 20px;
+            background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.18);
+            border-radius: 12px; display: flex; align-items: center; gap: 14px;
+        }
+        .self-host-callout i { font-size: 1.4rem; color: #10b981; flex-shrink: 0; }
+        .self-host-callout p { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+        .self-host-callout p strong { color: var(--text-primary); }
+        @media (max-width: 900px) {
+            .self-host-inner { grid-template-columns: 1fr; gap: 48px; }
+            .self-host-content h2 { font-size: 2rem; }
+        }
     </style>
 </head>
 <body>
@@ -808,6 +891,70 @@
                     <li><i class="bi bi-check-circle-fill"></i> Priority support</li>
                 </ul>
                 <a href="/login?tab=register" class="btn-plan btn-plan-outline">Go Enterprise</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Self-Host Section -->
+    <section class="self-host-section">
+        <div class="self-host-inner">
+            <div class="self-host-content fade-up">
+                <div class="self-host-badge"><i class="bi bi-server"></i> Self-Hosting Available</div>
+                <h2>Prefer to <span>Own Your Data?</span><br>Self-Host SecureLink.</h2>
+                <p>Run the entire SecureLink platform on your own server or private network. Full control, zero telemetry, and no usage limits — just you and your infrastructure.</p>
+                <ul class="self-host-perks">
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-box-fill"></i></div>
+                        <div><strong>Docker-ready in minutes</strong> — one <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.85em;">docker-compose up</code> and you're live</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-lock-fill"></i></div>
+                        <div><strong>Complete data privacy</strong> — your scans, users, and breach data never leave your server</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-infinity"></i></div>
+                        <div><strong>No usage limits</strong> — unlimited domain scans, users, and API calls</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-code-slash"></i></div>
+                        <div><strong>Full source access</strong> — customize every feature to fit your organization</div>
+                    </li>
+                    <li>
+                        <div class="perk-icon"><i class="bi bi-building"></i></div>
+                        <div><strong>Perfect for internal teams</strong> — deploy on-prem, air-gapped, or on any cloud provider</div>
+                    </li>
+                </ul>
+                <a href="/self-host" class="btn-self-host">
+                    <i class="bi bi-server"></i> Read the Self-Host Guide
+                </a>
+            </div>
+            <div class="fade-up">
+                <div class="self-host-terminal">
+                    <div class="terminal-bar">
+                        <div class="terminal-dot red"></div>
+                        <div class="terminal-dot yellow"></div>
+                        <div class="terminal-dot green"></div>
+                        <span class="terminal-title">terminal — your-server</span>
+                    </div>
+                    <div class="t-comment"># 1. Clone the repo</div>
+                    <div class="t-cmd"><span class="t-key">git</span> clone https://github.com/Ryan-bit/SecureLinkApp</div>
+                    <div class="t-cmd"><span class="t-key">cd</span> SecureLinkApp</div>
+                    <br>
+                    <div class="t-comment"># 2. Configure your environment</div>
+                    <div class="t-cmd"><span class="t-key">cp</span> .env.example .env</div>
+                    <div class="t-cmd"><span class="t-key">nano</span> .env <span class="t-comment"># set SECRET_KEY, DATABASE_URL…</span></div>
+                    <br>
+                    <div class="t-comment"># 3. Launch with Docker Compose</div>
+                    <div class="t-cmd"><span class="t-key">docker compose</span> up -d</div>
+                    <br>
+                    <div class="t-out">Starting securelink_db     ... done</div>
+                    <div class="t-out">Starting securelink_app    ... done</div>
+                    <div class="t-success">✓ SecureLink is live on http://localhost:5000</div>
+                </div>
+                <div class="self-host-callout">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <p><strong>Average setup time: under 10 minutes.</strong> Full Nginx reverse proxy config, SSL setup, and environment variable reference included in the guide.</p>
+                </div>
             </div>
         </div>
     </section>
