@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Licenses — SecureLink Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 1200px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px)  { .metrics { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px)  { .metrics { grid-template-columns: 1fr; } }
+
+        .pill-pro        { background: rgba(139,92,246,.15); color: #a78bfa; }
+        .pill-enterprise { background: rgba(16,185,129,.15); color: #34d399; }
+        .pill-active     { background: rgba(16,185,129,.12); color: #34d399; }
+        .pill-revoked    { background: rgba(239,68,68,.12);  color: #f87171; }
+
+        .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+                      margin-bottom: 20px; padding: 16px; background: var(--panel-bg);
+                      border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+
+        .key-mono { font-family: monospace; font-size: .8rem; color: var(--text-muted); }
+
+        /* Grant + expiry modal */
+        .modal-backdrop-custom {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.6); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-backdrop-custom.open { display: flex; }
+        .modal-box {
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            border-radius: 14px; padding: 28px; width: 100%; max-width: 480px;
+        }
+        .modal-box h5 { margin: 0 0 18px; font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+        .modal-form-group { margin-bottom: 14px; }
+        .modal-form-group label { display: block; font-size: .8rem; color: var(--text-muted);
+                                   margin-bottom: 5px; }
+        .modal-form-group input,
+        .modal-form-group select { width: 100%; padding: 8px 12px; border-radius: 8px;
+                                    border: 1px solid var(--border-color); background: rgba(255,255,255,.05);
+                                    color: var(--text-primary); font-size: .875rem; }
+        .modal-form-group input:focus,
+        .modal-form-group select:focus { outline: 2px solid var(--primary-color); border-color: transparent; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .modal-error { color: #f87171; font-size: .82rem; margin-top: 8px; min-height: 18px; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:32px;height:32px;display:block;border-radius:8px;"></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link"><i class="bi bi-ticket-detailed-fill"></i> All Tickets</a>
+            <a href="/admin/tickets?status=open" class="nav-link"><i class="bi bi-inbox-fill"></i> Open</a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link"><i class="bi bi-clock-history"></i> In Progress</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="/admin/employees" class="nav-link"><i class="bi bi-person-badge-fill"></i> Employees</a>
+            <a href="/admin/licenses" class="nav-link active"><i class="bi bi-key-fill"></i> Licenses</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/database" class="nav-link"><i class="bi bi-database-fill"></i> Database</a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title">License Keys</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="metrics" id="statsRow">
+            <div class="metric-card">
+                <div class="metric-label">Total Keys</div>
+                <div class="metric-value" id="statTotal">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active</div>
+                <div class="metric-value" id="statActive" style="color:#34d399">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Revoked</div>
+                <div class="metric-value" id="statRevoked" style="color:#f87171">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Pro Keys</div>
+                <div class="metric-value" id="statPro" style="color:#a78bfa">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Enterprise Keys</div>
+                <div class="metric-value" id="statEnt" style="color:#34d399">—</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <input type="text" id="searchInput" placeholder="Search label, email, username…" style="min-width:240px">
+            <select id="filterTier">
+                <option value="">All Tiers</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+            </select>
+            <select id="filterStatus">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="revoked">Revoked</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadLicenses()">
+                <i class="bi bi-search"></i> Search
+            </button>
+            <button class="btn btn-secondary" onclick="openGrantModal()" style="margin-left:auto">
+                <i class="bi bi-plus-lg"></i> Issue Key
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <h5 class="panel-title"><i class="bi bi-key-fill"></i> All License Keys</h5>
+                <span style="font-size:.82rem;color:var(--text-muted)" id="totalCount">—</span>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Owner</th>
+                            <th>Key Preview</th>
+                            <th>Tier</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Used</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysBody">
+                        <tr>
+                            <td colspan="9">
+                                <div class="empty-state">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <p>Loading license keys…</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationNav" style="display:none;">
+            <div class="pagi" id="pagination"></div>
+        </div>
+    </main>
+
+    <!-- Grant Key Modal -->
+    <div class="modal-backdrop-custom" id="grantModal">
+        <div class="modal-box">
+            <h5><i class="bi bi-key-fill" style="color:#a78bfa;margin-right:8px"></i>Issue License Key</h5>
+            <div class="modal-form-group">
+                <label>Customer Email</label>
+                <input type="email" id="grantEmail" placeholder="user@example.com">
+            </div>
+            <div class="modal-form-group">
+                <label>Tier</label>
+                <select id="grantTier">
+                    <option value="pro">Pro</option>
+                    <option value="enterprise">Enterprise</option>
+                </select>
+            </div>
+            <div class="modal-form-group">
+                <label>Label <em style="font-weight:400;">(optional)</em></label>
+                <input type="text" id="grantLabel" placeholder="e.g. Office Server" maxlength="100">
+            </div>
+            <div class="modal-form-group">
+                <label>Expires At <em style="font-weight:400;">(leave blank = never)</em></label>
+                <input type="date" id="grantExpiry">
+            </div>
+            <div class="modal-error" id="grantError"></div>
+            <div id="grantSuccess" style="display:none;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:12px;margin-top:10px;">
+                <p style="font-size:.82rem;color:#34d399;margin:0 0 8px;font-weight:600;"><i class="bi bi-check-circle-fill me-1"></i>Key issued successfully</p>
+                <input type="text" id="grantKeyValue" class="key-mono" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(16,185,129,.3);background:rgba(0,0,0,.3);">
+                <p style="font-size:.76rem;color:#f59e0b;margin:6px 0 0;"><i class="bi bi-exclamation-triangle me-1"></i>Copy this now — the full key won't be shown again.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeGrantModal()">Close</button>
+                <button class="btn btn-primary" id="grantBtn" onclick="grantKey()">Issue Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set Expiry Modal -->
+    <div class="modal-backdrop-custom" id="expiryModal">
+        <div class="modal-box">
+            <h5><i class="bi bi-calendar-event" style="color:#f59e0b;margin-right:8px"></i>Set Expiry Date</h5>
+            <p style="font-size:.84rem;color:var(--text-muted);margin-bottom:16px;">Leave blank to remove expiry (key never expires).</p>
+            <input type="hidden" id="expiryKeyId">
+            <div class="modal-form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="expiryDate">
+            </div>
+            <div class="modal-error" id="expiryError"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeExpiryModal()">Cancel</button>
+                <button class="btn btn-primary" id="expiryBtn" onclick="saveExpiry()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const perPage   = 25;
+
+        function getAdminToken()  { return localStorage.getItem('admin_token'); }
+        function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' }; }
+
+        function updateClock() {
+            const el = document.getElementById('currentTime');
+            if (el) el.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateClock(); setInterval(updateClock, 30000);
+
+        async function checkAuth() {
+            const token = getAdminToken();
+            if (!token) { window.location.href = '/admin/login'; return; }
+            try {
+                const res  = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+                if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+                const data = await res.json();
+                if (data.valid && data.employee) {
+                    document.getElementById('employeeName').textContent = data.employee.full_name;
+                    document.getElementById('employeeRole').textContent =
+                        data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                    document.getElementById('employeeAvatar').textContent =
+                        data.employee.full_name.charAt(0).toUpperCase();
+                    window.currentEmployee = data.employee;
+                    loadLicenses();
+                }
+            } catch (e) { window.location.href = '/admin/login'; }
+        }
+
+        async function loadLicenses(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('searchInput').value;
+            const tier   = document.getElementById('filterTier').value;
+            const status = document.getElementById('filterStatus').value;
+            let url = `/admin/api/licenses?page=${page}&per_page=${perPage}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (tier)   url += `&tier=${encodeURIComponent(tier)}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            try {
+                const res  = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                // Stats
+                if (data.stats) {
+                    document.getElementById('statTotal').textContent   = data.stats.total   ?? '—';
+                    document.getElementById('statActive').textContent  = data.stats.active  ?? '—';
+                    document.getElementById('statRevoked').textContent = data.stats.revoked ?? '—';
+                    document.getElementById('statPro').textContent     = data.stats.pro     ?? '—';
+                    document.getElementById('statEnt').textContent     = data.stats.enterprise ?? '—';
+                }
+                document.getElementById('totalCount').textContent = `${data.total ?? 0} keys`;
+                renderKeys(data.keys || []);
+                renderPagination(data.total || 0, data.page || 1, Math.ceil((data.total || 0) / perPage));
+            } catch (e) { console.error('Error loading licenses:', e); }
+        }
+
+        function renderKeys(keys) {
+            const tbody = document.getElementById('keysBody');
+            if (!keys.length) {
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="bi bi-key"></i><p>No license keys found</p></div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = keys.map(k => {
+                const preview  = k.key ? k.key.slice(0, 18) + '••••' : '—';
+                const tierCls  = k.tier === 'enterprise' ? 'enterprise' : 'pro';
+                const statCls  = k.is_active ? 'active' : 'revoked';
+                const statTxt  = k.is_active ? 'Active' : 'Revoked';
+                const created  = k.created_at ? new Date(k.created_at).toLocaleDateString() : '—';
+                const lastUsed = k.last_validated ? new Date(k.last_validated).toLocaleDateString() : 'Never';
+                const expiry   = k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '∞ Never';
+                const isExpired = k.expires_at && new Date(k.expires_at) < new Date();
+                return `
+                <tr>
+                    <td>
+                        <div class="cell-primary">${escapeHtml(k.label || 'Unnamed')}</div>
+                        <div class="cell-secondary">#${k.id}</div>
+                    </td>
+                    <td>
+                        <div class="cell-primary">${escapeHtml(k.owner_email || '?')}</div>
+                        <div class="cell-secondary">@${escapeHtml(k.owner_username || '?')}</div>
+                    </td>
+                    <td class="key-mono">${escapeHtml(preview)}</td>
+                    <td><span class="pill pill-${tierCls}">${k.tier?.toUpperCase()}</span></td>
+                    <td><span class="pill pill-${statCls}">${statTxt}${isExpired ? ' · Expired' : ''}</span></td>
+                    <td style="font-size:.78rem;color:var(--text-secondary)">${created}</td>
+                    <td style="font-size:.78rem;color:var(--text-secondary)">${lastUsed}</td>
+                    <td style="font-size:.78rem;color:${isExpired ? '#f87171' : 'var(--text-secondary)'}">${escapeHtml(expiry)}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap">
+                            <button class="btn btn-secondary btn-sm" onclick="openExpiryModal(${k.id}, '${k.expires_at ? k.expires_at.slice(0,10) : ''}')" title="Set Expiry">
+                                <i class="bi bi-calendar-event"></i>
+                            </button>
+                            ${k.is_active
+                                ? `<button class="btn btn-danger btn-sm" onclick="revokeKey(${k.id})" title="Revoke"><i class="bi bi-slash-circle"></i></button>`
+                                : `<button class="btn btn-secondary btn-sm" onclick="reinstateKey(${k.id})" title="Reinstate"><i class="bi bi-arrow-counterclockwise"></i></button>`
+                            }
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPagination(total, page, pages) {
+            const nav  = document.getElementById('paginationNav');
+            const pagi = document.getElementById('pagination');
+            if (pages <= 1) { nav.style.display = 'none'; return; }
+            nav.style.display = '';
+            let html = `<button class="pagi-btn ${page===1?'disabled':''}" onclick="loadLicenses(${page-1})">‹ Prev</button>`;
+            for (let i = 1; i <= pages; i++) {
+                if (i===1||i===pages||(i>=page-2&&i<=page+2)) {
+                    html += `<button class="pagi-btn ${i===page?'active':''}" onclick="loadLicenses(${i})">${i}</button>`;
+                } else if (i===page-3||i===page+3) {
+                    html += '<span class="pagi-btn disabled">…</span>';
+                }
+            }
+            html += `<button class="pagi-btn ${page===pages?'disabled':''}" onclick="loadLicenses(${page+1})">Next ›</button>`;
+            pagi.innerHTML = html;
+        }
+
+        async function revokeKey(id) {
+            if (!confirm('Revoke this license key? The self-hosted instance will lose access immediately.')) return;
+            try {
+                const res = await fetch(`/admin/api/licenses/${id}/revoke`, {
+                    method: 'POST', headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) loadLicenses(currentPage);
+                else alert(data.error || 'Failed to revoke.');
+            } catch (e) { alert('Request failed. Please try again.'); }
+        }
+
+        async function reinstateKey(id) {
+            if (!confirm('Re-activate this license key?')) return;
+            try {
+                const res = await fetch(`/admin/api/licenses/${id}/reinstate`, {
+                    method: 'POST', headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) loadLicenses(currentPage);
+                else alert(data.error || 'Failed to reinstate.');
+            } catch (e) { alert('Request failed. Please try again.'); }
+        }
+
+        // ── Grant modal ──────────────────────────────────────────
+        function openGrantModal() {
+            document.getElementById('grantEmail').value  = '';
+            document.getElementById('grantTier').value   = 'pro';
+            document.getElementById('grantLabel').value  = '';
+            document.getElementById('grantExpiry').value = '';
+            document.getElementById('grantError').textContent = '';
+            document.getElementById('grantSuccess').style.display = 'none';
+            document.getElementById('grantBtn').style.display = '';
+            document.getElementById('grantModal').classList.add('open');
+        }
+        function closeGrantModal() {
+            document.getElementById('grantModal').classList.remove('open');
+            loadLicenses(currentPage);
+        }
+        async function grantKey() {
+            const btn   = document.getElementById('grantBtn');
+            const errEl = document.getElementById('grantError');
+            errEl.textContent = '';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Issuing…';
+            try {
+                const body = {
+                    email:      document.getElementById('grantEmail').value.trim(),
+                    tier:       document.getElementById('grantTier').value,
+                    label:      document.getElementById('grantLabel').value.trim() || 'Admin-Issued',
+                    expires_at: document.getElementById('grantExpiry').value || null,
+                };
+                const res  = await fetch('/admin/api/licenses/grant', {
+                    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed'; }
+                else {
+                    document.getElementById('grantKeyValue').value = data.key.key;
+                    document.getElementById('grantSuccess').style.display = '';
+                    btn.style.display = 'none';
+                }
+            } catch (e) { errEl.textContent = 'Request failed.'; }
+            finally { btn.disabled = false; btn.innerHTML = 'Issue Key'; }
+        }
+
+        // ── Expiry modal ─────────────────────────────────────────
+        function openExpiryModal(id, currentExpiry) {
+            document.getElementById('expiryKeyId').value    = id;
+            document.getElementById('expiryDate').value     = currentExpiry || '';
+            document.getElementById('expiryError').textContent = '';
+            document.getElementById('expiryModal').classList.add('open');
+        }
+        function closeExpiryModal() {
+            document.getElementById('expiryModal').classList.remove('open');
+        }
+        async function saveExpiry() {
+            const btn   = document.getElementById('expiryBtn');
+            const errEl = document.getElementById('expiryError');
+            errEl.textContent = '';
+            const id    = document.getElementById('expiryKeyId').value;
+            const dateVal = document.getElementById('expiryDate').value;
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/admin/api/licenses/${id}/expiry`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ expires_at: dateVal || null }),
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed'; }
+                else { closeExpiryModal(); loadLicenses(currentPage); }
+            } catch (e) { errEl.textContent = 'Request failed.'; }
+            finally { btn.disabled = false; }
+        }
+
+        // ── Utils ────────────────────────────────────────────────
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text ?? '';
+            return d.innerHTML;
+        }
+        function logout() {
+            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
+                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
+        }
+
+        document.getElementById('searchInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') loadLicenses();
+        });
+        // Close modals on backdrop click
+        document.querySelectorAll('.modal-backdrop-custom').forEach(el => {
+            el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+        });
+
+        checkAuth();
+    </script>
+</body>
+</html>

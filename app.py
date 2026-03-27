@@ -1270,6 +1270,12 @@ def generate_license_key():
     tier = request.current_user.get('subscription_tier', 'free')
     if tier == 'free':
         return jsonify({'error': 'License keys require a Pro or Enterprise subscription'}), 403
+    if not _subscription_is_active(request.current_user):
+        return jsonify({'error': 'Your subscription has expired. Please renew to generate license keys.'}), 403
+
+    # Key limits per tier
+    KEY_LIMITS = {'pro': 3, 'enterprise': None}  # None = unlimited
+    limit = KEY_LIMITS.get(tier)
 
     data = request.get_json(silent=True) or {}
     label = str(data.get('label', 'My Instance'))[:100].strip() or 'My Instance'
@@ -1278,6 +1284,13 @@ def generate_license_key():
 
     db_session = auth_manager.get_session()
     try:
+        if limit is not None:
+            existing = db_session.query(LicenseKey).filter_by(
+                user_id=request.current_user['id'], is_active=True
+            ).count()
+            if existing >= limit:
+                return jsonify({'error': f'Pro plan allows up to {limit} active license keys. Revoke an existing key to create a new one.'}), 403
+
         lk = LicenseKey(
             user_id=request.current_user['id'],
             key=key,
@@ -3035,6 +3048,12 @@ def admin_database_page():
     return render_template('admin/database.html')
 
 
+@app.route('/admin/licenses')
+def admin_licenses_page():
+    """Admin license key management page"""
+    return render_template('admin/licenses.html')
+
+
 # ==================== Admin API Routes ====================
 
 @app.route('/admin/api/login', methods=['POST'])
@@ -3270,6 +3289,176 @@ def admin_api_delete_customer_by_email():
     
     result = auth_manager.delete_user_by_email(email)
     return jsonify(result) if result['success'] else (jsonify(result), 400)
+
+
+# ==================== Admin License Key API ====================
+
+@app.route('/admin/api/licenses', methods=['GET'])
+@require_admin
+def admin_api_licenses():
+    """List all license keys with optional filters."""
+    tier_filter  = request.args.get('tier')      # 'pro' | 'enterprise'
+    status_filter = request.args.get('status')   # 'active' | 'revoked'
+    search       = request.args.get('search', '').strip()
+    page         = request.args.get('page', 1, type=int)
+    per_page     = min(request.args.get('per_page', 25, type=int), 100)
+
+    db_session = auth_manager.get_session()
+    try:
+        from auth import LicenseKey as _LK, User as _User
+        q = db_session.query(_LK).join(_User, _LK.user_id == _User.id)
+        if tier_filter:
+            q = q.filter(_LK.tier == tier_filter)
+        if status_filter == 'active':
+            q = q.filter(_LK.is_active == True)
+        elif status_filter == 'revoked':
+            q = q.filter(_LK.is_active == False)
+        if search:
+            like = f'%{search}%'
+            q = q.filter(
+                (_LK.label.ilike(like)) |
+                (_User.email.ilike(like)) |
+                (_User.username.ilike(like))
+            )
+        total = q.count()
+        keys  = q.order_by(_LK.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        rows = []
+        for lk in keys:
+            d = lk.to_dict()
+            d['owner_email']    = lk.user.email if lk.user else '?'
+            d['owner_username'] = lk.user.username if lk.user else '?'
+            rows.append(d)
+
+        # Summary stats
+        total_all    = db_session.query(_LK).count()
+        active_all   = db_session.query(_LK).filter_by(is_active=True).count()
+        pro_all      = db_session.query(_LK).filter_by(tier='pro',        is_active=True).count()
+        ent_all      = db_session.query(_LK).filter_by(tier='enterprise', is_active=True).count()
+
+        return jsonify({
+            'keys':  rows,
+            'total': total,
+            'page':  page,
+            'per_page': per_page,
+            'stats': {
+                'total':      total_all,
+                'active':     active_all,
+                'revoked':    total_all - active_all,
+                'pro':        pro_all,
+                'enterprise': ent_all,
+            }
+        })
+    finally:
+        db_session.close()
+
+
+@app.route('/admin/api/licenses/<int:key_id>/revoke', methods=['POST'])
+@require_admin
+def admin_api_revoke_license(key_id):
+    """Revoke any license key."""
+    db_session = auth_manager.get_session()
+    try:
+        from auth import LicenseKey as _LK
+        lk = db_session.query(_LK).filter_by(id=key_id).first()
+        if not lk:
+            return jsonify({'error': 'Key not found'}), 404
+        lk.is_active = False
+        db_session.commit()
+        return jsonify({'success': True})
+    finally:
+        db_session.close()
+
+
+@app.route('/admin/api/licenses/<int:key_id>/reinstate', methods=['POST'])
+@require_admin
+def admin_api_reinstate_license(key_id):
+    """Re-activate a previously revoked key."""
+    db_session = auth_manager.get_session()
+    try:
+        from auth import LicenseKey as _LK
+        lk = db_session.query(_LK).filter_by(id=key_id).first()
+        if not lk:
+            return jsonify({'error': 'Key not found'}), 404
+        lk.is_active = True
+        db_session.commit()
+        return jsonify({'success': True})
+    finally:
+        db_session.close()
+
+
+@app.route('/admin/api/licenses/<int:key_id>/expiry', methods=['PUT'])
+@require_admin
+def admin_api_set_license_expiry(key_id):
+    """Set or clear the expiry date on a license key."""
+    from datetime import datetime as _dt
+    data = request.get_json(silent=True) or {}
+    db_session = auth_manager.get_session()
+    try:
+        from auth import LicenseKey as _LK
+        lk = db_session.query(_LK).filter_by(id=key_id).first()
+        if not lk:
+            return jsonify({'error': 'Key not found'}), 404
+        expires_str = data.get('expires_at')  # ISO string or null
+        if expires_str:
+            try:
+                lk.expires_at = _dt.fromisoformat(expires_str.replace('Z', '+00:00').replace('+00:00', ''))
+            except ValueError:
+                return jsonify({'error': 'Invalid date format (use ISO 8601)'}), 400
+        else:
+            lk.expires_at = None
+        db_session.commit()
+        return jsonify({'success': True, 'expires_at': lk.expires_at.isoformat() if lk.expires_at else None})
+    finally:
+        db_session.close()
+
+
+@app.route('/admin/api/licenses/grant', methods=['POST'])
+@require_admin
+def admin_api_grant_license():
+    """Manually issue a license key for a user (admin override, bypasses tier check)."""
+    import secrets as _secrets
+    from datetime import datetime as _dt
+    data = request.get_json(silent=True) or {}
+    email = str(data.get('email', '')).strip()
+    tier  = str(data.get('tier', '')).strip()
+    label = str(data.get('label', 'Admin-Issued'))[:100].strip() or 'Admin-Issued'
+    expires_str = data.get('expires_at')
+
+    if not email:
+        return jsonify({'error': 'email is required'}), 400
+    if tier not in ('pro', 'enterprise'):
+        return jsonify({'error': 'tier must be pro or enterprise'}), 400
+
+    owner = auth_manager.get_user_by_email(email)
+    if not owner:
+        return jsonify({'error': f'No user found with email: {email}'}), 404
+
+    expires_at = None
+    if expires_str:
+        try:
+            expires_at = _dt.fromisoformat(expires_str.replace('Z', '+00:00').replace('+00:00', ''))
+        except ValueError:
+            return jsonify({'error': 'Invalid date format (use ISO 8601)'}), 400
+
+    key_val = 'sl_' + _secrets.token_urlsafe(40)
+    db_session = auth_manager.get_session()
+    try:
+        from auth import LicenseKey as _LK
+        lk = _LK(
+            user_id=owner['id'],
+            key=key_val,
+            tier=tier,
+            label=label,
+            expires_at=expires_at,
+        )
+        db_session.add(lk)
+        db_session.commit()
+        d = lk.to_dict()
+        d['owner_email'] = email
+        return jsonify({'key': d}), 201
+    finally:
+        db_session.close()
 
 
 # ==================== Employee Onboarding API ====================
