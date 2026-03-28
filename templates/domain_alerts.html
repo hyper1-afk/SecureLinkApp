@@ -189,7 +189,7 @@
         let _token = null;
         let _isPro = false;
 
-        (async function init() {
+        async function init() {
             _token = localStorage.getItem('auth_token');
             const authLink = document.getElementById('authLink');
             const brandLink = document.getElementById('brandLink');
@@ -214,7 +214,9 @@
                     loadWatches();
                 }
             } catch(e) {}
-        })();
+        }
+        init();
+        window.addEventListener('pageshow', function(e) { if (e.persisted) init(); });
 
         function showUpgrade(title, text, href, btnText) {
             const b = document.getElementById('upgradeBanner');

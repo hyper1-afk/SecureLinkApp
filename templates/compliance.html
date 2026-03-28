@@ -712,6 +712,7 @@
 
         // ── Init ──────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', checkAuth);
+        window.addEventListener('pageshow', function(e) { if (e.persisted) checkAuth(); });
 
     })();
     </script>
