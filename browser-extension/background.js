@@ -344,13 +344,21 @@ function showWarning(tabId, url, result) {
     chrome.tabs.update(tabId, { url: warningUrl });
 }
 
-// Show upgrade prompt when rate limited
+// Show upgrade prompt when rate limited — only open one tab
 function showUpgradePrompt(tabId, message) {
-    const upgradeUrl = chrome.runtime.getURL('upgrade.html') + 
-        `?message=${encodeURIComponent(message)}`;
-    
-    // Show upgrade prompt in new tab (don't block navigation)
-    chrome.tabs.create({ url: upgradeUrl, active: false });
+    const upgradeBase = chrome.runtime.getURL('upgrade.html');
+
+    // If an upgrade tab is already open, just focus it instead of opening another
+    chrome.tabs.query({}, (tabs) => {
+        const existing = tabs.find(t => t.url && t.url.startsWith(upgradeBase));
+        if (existing) {
+            chrome.tabs.update(existing.id, { active: true });
+            chrome.windows.update(existing.windowId, { focused: true });
+        } else {
+            const upgradeUrl = upgradeBase + `?message=${encodeURIComponent(message)}`;
+            chrome.tabs.create({ url: upgradeUrl, active: false });
+        }
+    });
 }
 
 // Login function
