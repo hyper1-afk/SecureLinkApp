@@ -338,7 +338,7 @@
         }
     </style>
 </head>
-<body>
+<body style="visibility:hidden;">
     <div class="bg-grid"></div>
     <div class="bg-glow"></div>
 
@@ -489,10 +489,10 @@
     <script>
         const token = localStorage.getItem('auth_token');
 
-        // Check subscription - Pro or Enterprise required
-        (async function checkSubscription() {
+        // Check subscription - Pro or higher required
+        async function checkSubscription() {
             if (!token) {
-                window.location.href = '/pricing?upgrade=pro&feature=shortener';
+                window.location.replace('/pricing?upgrade=pro&feature=shortener');
                 return;
             }
             try {
@@ -502,12 +502,22 @@
                 const profile = await res.json();
                 const tier = (profile.user && profile.user.subscription_tier) || 'free';
                 if (tier === 'free') {
-                    window.location.href = '/pricing?upgrade=pro&feature=shortener';
+                    window.location.replace('/pricing?upgrade=pro&feature=shortener');
+                    return;
                 }
             } catch (e) {
-                window.location.href = '/pricing?upgrade=pro&feature=shortener';
+                window.location.replace('/pricing?upgrade=pro&feature=shortener');
+                return;
             }
-        })();
+            // Auth passed — reveal page
+            document.body.style.visibility = 'visible';
+        }
+        checkSubscription();
+
+        // Re-run auth when page is restored from bfcache
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) checkSubscription();
+        });
 
         async function shortenUrl() {
             const url = document.getElementById('urlInput').value;

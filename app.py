@@ -170,6 +170,17 @@ def add_security_headers(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
 
+    # Prevent bfcache on tier-gated pages so the back button can't bypass the
+    # client-side subscription check that runs on page load.
+    _GATED_PAGES = (
+        '/dark-web-monitor', '/compliance', '/organization',
+        '/attack-surface', '/shortener', '/domain-alerts',
+        '/breach-checker', '/pdf-export',
+    )
+    if any(request.path == p or request.path.startswith(p + '/') for p in _GATED_PAGES):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+
     return response
 
 # Initialize services

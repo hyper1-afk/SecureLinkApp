@@ -369,7 +369,7 @@
         }
     </style>
 </head>
-<body>
+<body style="visibility:hidden;">
     <div class="bg-grid"></div>
     <div class="bg-glow"></div>
 
@@ -1151,10 +1151,10 @@ if ($result['verdict'] === 'block') {
         let currentOrg = null;
         let apiKeyVisible = false;
 
-        // Check subscription - Enterprise required
-        (async function checkSubscription() {
+        // Check subscription - Team or Enterprise required
+        async function checkSubscription() {
             if (!token) {
-                window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+                window.location.replace('/pricing?upgrade=team&feature=organization');
                 return;
             }
             try {
@@ -1163,13 +1163,23 @@ if ($result['verdict'] === 'block') {
                 });
                 const profile = await res.json();
                 const tier = (profile.user && profile.user.subscription_tier) || 'free';
-                if (tier !== 'enterprise') {
-                    window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+                if (tier !== 'team' && tier !== 'enterprise') {
+                    window.location.replace('/pricing?upgrade=team&feature=organization');
+                    return;
                 }
             } catch (e) {
-                window.location.href = '/pricing?upgrade=enterprise&feature=organization';
+                window.location.replace('/pricing?upgrade=team&feature=organization');
+                return;
             }
-        })();
+            // Auth passed — reveal page
+            document.body.style.visibility = 'visible';
+        }
+        checkSubscription();
+
+        // Re-run auth when page is restored from bfcache
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) checkSubscription();
+        });
 
         // Check auth and load data
         async function init() {
