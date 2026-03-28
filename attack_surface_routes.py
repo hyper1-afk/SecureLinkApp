@@ -60,10 +60,10 @@ def require_auth_as(f):
             'organization_id': user_info.get('organization_id'),
             'plan_limits': raw.get('plan_limits', {}),
         }
-        # Enterprise-only gate
-        if user_data['subscription_tier'] != 'enterprise':
+        # Team and Enterprise only
+        if user_data['subscription_tier'] not in ('team', 'enterprise'):
             return jsonify({
-                'error': 'Attack Surface Monitoring is available on the Enterprise plan only.',
+                'error': 'Attack Surface Monitoring is available on the Team and Enterprise plans.',
                 'upgrade_required': True
             }), 403
         kwargs['user_data'] = user_data
@@ -433,17 +433,24 @@ def reset_baseline(domain_id, user_data=None):
 # ================================================================
 
 def _get_domain_limits(tier: str) -> dict:
-    """Get domain monitoring limits based on subscription tier (enterprise only)"""
-    if tier != 'enterprise':
+    """Get domain monitoring limits based on subscription tier"""
+    if tier == 'team':
         return {
-            'max_domains': 0,
-            'default_frequency': None,
-            'allowed_frequencies': [],
+            'max_domains': 5,
+            'default_frequency': 'daily',
+            'allowed_frequencies': ['daily', 'weekly'],
             'ai_advice': False,
         }
+    if tier == 'enterprise':
+        return {
+            'max_domains': 25,
+            'default_frequency': 'daily',
+            'allowed_frequencies': ['hourly', 'daily', 'weekly'],
+            'ai_advice': True,
+        }
     return {
-        'max_domains': 25,
-        'default_frequency': 'daily',
-        'allowed_frequencies': ['hourly', 'daily', 'weekly'],
-        'ai_advice': True,
+        'max_domains': 0,
+        'default_frequency': None,
+        'allowed_frequencies': [],
+        'ai_advice': False,
     }

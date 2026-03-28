@@ -32,6 +32,7 @@ class SubscriptionTier(Enum):
     """Subscription plans"""
     FREE = "free"
     PRO = "pro"
+    TEAM = "team"
     ENTERPRISE = "enterprise"
 
 
@@ -138,6 +139,20 @@ class User(Base):
                 'scan_frequency': None,
                 'ai_remediation': False,
                 'attack_surface': False,
+            },
+            SubscriptionTier.TEAM.value: {
+                'daily_scans': -1,  # Unlimited
+                'dark_web_monitoring': True,
+                'max_monitored_assets': 20,
+                'api_access': True,
+                'priority_support': False,
+                'advanced_analysis': True,
+                'whitelist_blacklist': True,
+                'export_reports': True,
+                'max_monitored_domains': 5,
+                'scan_frequency': 'daily',
+                'ai_remediation': False,
+                'attack_surface': True,
             },
             SubscriptionTier.ENTERPRISE.value: {
                 'daily_scans': -1,  # Unlimited
@@ -2212,56 +2227,71 @@ SUBSCRIPTION_PLANS = {
         'period': 'forever',
         'max_monitored_assets': 0,
         'features': [
-            '25 link scans per day',
-            'Basic threat detection',
-            'Security scorecard & grade',
-            '7-day scan history',
+            'Domain health check (3/day)',
+            'SSL, SPF, DMARC & header audit',
+            'One-time dark web breach lookup',
             'Browser extension',
-            'Desktop notifications'
+            '7-day scan history',
         ],
         'limitations': [
             'No dark web monitoring',
-            'No Compliance Center',
-            'No Attack Surface Monitoring',
-            'No API access'
+            'No API access',
+            'No organization features',
+            'No attack surface monitoring',
         ]
     },
     'pro': {
         'name': 'Pro',
-        'price': 14.99,
+        'price': 19.99,
         'period': 'month',
         'max_monitored_assets': 5,
         'features': [
-            'Unlimited link scans',
-            'Advanced threat detection',
-            'Full scan history',
-            'Dark web monitoring (5 assets)',
-            'Compliance Center (SOC 2, ISO 27001, GDPR)',
-            'API access',
-            'Whitelist/Blacklist',
-            'Export reports',
-            'Email support'
+            'Everything in Free',
+            'Unlimited domain health checks',
+            'Dark web monitoring & alerts (5 assets)',
+            'Weekly security reports (PDF)',
+            'API access & export',
+            'Security news feed',
         ],
         'limitations': [
-            'No Attack Surface Monitoring',
-            'No AI remediation advice'
+            'No team/org features',
+            'No attack surface monitoring',
+        ]
+    },
+    'team': {
+        'name': 'Team',
+        'price': 49.99,
+        'period': 'month',
+        'max_monitored_assets': 20,
+        'features': [
+            'Everything in Pro',
+            'Organization dashboard (up to 10 members)',
+            'Compliance Center (SOC 2, ISO 27001, GDPR)',
+            'Webhook alerts (Slack, Discord, Teams)',
+            'Dark web monitoring (20 assets)',
+            'Attack surface monitoring (5 domains)',
+            'Daily security reports (PDF)',
+        ],
+        'limitations': [
+            'No network gateway',
+            'No intrusion detection (IDS)',
         ]
     },
     'enterprise': {
         'name': 'Enterprise',
-        'price': 59.99,
+        'price': 99.99,
         'period': 'month',
         'max_monitored_assets': -1,
         'features': [
-            'Unlimited link scans',
-            'Everything in Pro',
-            'Unlimited dark web monitoring',
-            'Attack Surface Monitoring (25 domains, hourly)',
-            'Compliance Center with exportable reports',
-            'AI-powered remediation advice',
-            'Team management',
-            'Scheduled reports',
-            'Priority support'
+            'Everything in Team',
+            'Network gateway (real-time URL blocking)',
+            'Intrusion detection (IDS)',
+            'Hourly scans with A-F security grade',
+            'Attack surface monitoring (25 domains)',
+            'AI remediation recommendations',
+            'Named-user seat licensing',
+            'Self-host on your own server',
+            'Priority support',
         ],
         'limitations': []
     }

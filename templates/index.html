@@ -2984,16 +2984,20 @@
                     if (bannerDesc) bannerDesc.textContent = 'Upgrade to Pro to monitor your email addresses for data breaches on the dark web.';
                 } else if (tier === 'pro') {
                     upgradeBanner.style.display = 'block';
-                    if (bannerTitle) bannerTitle.textContent = 'Unlock Attack Surface Monitoring';
-                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Enterprise for domain security scanning and full organizational protection.';
+                    if (bannerTitle) bannerTitle.textContent = 'Unlock Team Features';
+                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Team for org dashboard, compliance center, webhook alerts, and attack surface monitoring.';
+                } else if (tier === 'team') {
+                    upgradeBanner.style.display = 'block';
+                    if (bannerTitle) bannerTitle.textContent = 'Unlock Enterprise Features';
+                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Enterprise for the network gateway, IDS, AI remediation, and 25-domain attack surface monitoring.';
                 } else {
                     upgradeBanner.style.display = 'none';
                 }
             }
 
-            // Show PDF report button for Enterprise users
+            // Show PDF report button for Team and Enterprise users
             const downloadReportBtn = document.getElementById('downloadReportBtn');
-            if (downloadReportBtn && (user.subscription_tier === 'enterprise')) {
+            if (downloadReportBtn && (user.subscription_tier === 'enterprise' || user.subscription_tier === 'team')) {
                 downloadReportBtn.style.display = 'inline-flex';
             }
 

@@ -1043,17 +1043,16 @@
                             
                             <div class="row">
                                 <!-- Free Plan -->
-                                <div class="col-md-4 mb-4">
+                                <div class="col-md-3 mb-4">
                                     <div class="plan-card" id="plan-free">
                                         <h5>Free</h5>
                                         <div class="plan-price">$0</div>
-                                        <p class="text-secondary">Perfect for casual users</p>
+                                        <p class="text-secondary">Free forever</p>
                                         
                                         <ul class="plan-features">
-                                            <li><i class="bi bi-check-circle-fill"></i>25 scans per day</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Basic threat detection</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Domain health check (3/day)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Browser extension</li>
                                             <li><i class="bi bi-check-circle-fill"></i>7-day history</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Desktop notifications</li>
                                             <li><i class="bi bi-x-circle-fill"></i>Dark web monitoring</li>
                                             <li><i class="bi bi-x-circle-fill"></i>API access</li>
                                         </ul>
@@ -1063,21 +1062,20 @@
                                 </div>
                                 
                                 <!-- Pro Plan -->
-                                <div class="col-md-4 mb-4">
+                                <div class="col-md-3 mb-4">
                                     <div class="plan-card popular" id="plan-pro">
                                         <div class="popular-badge">Most Popular</div>
                                         <h5>Pro</h5>
-                                        <div class="plan-price" id="proPriceDisplay">$14.99<span>/month</span></div>
-                                        <p class="text-secondary yearly-savings d-none" id="proYearlySavings">Save $29.89/year!</p>
-                                        <p class="text-secondary">For power users</p>
+                                        <div class="plan-price" id="proPriceDisplay">$19.99<span>/month</span></div>
+                                        <p class="text-secondary yearly-savings d-none" id="proYearlySavings">Save $39.89/year!</p>
+                                        <p class="text-secondary">For professionals</p>
                                         
                                         <ul class="plan-features">
-                                            <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Advanced threat detection</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Full history</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Dark web monitoring</strong></li>
-                                            <li><i class="bi bi-check-circle-fill"></i>API access</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Whitelist/Blacklist</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Unlimited health checks</li>
+                                            <li><i class="bi bi-check-circle-fill"></i><strong>Dark web monitoring</strong> (5 assets)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Weekly PDF reports</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>API access &amp; export</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Security news feed</li>
                                         </ul>
                                         
                                         <button class="btn btn-primary w-100" id="proBtn" onclick="handlePlanClick('pro')">
@@ -1085,21 +1083,42 @@
                                         </button>
                                     </div>
                                 </div>
-                                
-                                <!-- Enterprise Plan -->
-                                <div class="col-md-4 mb-4">
-                                    <div class="plan-card" id="plan-enterprise">
-                                        <h5>Enterprise</h5>
-                                        <div class="plan-price" id="enterprisePriceDisplay">$59.99<span>/month</span></div>
-                                        <p class="text-secondary yearly-savings d-none" id="enterpriseYearlySavings">Save $119.89/year!</p>
-                                        <p class="text-secondary">For teams & businesses</p>
+
+                                <!-- Team Plan -->
+                                <div class="col-md-3 mb-4">
+                                    <div class="plan-card" id="plan-team" style="border-color:rgba(16,185,129,0.35);">
+                                        <h5 style="color:#34d399;">Team</h5>
+                                        <div class="plan-price" id="teamPriceDisplay">$49.99<span>/month</span></div>
+                                        <p class="text-secondary yearly-savings d-none" id="teamYearlySavings">Save $99.89/year!</p>
+                                        <p class="text-secondary">For small organizations</p>
                                         
                                         <ul class="plan-features">
-                                            <li><i class="bi bi-check-circle-fill"></i>Unlimited scans</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Everything in Pro</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Unlimited dark web monitoring</strong></li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Attack Surface Monitoring</li>
-                                            <li><i class="bi bi-check-circle-fill"></i>Team management</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Org dashboard (10 members)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Compliance Center</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Webhook alerts</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Attack surface (5 domains)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Daily PDF reports</li>
+                                        </ul>
+                                        
+                                        <button class="btn w-100" id="teamBtn" onclick="handlePlanClick('team')" style="background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;border:none;">
+                                            <i class="bi bi-people-fill me-2"></i>Get Team Plan
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Enterprise Plan -->
+                                <div class="col-md-3 mb-4">
+                                    <div class="plan-card" id="plan-enterprise" style="border-color:rgba(139,92,246,0.35);">
+                                        <h5 style="color:#a78bfa;">Enterprise</h5>
+                                        <div class="plan-price" id="enterprisePriceDisplay">$99.99<span>/month</span></div>
+                                        <p class="text-secondary yearly-savings d-none" id="enterpriseYearlySavings">Save $199.89/year!</p>
+                                        <p class="text-secondary">For large organizations</p>
+                                        
+                                        <ul class="plan-features">
+                                            <li><i class="bi bi-check-circle-fill"></i>Network gateway &amp; IDS</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Attack surface (25 domains)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>AI remediation</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Seat licensing</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Priority support</li>
                                         </ul>
                                         
@@ -1395,9 +1414,9 @@
             const planName = tier.charAt(0).toUpperCase() + tier.slice(1);
             document.getElementById('dashPlan').textContent = planName;
 
-            // Show PDF report download for Enterprise users
+            // Show PDF report download for Team and Enterprise users
             const profileDownloadBtn = document.getElementById('profileDownloadReportBtn');
-            if (profileDownloadBtn && tier === 'enterprise') {
+            if (profileDownloadBtn && (tier === 'enterprise' || tier === 'team')) {
                 profileDownloadBtn.style.display = 'block';
             }
             
@@ -1410,7 +1429,7 @@
                 document.getElementById('dashPlanExpiry').textContent = 'Active subscription';
             }
 
-            const subColors = { 'free': '#64748b', 'pro': '#f59e0b', 'enterprise': '#8b5cf6' };
+            const subColors = { 'free': '#64748b', 'pro': '#f59e0b', 'team': '#10b981', 'enterprise': '#8b5cf6' };
             const c = subColors[tier] || '#64748b';
             const icon = document.getElementById('dashSubIcon');
             icon.style.background = `${c}22`;
@@ -1421,7 +1440,7 @@
             const tier = currentUser.subscription_tier || 'free';
             if (tier === 'free') {
                 document.getElementById('dashDarkWebAlerts').textContent = '-';
-                document.getElementById('dashDarkWebStatus').textContent = 'Requires Pro or Enterprise';
+                document.getElementById('dashDarkWebStatus').textContent = 'Requires Pro or higher';
             } else if (currentUser.dark_web_monitoring_enabled) {
                 document.getElementById('dashDarkWebAlerts').textContent = '0';
                 document.getElementById('dashDarkWebStatus').textContent = 'Monitoring active';
@@ -1591,7 +1610,7 @@
         function handlePlanClick(plan) {
             console.log('handlePlanClick called with plan:', plan);
             const currentTier = currentUser?.subscription_tier || 'free';
-            const planOrder = { 'free': 0, 'pro': 1, 'enterprise': 2 };
+            const planOrder = { 'free': 0, 'pro': 1, 'team': 2, 'enterprise': 3 };
             
             console.log('Current tier:', currentTier, 'Target plan:', plan);
             
@@ -1628,6 +1647,7 @@
             // Get buttons
             const freeBtn = document.getElementById('freeBtn');
             const proBtn = document.getElementById('proBtn');
+            const teamBtn = document.getElementById('teamBtn');
             const enterpriseBtn = document.getElementById('enterpriseBtn');
             
             // Show/hide manage subscription section
@@ -1656,6 +1676,12 @@
                 proBtn.innerHTML = '<i class="bi bi-lightning-fill me-2"></i>Upgrade to Pro';
                 proBtn.disabled = false;
                 proBtn.className = 'btn btn-primary w-100';
+
+                if (teamBtn) {
+                    teamBtn.innerHTML = '<i class="bi bi-people-fill me-2"></i>Get Team Plan';
+                    teamBtn.disabled = false;
+                    teamBtn.style.cssText = 'background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;border:none;';
+                }
                 
                 enterpriseBtn.innerHTML = '<i class="bi bi-building me-2"></i>Upgrade to Enterprise';
                 enterpriseBtn.disabled = false;
@@ -1669,7 +1695,32 @@
                 proBtn.textContent = 'Current Plan';
                 proBtn.disabled = true;
                 proBtn.className = 'btn btn-success w-100';
+
+                if (teamBtn) {
+                    teamBtn.innerHTML = '<i class="bi bi-people-fill me-2"></i>Upgrade to Team';
+                    teamBtn.disabled = false;
+                    teamBtn.style.cssText = 'background:linear-gradient(135deg,#10b981,#0ea5e9);color:#fff;border:none;';
+                }
                 
+                enterpriseBtn.innerHTML = '<i class="bi bi-building me-2"></i>Upgrade to Enterprise';
+                enterpriseBtn.disabled = false;
+                enterpriseBtn.className = 'btn btn-outline-light w-100';
+
+            } else if (tier === 'team') {
+                freeBtn.textContent = 'Downgrade to Free';
+                freeBtn.disabled = false;
+                freeBtn.className = 'btn btn-outline-light w-100';
+
+                proBtn.innerHTML = '<i class="bi bi-arrow-down me-2"></i>Downgrade to Pro';
+                proBtn.disabled = false;
+                proBtn.className = 'btn btn-outline-light w-100';
+
+                if (teamBtn) {
+                    teamBtn.textContent = 'Current Plan';
+                    teamBtn.disabled = true;
+                    teamBtn.style.cssText = 'background:#10b981;color:#fff;border:none;opacity:0.8;';
+                }
+
                 enterpriseBtn.innerHTML = '<i class="bi bi-building me-2"></i>Upgrade to Enterprise';
                 enterpriseBtn.disabled = false;
                 enterpriseBtn.className = 'btn btn-outline-light w-100';
@@ -1682,13 +1733,19 @@
                 proBtn.innerHTML = '<i class="bi bi-arrow-down me-2"></i>Downgrade to Pro';
                 proBtn.disabled = false;
                 proBtn.className = 'btn btn-outline-light w-100';
+
+                if (teamBtn) {
+                    teamBtn.innerHTML = '<i class="bi bi-arrow-down me-2"></i>Downgrade to Team';
+                    teamBtn.disabled = false;
+                    teamBtn.style.cssText = 'background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);';
+                }
                 
                 enterpriseBtn.textContent = 'Current Plan';
                 enterpriseBtn.disabled = true;
                 enterpriseBtn.className = 'btn btn-success w-100';
             }
             
-            console.log('Buttons updated - Free:', freeBtn.textContent, 'Pro:', proBtn.textContent, 'Enterprise:', enterpriseBtn.textContent);
+            console.log('Buttons updated - tier:', tier);
             
         }
         
@@ -1871,7 +1928,7 @@
         
         async function changePlan(plan) {
             const currentTier = currentUser.subscription_tier || 'free';
-            const planOrder = { 'free': 0, 'pro': 1, 'enterprise': 2 };
+            const planOrder = { 'free': 0, 'pro': 1, 'team': 2, 'enterprise': 3 };
             const isDowngrade = planOrder[plan] < planOrder[currentTier];
             
             if (!isDowngrade) return;
@@ -1881,6 +1938,10 @@
             message += '\n\nWarning: You may lose access to some features.';
             if (plan === 'free') {
                 message += '\n• Dark web monitoring will be disabled\n• API access will be removed';
+            } else if (plan === 'pro') {
+                message += '\n• Organization and team features will be disabled\n• Attack surface monitoring will be disabled';
+            } else if (plan === 'team') {
+                message += '\n• Network gateway and IDS will be disabled\n• Attack surface monitoring limited to 5 domains';
             }
             
             if (!confirm(message)) return;

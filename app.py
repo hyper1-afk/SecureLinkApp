@@ -245,7 +245,7 @@ def _subscription_is_active(user):
 
 
 def require_pro(f):
-    """Decorator to require an active Pro (or Enterprise) subscription"""
+    """Decorator to require an active Pro (or higher) subscription"""
     @wraps(f)
     @require_auth
     def decorated(*args, **kwargs):
@@ -253,6 +253,21 @@ def require_pro(f):
         tier = user.get('subscription_tier')
         if tier == SubscriptionTier.FREE.value:
             return jsonify({'error': 'This feature requires a Pro subscription'}), 403
+        if not _subscription_is_active(user):
+            return jsonify({'error': 'Your subscription has expired. Please renew to access this feature.'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def require_team(f):
+    """Decorator to require an active Team (or Enterprise) subscription"""
+    @wraps(f)
+    @require_auth
+    def decorated(*args, **kwargs):
+        user = request.current_user
+        tier = user.get('subscription_tier')
+        if tier not in (SubscriptionTier.TEAM.value, SubscriptionTier.ENTERPRISE.value):
+            return jsonify({'error': 'This feature requires a Team subscription'}), 403
         if not _subscription_is_active(user):
             return jsonify({'error': 'Your subscription has expired. Please renew to access this feature.'}), 403
         return f(*args, **kwargs)
@@ -1560,7 +1575,7 @@ def upgrade_subscription():
     plan = data.get('plan', 'pro')
     
     current_tier = request.current_user.get('subscription_tier', 'free')
-    plan_order = {'free': 0, 'pro': 1, 'enterprise': 2}
+    plan_order = {'free': 0, 'pro': 1, 'team': 2, 'enterprise': 3}
     is_downgrade = plan_order.get(plan, 0) < plan_order.get(current_tier, 0)
     
     # Always allow downgrades (free)
@@ -1612,7 +1627,7 @@ def create_checkout_session():
     plan = data.get('plan', 'pro')
     billing_period = data.get('billing_period', 'monthly')
     
-    if plan not in ['pro', 'enterprise']:
+    if plan not in ['pro', 'team', 'enterprise']:
         return jsonify({'error': 'Invalid plan'}), 400
     
     if billing_period not in ['monthly', 'yearly']:
@@ -1680,7 +1695,7 @@ def verify_payment():
     if result and result.get('success'):
         # Use plan from Stripe session metadata — never trust the client-supplied plan
         plan = result.get('plan')
-        if plan not in ['pro', 'enterprise']:
+        if plan not in ['pro', 'team', 'enterprise']:
             logger.error(f"verify_payment: invalid plan '{plan}' in Stripe session {session_id}")
             return jsonify({'error': 'Invalid plan in session metadata'}), 400
 
@@ -2112,7 +2127,7 @@ def health_check_pdf():
 
     user = request.current_user
     tier = user.get('subscription_tier', 'free')
-    if tier not in ('pro', 'enterprise'):
+    if tier not in ('pro', 'team', 'enterprise'):
         return jsonify({'error': 'PDF export requires a Pro plan'}), 403
 
     data = request.get_json() or {}
@@ -2321,7 +2336,7 @@ def add_health_watch():
     """Add a domain to a Pro user's watch list for score-drop alerts."""
     user = request.current_user
     tier = user.get('subscription_tier', 'free')
-    if tier not in ('pro', 'enterprise'):
+    if tier not in ('pro', 'team', 'enterprise'):
         return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
 
     import re as _re
@@ -2346,7 +2361,7 @@ def remove_health_watch(domain):
     """Remove a domain from a Pro user's watch list."""
     user = request.current_user
     tier = user.get('subscription_tier', 'free')
-    if tier not in ('pro', 'enterprise'):
+    if tier not in ('pro', 'team', 'enterprise'):
         return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
     db.remove_health_watch(user['id'], domain)
     return jsonify({'success': True})
@@ -2358,7 +2373,7 @@ def list_health_watches():
     """List all watched domains for the current Pro user."""
     user = request.current_user
     tier = user.get('subscription_tier', 'free')
-    if tier not in ('pro', 'enterprise'):
+    if tier not in ('pro', 'team', 'enterprise'):
         return jsonify({'error': 'Domain watch alerts require a Pro plan'}), 403
     return jsonify({'watches': db.get_health_watches(user['id'])})
 
@@ -2852,8 +2867,8 @@ def generate_security_report_pdf():
     from attack_surface_db import AttackSurfaceDB
 
     user = request.current_user
-    if user.get('subscription_tier') != 'enterprise':
-        return jsonify({'error': 'PDF reports require an Enterprise plan'}), 403
+    if user.get('subscription_tier') not in ('team', 'enterprise'):
+        return jsonify({'error': 'PDF reports require a Team or Enterprise plan'}), 403
 
     user_id = user['id']
     user_name = user.get('display_name') or user.get('username') or user['email'].split('@')[0]
@@ -3489,8 +3504,8 @@ def admin_api_grant_license():
 
     if not email:
         return jsonify({'error': 'email is required'}), 400
-    if tier not in ('pro', 'enterprise'):
-        return jsonify({'error': 'tier must be pro or enterprise'}), 400
+    if tier not in ('pro', 'team', 'enterprise'):
+        return jsonify({'error': 'tier must be pro, team, or enterprise'}), 400
 
     owner = auth_manager.get_user_by_email(email)
     if not owner:
@@ -4541,8 +4556,8 @@ def org_licenses_checkout(org_id):
     except (TypeError, ValueError):
         seat_count = 1
 
-    if tier not in ('pro', 'enterprise'):
-        return jsonify({'error': 'tier must be pro or enterprise'}), 400
+    if tier not in ('pro', 'team', 'enterprise'):
+        return jsonify({'error': 'tier must be pro, team, or enterprise'}), 400
     if billing_period not in ('monthly', 'yearly'):
         return jsonify({'error': 'billing_period must be monthly or yearly'}), 400
     if not (1 <= seat_count <= 1000):

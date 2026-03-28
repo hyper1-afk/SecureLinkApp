@@ -59,10 +59,10 @@ def _require_auth(f):
             'subscription_tier': user_info.get('subscription_tier', 'free'),
             'organization_name': user_info.get('full_name', ''),
         }
-        # Enterprise only
-        if user_data['subscription_tier'] != 'enterprise':
+        # Team and Enterprise only
+        if user_data['subscription_tier'] not in ('team', 'enterprise'):
             return jsonify({
-                'error': 'Compliance Center is only available to Enterprise plan users.',
+                'error': 'Compliance Center is available on the Team and Enterprise plans.',
                 'upgrade_required': True,
             }), 403
         kwargs['user_data'] = user_data
