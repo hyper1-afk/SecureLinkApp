@@ -108,6 +108,16 @@ limiter = Limiter(
 # ================================================================
 #  Firewall — inspect every request before routing
 # ================================================================
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """Return JSON (not HTML) when a rate limit is hit."""
+    return jsonify({
+        'error': 'Too many requests. Please wait a moment and try again.',
+        'retry_after': getattr(e, 'description', 'soon')
+    }), 429
+
+
 @app.before_request
 def firewall_check():
     """Application-layer firewall: block bad IPs and suspicious requests."""

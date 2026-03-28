@@ -408,8 +408,8 @@
             resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--accent-color);" role="status"></span><p class="mt-2">Checking breaches...</p></div>';
             resultDiv.classList.remove('hidden');
 
-            // Pro users get full breach details; free/anonymous users get count + risk only
-            const isPro = userTier === 'pro' || userTier === 'enterprise';
+            // Pro/Team users get full breach details; free/anonymous users get count + risk only
+            const isPro = userTier === 'pro' || userTier === 'team' || userTier === 'enterprise';
 
             try {
                 let response, data;
@@ -420,14 +420,20 @@
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ email })
                     });
-                    data = await response.json();
                 } else {
                     response = await fetch('/api/public/breach-check', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email })
                     });
+                }
+
+                // Safely parse JSON — server may return HTML on 429/500
+                try {
                     data = await response.json();
+                } catch (_) {
+                    resultDiv.innerHTML = `<div class="upgrade-box"><i class="bi bi-exclamation-circle me-2"></i>${response.status === 429 ? 'Too many requests — please wait a moment and try again.' : 'Service temporarily unavailable. Please try again.'}</div>`;
+                    return;
                 }
 
                 if (!response.ok) {
