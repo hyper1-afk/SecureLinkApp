@@ -2018,11 +2018,11 @@
                                 <a href="/dark-web-monitor" class="alert-link">Go to Dark Web Monitor</a> to set up monitoring for your email addresses and credentials.
                             </div>
                             
-                            <!-- Pro Required Warning -->
+                            <!-- Free tier dark web note -->
                             <div id="proRequiredWarning" class="alert alert-info" style="display: none;">
-                                <i class="bi bi-info-circle me-2"></i>
-                                Dark web monitoring requires a <strong>Pro</strong> subscription.
-                                <a href="/profile#subscription" class="alert-link">Upgrade now</a> to monitor the dark web for your exposed data.
+                                <i class="bi bi-shield-check me-2"></i>
+                                Your registered email is being monitored on the free plan (1 asset).
+                                <a href="/pricing" class="alert-link">Upgrade to Pro</a> to monitor up to 5 assets with full breach alerts.
                             </div>
                             
                             <h6 class="mt-4 mb-3">Recent Dark Web Alerts</h6>
@@ -2879,18 +2879,13 @@
                 const validateData = await validateResponse.json();
                 
                 const swDarkWeb = document.getElementById('swDarkWebStatus');
-                if (validateData.valid && validateData.user.subscription_tier === 'free') {
-                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Pro required</span>';
-                    if (accountsInfo) accountsInfo.style.display = 'none';
-                    if (noAccountsWarning) noAccountsWarning.style.display = 'none';
-                    if (proRequiredWarning) proRequiredWarning.style.display = 'block';
-                    if (swDarkWeb) swDarkWeb.textContent = 'Off';
-                } else if (validateData.valid) {
+                const isFree = validateData.valid && validateData.user.subscription_tier === 'free';
+                if (validateData.valid) {
                     status.innerHTML = '<span class="status-dot connected"></span><span><i class="bi bi-shield-check me-1"></i>Dark Web: Active</span>';
                     if (accountsInfo) accountsInfo.style.display = 'block';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'none';
-                    if (proRequiredWarning) proRequiredWarning.style.display = 'none';
-                    if (connectedAccountsText) connectedAccountsText.textContent = 'Dark web monitoring is active';
+                    if (proRequiredWarning) proRequiredWarning.style.display = isFree ? 'block' : 'none';
+                    if (connectedAccountsText) connectedAccountsText.textContent = isFree ? 'Monitoring 1 email (free plan)' : 'Dark web monitoring is active';
                     if (swDarkWeb) swDarkWeb.textContent = 'Active';
                 } else {
                     status.innerHTML = '<span class="status-dot disconnected"></span><span>Dark Web: Not configured</span>';
@@ -2980,8 +2975,8 @@
                 const bannerDesc = document.getElementById('upgradeBannerDesc');
                 if (tier === 'free') {
                     upgradeBanner.style.display = 'block';
-                    if (bannerTitle) bannerTitle.textContent = 'Unlock Dark Web Monitoring';
-                    if (bannerDesc) bannerDesc.textContent = 'Upgrade to Pro to monitor your email addresses for data breaches on the dark web.';
+                    if (bannerTitle) bannerTitle.textContent = 'Expand Dark Web Monitoring';
+                    if (bannerDesc) bannerDesc.textContent = 'You\'re monitoring 1 email on the free plan. Upgrade to Pro to monitor up to 5 assets with instant breach alerts.';
                 } else if (tier === 'pro') {
                     upgradeBanner.style.display = 'block';
                     if (bannerTitle) bannerTitle.textContent = 'Unlock Team Features';
