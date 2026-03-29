@@ -354,8 +354,14 @@
         </div>
     </section>
 
-    <!-- Main Content (requires Pro) -->
+    <!-- Main Content (all authenticated users) -->
     <div id="mainContent" class="container py-4" style="display: none;">
+
+        <!-- Free tier banner (shown for free users only) -->
+        <div id="freeTierBanner" class="alert mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" style="display: none !important; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35); border-radius: 12px; color: var(--text-primary);">
+            <div><i class="bi bi-shield-check me-2" style="color: var(--accent-color);"></i><strong>Free plan</strong> — monitoring 1 email asset. Your registered email was added automatically.</div>
+            <a href="/pricing" class="btn btn-sm" style="background: linear-gradient(135deg,var(--primary-color),var(--accent-color)); border: none; color: white; white-space: nowrap;">Upgrade for more assets</a>
+        </div>
 
         <!-- Stats Row -->
         <div class="row g-3 mb-4" id="statsRow">
@@ -579,17 +585,22 @@
                 const data = await res.json();
                 if (!data.valid || !data.user) throw new Error('Not authenticated');
                 currentUser = data.user;
-                isPro = ['pro', 'enterprise'].includes(data.user.subscription_tier);
+                isPro = ['pro', 'team', 'enterprise'].includes(data.user.subscription_tier);
+                const isFree = data.user.subscription_tier === 'free';
 
-                if (isPro) {
-                    document.getElementById('mainContent').style.display = 'block';
-                    document.getElementById('proGate').style.display = 'none';
-                    loadAssets();
-                    loadAlerts();
-                } else {
-                    document.getElementById('mainContent').style.display = 'none';
-                    document.getElementById('proGate').style.display = 'block';
+                // All authenticated users get the monitoring dashboard
+                document.getElementById('mainContent').style.display = 'block';
+                document.getElementById('proGate').style.display = 'none';
+
+                // Show the free-tier banner for free users
+                if (isFree) {
+                    const banner = document.getElementById('freeTierBanner');
+                    banner.style.removeProperty('display');
+                    banner.style.display = 'flex';
                 }
+
+                loadAssets();
+                loadAlerts();
             } catch (e) {
                 window.location.href = '/login';
             }
@@ -960,7 +971,7 @@
                     if (!isPro && summary.total_breaches > 0) {
                         html += `<div class="text-center mt-3 pt-3 border-top border-secondary">
                             <a href="/pricing" class="btn btn-sm btn-primary">
-                                <i class="bi bi-rocket-takeoff me-1"></i>Upgrade to Pro for continuous monitoring
+                                <i class="bi bi-rocket-takeoff me-1"></i>Upgrade to Pro to monitor more assets
                             </a>
                         </div>`;
                     }
