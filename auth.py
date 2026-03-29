@@ -114,8 +114,8 @@ class User(Base):
         limits = {
             SubscriptionTier.FREE.value: {
                 'daily_scans': -1,  # Unlimited
-                'dark_web_monitoring': False,
-                'max_monitored_assets': 0,
+                'dark_web_monitoring': True,
+                'max_monitored_assets': 1,
                 'api_access': False,
                 'priority_support': False,
                 'advanced_analysis': False,

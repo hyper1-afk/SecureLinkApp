@@ -529,6 +529,25 @@ def verify_email():
         verified_user = result['user']
         db.activate_pending_org_seats(verified_user['email'], verified_user['id'])
 
+        # Auto-add user's email as their 1 free monitored dark web asset
+        user_id = verified_user['id']
+        user_email = verified_user['email']
+        asset_result = auth_manager.add_monitored_asset(
+            user_id=user_id,
+            asset_type='email',
+            asset_value=user_email,
+            label='My Email'
+        )
+
+        # Run an initial breach scan immediately so results are ready on first login
+        if asset_result.get('success') and getattr(dark_web_monitor, 'hibp_api_key', None):
+            try:
+                scan_result = dark_web_monitor.full_scan(user_email)
+                auth_manager.save_scan_results(user_id, asset_result['asset']['id'], scan_result)
+                result['initial_breach_summary'] = scan_result.get('summary', {})
+            except Exception as e:
+                logger.error(f"Auto breach scan on signup failed for user {user_id}: {e}", exc_info=True)
+
     return jsonify(result)
 
 
@@ -1401,7 +1420,7 @@ def dark_web_monitor_page():
 
 
 @app.route('/api/dark-web/assets', methods=['GET'])
-@require_pro
+@require_auth
 def get_dark_web_assets():
     """Get all monitored assets"""
     assets = auth_manager.get_monitored_assets(request.current_user['id'])
@@ -1410,7 +1429,7 @@ def get_dark_web_assets():
 
 
 @app.route('/api/dark-web/assets', methods=['POST'])
-@require_pro
+@require_auth
 def add_dark_web_asset():
     """Add a new asset to dark web monitoring"""
     data = request.get_json()
@@ -1442,7 +1461,7 @@ def add_dark_web_asset():
 
 
 @app.route('/api/dark-web/assets/<int:asset_id>', methods=['DELETE'])
-@require_pro
+@require_auth
 def delete_dark_web_asset(asset_id):
     """Remove a monitored asset"""
     result = auth_manager.delete_monitored_asset(request.current_user['id'], asset_id)
@@ -1451,7 +1470,7 @@ def delete_dark_web_asset(asset_id):
 
 @app.route('/api/dark-web/scan', methods=['POST'])
 @limiter.limit("10 per minute")
-@require_pro
+@require_auth
 def scan_dark_web():
     """Run a dark web scan for a specific asset or all assets"""
     data = request.get_json() or {}
@@ -1530,7 +1549,7 @@ def quick_dark_web_scan():
 
 
 @app.route('/api/dark-web/alerts', methods=['GET'])
-@require_pro
+@require_auth
 def get_dark_web_alerts():
     """Get dark web alerts for the user"""
     unread_only = request.args.get('unread', 'false').lower() == 'true'
@@ -1541,7 +1560,7 @@ def get_dark_web_alerts():
 
 
 @app.route('/api/dark-web/alerts/<int:alert_id>/read', methods=['POST'])
-@require_pro
+@require_auth
 def mark_dark_web_alert_read(alert_id):
     """Mark alert as read"""
     result = auth_manager.mark_alert_read(request.current_user['id'], alert_id)
@@ -1549,7 +1568,7 @@ def mark_dark_web_alert_read(alert_id):
 
 
 @app.route('/api/dark-web/alerts/read-all', methods=['POST'])
-@require_pro
+@require_auth
 def mark_all_dark_web_alerts_read():
     """Mark all alerts as read"""
     result = auth_manager.mark_all_alerts_read(request.current_user['id'])
@@ -1557,7 +1576,7 @@ def mark_all_dark_web_alerts_read():
 
 
 @app.route('/api/dark-web/alerts/<int:alert_id>/resolve', methods=['POST'])
-@require_pro
+@require_auth
 def resolve_dark_web_alert(alert_id):
     """Mark alert as resolved"""
     result = auth_manager.resolve_alert(request.current_user['id'], alert_id)
@@ -1924,7 +1943,7 @@ def public_breach_check():
         anon_id = str(_uuid.uuid4())
         new_anon_id = anon_id
 
-    remaining = db.get_anon_quota_remaining(anon_id, 'bc', 3)
+    remaining = db.get_anon_quota_remaining(anon_id, 'bc', 5)
     if remaining <= 0:
         return jsonify({
             'error': 'Daily limit reached',
@@ -1947,7 +1966,7 @@ def public_breach_check():
         return jsonify({'error': error}), 503
 
     # Increment only after a successful API call
-    db.check_and_increment_anon_quota(anon_id, 'bc', 3)
+    db.check_and_increment_anon_quota(anon_id, 'bc', 5)
     remaining_after = max(0, remaining - 1)
 
     breach_count = len(breaches)
@@ -2057,7 +2076,7 @@ def verify_link():
 
 @app.route('/api/health-check-quota', methods=['GET'])
 def health_check_quota():
-    limit = 3
+    limit = 10
     anon_id = request.cookies.get('sl_anon_id', '')
     remaining = db.get_anon_quota_remaining(anon_id, 'hc', limit) if anon_id else limit
     return jsonify({'remaining': remaining, 'limit': limit})
@@ -2088,9 +2107,9 @@ def domain_health_check():
         if not anon_id:
             anon_id = str(_uuid.uuid4())
             new_anon_id = anon_id
-        if not db.check_and_increment_anon_quota(anon_id, 'hc', 3):
+        if not db.check_and_increment_anon_quota(anon_id, 'hc', 10):
             return jsonify({
-                'error': 'Daily limit reached. Create a free account for more checks.',
+                'error': 'Daily limit reached. Create a free account for unlimited checks.',
                 'limit_reached': True
             }), 429
 
