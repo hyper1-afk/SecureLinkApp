@@ -126,8 +126,8 @@ class DarkWebMonitor:
     HIBP_PASSWORD_API = "https://api.pwnedpasswords.com"
     USER_AGENT = "SecureLink-DarkWebMonitor/1.0"
 
-    # Rate limiting: HIBP allows 1 req per 1.5s on free tier, 10 req/s on paid
-    RATE_LIMIT_DELAY = 1.6  # seconds between requests (free tier safe)
+    # Rate limiting: Core 1 plan allows 10 RPM → 1 request per 6 seconds
+    RATE_LIMIT_DELAY = 6.5  # seconds between requests (Core 1 safe)
 
     def __init__(self, config: Config = None):
         self.config = config or Config()
