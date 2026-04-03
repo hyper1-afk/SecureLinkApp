@@ -75,10 +75,12 @@ document.getElementById('btn-proceed').addEventListener('click', function() {
         this.style.background = '#dc2626';
         return;
     }
-    // Store bypass for this URL temporarily
+    // Store bypass for this URL, then navigate the tab directly
     chrome.storage.local.set({
         [`bypass_${blockedUrl}`]: Date.now()
     }, () => {
-        window.location.href = blockedUrl;
+        chrome.tabs.getCurrent(tab => {
+            chrome.tabs.update(tab.id, { url: blockedUrl });
+        });
     });
 });
