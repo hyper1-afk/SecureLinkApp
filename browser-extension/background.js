@@ -228,7 +228,11 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     
     // Skip extension pages
     if (url.includes('warning.html') || url.includes('upgrade.html')) return;
-    
+
+    // Skip URLs the user has explicitly chosen to proceed through (bypass valid for 5 minutes)
+    const bypassEntry = await chrome.storage.local.get(`bypass_${url}`);
+    if (bypassEntry[`bypass_${url}`] && Date.now() - bypassEntry[`bypass_${url}`] < 5 * 60 * 1000) return;
+
     try {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname.replace(/^www\./, '');
