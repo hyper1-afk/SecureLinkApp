@@ -380,6 +380,18 @@ class DarkWebAlert(Base):
         }
 
 
+class UserScanCount(Base):
+    """Daily extension scan count per user — persisted across server restarts"""
+    __tablename__ = 'user_scan_counts'
+
+    id        = Column(Integer, primary_key=True, autoincrement=True)
+    user_id   = Column(Integer, ForeignKey('users.id'), nullable=False)
+    scan_date = Column(String(10), nullable=False)   # YYYY-MM-DD
+    count     = Column(Integer, default=0, nullable=False)
+
+    user = relationship("User")
+
+
 class PasswordResetToken(Base):
     """Password reset tokens"""
     __tablename__ = 'password_reset_tokens'

@@ -360,6 +360,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/workspace')
+def workspace():
+    """Render the pentesting workspace"""
+    return render_template('workspace.html')
+
+
 @app.route('/login')
 def login_page():
     """Render the login page"""
@@ -497,19 +503,60 @@ def register():
     if result.get('success'):
         base_url = request.host_url.rstrip('/')
         verification_token = result.get('verification_token')
-        
+
         # Send verification email
         email_sent = auth_manager._send_verification_email(email, username, verification_token, base_url)
-        
+
+        # Notify admin of new signup
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            from datetime import datetime
+
+            admin_email = 'admin@securelinkapp.com'
+            smtp_host = config.SMTP_HOST
+            smtp_port = config.SMTP_PORT
+            smtp_user = config.SMTP_USERNAME
+            smtp_pass = config.SMTP_PASSWORD
+
+            if smtp_user and smtp_pass:
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = f'New Signup: {username}'
+                msg['From'] = config.SMTP_FROM_EMAIL or 'support@securelinkapp.com'
+                msg['To'] = admin_email
+
+                body = (
+                    f"New user signed up on SecureLink.\n\n"
+                    f"Name:     {full_name or 'N/A'}\n"
+                    f"Username: {username}\n"
+                    f"Email:    {email}\n"
+                    f"Plan:     {subscription_tier}\n"
+                    f"Time:     {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n"
+                )
+                msg.attach(MIMEText(body, 'plain'))
+
+                if getattr(config, 'SMTP_USE_SSL', False) or smtp_port == 465:
+                    with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+                        server.login(smtp_user, smtp_pass)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(smtp_host, smtp_port) as server:
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.send_message(msg)
+        except Exception as e:
+            logger.warning(f"Admin signup notification failed: {e}")
+
         # Store the selected plan in the result so frontend can remind user after verification
         result['selected_plan'] = subscription_tier
         result['email_sent'] = email_sent
         result['requires_verification'] = True
-        
+
         # Don't expose the verification token to the frontend
         if 'verification_token' in result:
             del result['verification_token']
-    
+
     return jsonify(result)
 
 
@@ -1023,9 +1070,30 @@ def extension_verify():
             'upgrade_url': 'https://securelinkapp.com/login'
         }), 429
     
-    # Increment scan count
+    # Increment scan count (in-memory for rate limiting)
     extension_scan_counts[key] = scans_today + 1
-    
+
+    # Persist scan count to DB for authenticated users
+    if user_id:
+        try:
+            from auth import UserScanCount
+            from sqlalchemy.orm import sessionmaker as _sm
+            _Session = _sm(bind=auth_manager.engine)
+            _db = _Session()
+            try:
+                scan_record = _db.query(UserScanCount).filter_by(user_id=user_id, scan_date=today).first()
+                if scan_record:
+                    scan_record.count += 1
+                else:
+                    _db.add(UserScanCount(user_id=user_id, scan_date=today, count=1))
+                _db.commit()
+            except Exception:
+                _db.rollback()
+            finally:
+                _db.close()
+        except Exception:
+            pass  # Never block a scan due to DB write failure
+
     # Perform the actual verification
     result = verifier.verify_link(url)
     
@@ -3359,11 +3427,33 @@ def admin_api_ticket_respond(ticket_id):
 @require_admin
 def admin_api_customers():
     """Get all customers"""
+    from datetime import date
+    from auth import UserScanCount
+    from sqlalchemy.orm import sessionmaker as _sm
+
     result = admin_manager.get_customers(
         search=request.args.get('search'),
         page=request.args.get('page', 1, type=int),
         per_page=request.args.get('per_page', 20, type=int)
     )
+    today = date.today().isoformat()
+
+    # Load today's scan counts from DB in one query
+    scan_counts = {}
+    try:
+        _Session = _sm(bind=auth_manager.engine)
+        _db = _Session()
+        try:
+            rows = _db.query(UserScanCount).filter_by(scan_date=today).all()
+            scan_counts = {row.user_id: row.count for row in rows}
+        finally:
+            _db.close()
+    except Exception:
+        pass
+
+    for customer in result.get('customers', []):
+        user_id = customer.get('id')
+        customer['links_verified_today'] = scan_counts.get(user_id, 0)
     return jsonify(result)
 
 
