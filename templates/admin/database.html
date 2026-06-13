@@ -64,7 +64,7 @@
         <!-- Topbar -->
         <div class="topbar">
             <div class="topbar-left">
-                <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                <button class="mobile-toggle" onclick="toggleSidebar()">
                     <i class="bi bi-list"></i>
                 </button>
                 <div>
@@ -269,12 +269,21 @@
         </div>
     </main>
 
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <script>
-        const authToken = localStorage.getItem('admin_token');
         if (!authToken) window.location.href = '/admin/login';
 
         function getAuthHeaders() {
             return { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const open = sidebar.classList.toggle('open');
+            overlay.classList.toggle('active', open);
         }
 
         function updateClock() {

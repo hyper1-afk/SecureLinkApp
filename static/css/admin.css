@@ -787,6 +787,19 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .w-full { width: 100%; }
 
 /* ══════════════════════════════════════
+   SIDEBAR OVERLAY (mobile backdrop)
+   ══════════════════════════════════════ */
+.sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+.sidebar-overlay.active { display: block; }
+
+/* ══════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════ */
 @media (max-width: 1200px) {
@@ -794,13 +807,37 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 }
 
 @media (max-width: 992px) {
-    .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
-    .sidebar.open { transform: translateX(0); }
+    .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; z-index: 200; }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.6); }
     .main-content { margin-left: 0; padding: 20px 16px; }
     .mobile-toggle { display: flex !important; }
+
+    /* Stack topbar on small tablets */
+    .topbar-right .topbar-time { display: none; }
 }
 
 @media (max-width: 576px) {
-    .main-content { padding: 16px 12px; }
-    .topbar { flex-wrap: wrap; gap: 12px; }
+    .main-content { padding: 14px 10px; }
+    .topbar { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .page-title { font-size: 1.2rem; }
+
+    /* Make metric cards 2-up */
+    .metrics { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+
+    /* Full-width buttons on phone */
+    .btn { min-height: 44px; }
+
+    /* Tables: show horizontal scroll hint */
+    .panel > div[style*="overflow-x"] { -webkit-overflow-scrolling: touch; }
+
+    /* Wider tap targets in nav */
+    .sidebar .nav-link { padding: 14px 16px; font-size: 0.95rem; }
+
+    /* Stack ticket/customer action buttons */
+    .btn-group-mobile { flex-direction: column; }
+}
+
+@media (max-width: 400px) {
+    .metrics { grid-template-columns: 1fr !important; }
+    .user-pill-info { display: none; }
 }
