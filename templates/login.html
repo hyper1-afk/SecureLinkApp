@@ -785,8 +785,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Check if already logged in - show message instead of auto-redirect
+        // Check if already logged in — if so, redirect to destination immediately
         const token = localStorage.getItem('auth_token');
+        const _redirectTarget = new URLSearchParams(window.location.search).get('redirect');
         let isLoggedIn = false;
         
         if (token) {
@@ -798,7 +799,12 @@
             .then(data => {
                 if (data.valid) {
                     isLoggedIn = true;
-                    showLoggedInMessage(data.user);
+                    // If we were redirected here from a protected page, go straight back there
+                    if (_redirectTarget) {
+                        window.location.replace(_redirectTarget);
+                    } else {
+                        showLoggedInMessage(data.user);
+                    }
                 }
             });
         }
@@ -1049,7 +1055,8 @@
                     } else {
                         showAlert('Login successful! Redirecting...', 'success');
                         setTimeout(() => {
-                            window.location.href = '/home';
+                            const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                            window.location.href = redirectParam || '/home';
                         }, 1000);
                     }
                 } else if (data.email_not_verified) {

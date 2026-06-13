@@ -961,21 +961,38 @@ let currentUser = null;
 // ── AUTH ──
 async function checkAuth() {
     const token = getAuthToken();
-    if (!token) { window.location.href = '/'; return; }
-    try {
+    if (!token) { window.location.replace('/login?redirect=/workspace'); return; }
+
+    async function validateOnce() {
         const res  = await fetch('/api/auth/validate', { headers: authHeaders() });
         const data = await res.json();
-        if (!data.valid) { window.location.href = '/'; return; }
-        currentUser = data.user;
-        document.getElementById('navUsername').textContent = data.user.username || data.user.email;
-        document.getElementById('navAvatar').textContent   = (data.user.username || 'U')[0].toUpperCase();
-        document.getElementById('greetName').textContent   = data.user.username || 'there';
-        const tier = (data.user.subscription_tier || 'free').toLowerCase();
-        const badge = document.getElementById('navTierBadge');
-        badge.textContent = tier.toUpperCase();
-        if (tier !== 'free') badge.classList.add(tier);
-        loadStats();
-    } catch (e) { window.location.href = '/'; }
+        return data;
+    }
+
+    let data;
+    try {
+        data = await validateOnce();
+    } catch (e) {
+        // Network hiccup — retry once after a short delay before giving up
+        try {
+            await new Promise(r => setTimeout(r, 800));
+            data = await validateOnce();
+        } catch (e2) {
+            window.location.replace('/login?redirect=/workspace');
+            return;
+        }
+    }
+
+    if (!data.valid) { window.location.replace('/login?redirect=/workspace'); return; }
+    currentUser = data.user;
+    document.getElementById('navUsername').textContent = data.user.username || data.user.email;
+    document.getElementById('navAvatar').textContent   = (data.user.username || 'U')[0].toUpperCase();
+    document.getElementById('greetName').textContent   = data.user.username || 'there';
+    const tier = (data.user.subscription_tier || 'free').toLowerCase();
+    const badge = document.getElementById('navTierBadge');
+    badge.textContent = tier.toUpperCase();
+    if (tier !== 'free') badge.classList.add(tier);
+    loadStats();
 }
 
 // ── STATS ──
@@ -1411,10 +1428,19 @@ function timeAgo(ts) {
 }
 
 // ── INIT ──
-checkAuth();
 renderSidebar();
 loadTargets();
 renderRecentScans();
+
+// Wait for DOM to be fully ready before running auth check
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAuth);
+} else {
+    checkAuth();
+}
+
+// Re-validate auth when page is restored from bfcache (browser back/forward)
+window.addEventListener('pageshow', function(e) { if (e.persisted) checkAuth(); });
 </script>
 </body>
 </html>
