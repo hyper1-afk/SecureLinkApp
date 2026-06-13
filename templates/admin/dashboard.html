@@ -363,8 +363,12 @@
             return d.innerHTML;
         }
         function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() })
-                .finally(() => { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; });
+            // Clear session immediately — don't wait for server round-trip (iOS Safari fix)
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('user');
+            window.location.href = '/admin/login';
+            // Best-effort server-side session invalidation
+            try { navigator.sendBeacon('/admin/api/logout'); } catch(e) {}
         }
 
         checkAuth();

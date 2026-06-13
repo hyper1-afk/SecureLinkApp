@@ -546,10 +546,10 @@
         }
         
         function logout() {
-            fetch('/admin/api/logout', { method: 'POST', headers: getAuthHeaders() }).finally(() => {
-                localStorage.removeItem('admin_token');
-                window.location.href = '/admin/login';
-            });
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('user');
+            window.location.href = '/admin/login';
+            try { navigator.sendBeacon('/admin/api/logout'); } catch(e) {}
         }
         
         checkAuth();
