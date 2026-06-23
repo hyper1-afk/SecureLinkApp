@@ -39,6 +39,7 @@ plyer==2.1.0
 
 # Scheduling
 schedule==1.2.1
+psutil==5.9.8
 
 # Payments
 stripe==7.0.0

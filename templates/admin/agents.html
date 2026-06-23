@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agents — SecureLink Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <style>
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .agent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .agent-card:hover { border-color: rgba(148,163,184,.25); }
+        .agent-card-accent {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .agent-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .agent-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .agent-title { font-size: 15px; font-weight: 600; color: var(--text-white); }
+        .agent-desc  { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.5; }
+        .agent-status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 99px;
+            font-size: 11px; font-weight: 600; letter-spacing: .4px;
+            text-transform: uppercase;
+        }
+        .status-idle    { background: rgba(100,116,139,.18); color: #94a3b8; }
+        .status-running { background: rgba(14,165,233,.15);  color: #38bdf8; }
+        .status-error   { background: rgba(239,68,68,.15);   color: #f87171; }
+        .status-paused  { background: rgba(245,158,11,.15);  color: #fbbf24; }
+        .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+        .pulse-running { background: #38bdf8; animation: pulse 1.2s ease-in-out infinite; }
+        .pulse-idle    { background: #64748b; }
+        .pulse-error   { background: #f87171; }
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:.5; transform:scale(1.4); }
+        }
+        .agent-meta {
+            display: flex; flex-wrap: wrap; gap: 12px;
+            margin: 12px 0;
+            font-size: 12px; color: var(--text-secondary);
+        }
+        .meta-item { display: flex; align-items: center; gap: 4px; }
+        .agent-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+        .btn-run {
+            flex: 1; min-width: 100px;
+            padding: 8px 14px; border-radius: 8px;
+            background: rgba(14,165,233,.12); color: var(--primary);
+            border: 1px solid rgba(14,165,233,.25);
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-run:hover { background: rgba(14,165,233,.22); }
+        .btn-run:disabled { opacity: .4; cursor: not-allowed; }
+        .toggle-switch {
+            position: relative; display: inline-flex;
+            align-items: center; gap: 8px;
+            cursor: pointer; font-size: 12px; color: var(--text-secondary);
+        }
+        .toggle-switch input { display: none; }
+        .toggle-track {
+            width: 36px; height: 20px; border-radius: 10px;
+            background: #334155; transition: var(--transition); flex-shrink: 0;
+            position: relative;
+        }
+        .toggle-track::after {
+            content:''; position: absolute;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #94a3b8; top: 3px; left: 3px;
+            transition: var(--transition);
+        }
+        input:checked ~ .toggle-track { background: var(--primary); }
+        input:checked ~ .toggle-track::after { transform: translateX(16px); background: #fff; }
+
+        /* Daemon bar */
+        .daemon-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+        }
+        .daemon-indicator {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600;
+        }
+        .daemon-meta { font-size: 12px; color: var(--text-secondary); }
+        .daemon-meta span { color: var(--text-primary); font-weight: 500; }
+        .daemon-controls { margin-left: auto; display: flex; gap: 8px; }
+        .btn-daemon {
+            padding: 6px 16px; border-radius: 8px; font-size: 12px;
+            font-weight: 600; cursor: pointer; border: 1px solid;
+            transition: var(--transition);
+        }
+        .btn-stop { background: rgba(239,68,68,.1); color: #f87171; border-color: rgba(239,68,68,.25); }
+        .btn-stop:hover { background: rgba(239,68,68,.2); }
+        .btn-start { background: rgba(16,185,129,.1); color: #34d399; border-color: rgba(16,185,129,.25); }
+        .btn-start:hover { background: rgba(16,185,129,.2); }
+
+        /* Log viewer */
+        .log-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .log-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .log-header h3 { font-size: 14px; font-weight: 600; color: var(--text-white); flex: 1; }
+        .log-body {
+            height: 360px;
+            overflow-y: auto;
+            padding: 12px 16px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        .log-body::-webkit-scrollbar { width: 4px; }
+        .log-body::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .log-line { display: flex; gap: 10px; padding: 1px 0; }
+        .log-ts    { color: #475569; flex-shrink: 0; }
+        .log-agent { font-weight: 600; flex-shrink: 0; min-width: 120px; }
+        .log-msg   { color: var(--text-secondary); word-break: break-word; }
+        .log-info    .log-msg { color: var(--text-primary); }
+        .log-warning .log-msg { color: #fbbf24; }
+        .log-error   .log-msg { color: #f87171; }
+        .log-controls { display: flex; gap: 8px; }
+        .btn-sm {
+            padding: 5px 12px; border-radius: 6px; font-size: 11px;
+            font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+            background: transparent; color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-sm.active { background: rgba(14,165,233,.12); color: var(--primary); border-color: rgba(14,165,233,.3); }
+
+        /* Pending changes */
+        .pending-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .pending-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .pending-header h3 { font-size: 14px; font-weight: 600; color: var(--text-white); flex: 1; }
+        .pending-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .pending-item:last-child { border-bottom: none; }
+        .pending-title { font-size: 13px; font-weight: 500; color: var(--text-white); flex: 1; }
+        .pending-meta { font-size: 11px; color: var(--text-secondary); }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 99px;
+            font-size: 11px; font-weight: 600;
+        }
+        .badge-pending  { background: rgba(245,158,11,.15); color: #fbbf24; }
+        .badge-deployed { background: rgba(16,185,129,.15); color: #34d399; }
+        .badge-denied   { background: rgba(239,68,68,.15);  color: #f87171; }
+        .badge-pass     { background: rgba(16,185,129,.15); color: #34d399; }
+        .badge-fail     { background: rgba(239,68,68,.15);  color: #f87171; }
+        .pending-actions { display: flex; gap: 6px; }
+        .btn-approve {
+            padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
+            cursor: pointer; border: none;
+            background: rgba(16,185,129,.15); color: #34d399;
+            transition: var(--transition);
+        }
+        .btn-approve:hover { background: rgba(16,185,129,.3); }
+        .btn-deny {
+            padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
+            cursor: pointer; border: none;
+            background: rgba(239,68,68,.1); color: #f87171;
+            transition: var(--transition);
+        }
+        .btn-deny:hover { background: rgba(239,68,68,.2); }
+        .empty-state {
+            padding: 32px; text-align: center;
+            color: var(--text-muted); font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .agents-grid { grid-template-columns: 1fr; }
+            .daemon-bar { flex-direction: column; align-items: flex-start; }
+            .daemon-controls { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-inner">
+                <div class="sidebar-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:32px;height:32px;display:block;border-radius:8px;"></div>
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">SecureLink</span>
+                    <span class="sidebar-brand-sub">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Overview</div>
+            <a href="/admin/dashboard" class="nav-link">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Support</div>
+            <a href="/admin/tickets" class="nav-link">
+                <i class="bi bi-ticket-detailed-fill"></i> All Tickets
+                <span class="nav-count" id="openTicketsBadge">0</span>
+            </a>
+            <a href="/admin/tickets?status=open" class="nav-link">
+                <i class="bi bi-inbox-fill"></i> Open
+            </a>
+            <a href="/admin/tickets?status=in_progress" class="nav-link">
+                <i class="bi bi-clock-history"></i> In Progress
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Management</div>
+            <a href="/admin/customers" class="nav-link">
+                <i class="bi bi-people-fill"></i> Customers
+            </a>
+            <a href="/admin/employees" class="nav-link">
+                <i class="bi bi-person-badge-fill"></i> Employees
+            </a>
+            <a href="/admin/licenses" class="nav-link">
+                <i class="bi bi-key-fill"></i> Licenses
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">System</div>
+            <a href="/admin/agents" class="nav-link active">
+                <i class="bi bi-cpu-fill"></i> AI Agents
+            </a>
+            <a href="/admin/database" class="nav-link">
+                <i class="bi bi-database-fill"></i> Database
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-link" onclick="logout()">
+                <i class="bi bi-box-arrow-left"></i> Sign Out
+            </a>
+        </div>
+    </nav>
+
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" onclick="toggleSidebar()">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title">AI Agent Control Center</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-time" id="currentTime"></span>
+                <div class="user-pill">
+                    <div class="user-pill-avatar" id="employeeAvatar">?</div>
+                    <div class="user-pill-info">
+                        <div class="user-pill-name" id="employeeName">Loading…</div>
+                        <div class="user-pill-role" id="employeeRole">—</div>
+                    </div>
+                </div>
+                <button class="topbar-signout" onclick="logout()" title="Sign Out">
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Page content -->
+        <div class="page-content">
+
+            <!-- Daemon status bar -->
+            <div class="daemon-bar" id="daemonBar">
+                <div class="daemon-indicator">
+                    <span class="pulse" id="daemonPulse"></span>
+                    <span id="daemonStatus">Checking…</span>
+                </div>
+                <div class="daemon-meta">
+                    Uptime: <span id="daemonUptime">—</span> &nbsp;·&nbsp;
+                    Tasks completed: <span id="daemonTasks">—</span> &nbsp;·&nbsp;
+                    Server time: <span id="serverTime">—</span>
+                </div>
+                <div class="daemon-controls">
+                    <button class="btn-daemon btn-stop" onclick="stopDaemon()" id="btnStop">
+                        <i class="bi bi-stop-fill"></i> Stop All
+                    </button>
+                    <button class="btn-daemon btn-start" onclick="startDaemon()" id="btnStart" style="display:none;">
+                        <i class="bi bi-play-fill"></i> Start
+                    </button>
+                </div>
+            </div>
+
+            <!-- Agent cards -->
+            <div class="agents-grid" id="agentsGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Pending pipeline changes -->
+            <div class="pending-panel" id="pendingPanel">
+                <div class="pending-header">
+                    <i class="bi bi-hourglass-split" style="color:#f59e0b;"></i>
+                    <h3>Pipeline Changes Awaiting Review</h3>
+                    <span class="badge badge-pending" id="pendingCount">0</span>
+                </div>
+                <div id="pendingList">
+                    <div class="empty-state">No pending changes</div>
+                </div>
+            </div>
+
+            <!-- Agent memory panel -->
+            <div class="pending-panel" id="memoryPanel" style="margin-bottom:20px;">
+                <div class="pending-header">
+                    <i class="bi bi-lightning-charge-fill" style="color:#8b5cf6;"></i>
+                    <h3>Agent Memory &amp; Learnings</h3>
+                    <button class="btn-sm" onclick="loadMemory()" style="margin-left:auto;">Refresh</button>
+                </div>
+                <div id="memoryContent">
+                    <div class="empty-state">Click Refresh to view what agents have learned</div>
+                </div>
+                <div style="padding:14px 20px;border-top:1px solid var(--border);">
+                    <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">
+                        <i class="bi bi-mortarboard-fill" style="color:#8b5cf6;"></i> Teach an Agent
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                        <select id="teachAgent" style="background:var(--bg-body);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;">
+                            <option value="ticket_handler">Ticket Handler</option>
+                            <option value="business_analyst">Business Analyst</option>
+                            <option value="bug_scanner">Bug Scanner</option>
+                            <option value="code_reviewer">Code Reviewer</option>
+                            <option value="update_agent">Update Agent</option>
+                        </select>
+                        <select id="teachType" style="background:var(--bg-body);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;">
+                            <option value="correction">Correction</option>
+                            <option value="mistake">Mistake to avoid</option>
+                            <option value="success">Success to repeat</option>
+                            <option value="warning">Warning</option>
+                        </select>
+                        <input id="teachLesson" type="text" placeholder="e.g. Don't flag 429 errors as bugs — that's rate limiting working correctly"
+                            style="background:var(--bg-body);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;flex:1;min-width:220px;">
+                        <button class="btn-run" style="flex:none;padding:7px 16px;" onclick="teachAgent()">
+                            <i class="bi bi-send-fill"></i> Teach
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live activity log -->
+            <div class="log-panel">
+                <div class="log-header">
+                    <i class="bi bi-terminal-fill" style="color:var(--primary);"></i>
+                    <h3>Live Activity Log</h3>
+                    <div class="log-controls">
+                        <button class="btn-sm active" id="btnAutoScroll" onclick="toggleAutoScroll()">Auto-scroll</button>
+                        <button class="btn-sm" onclick="clearLog()">Clear</button>
+                        <button class="btn-sm active" id="btnLiveUpdate" onclick="toggleLiveUpdate()">
+                            <i class="bi bi-broadcast"></i> Live
+                        </button>
+                    </div>
+                </div>
+                <div class="log-body" id="logBody">
+                    <div style="color:var(--text-muted);padding:12px 0;">Waiting for activity…</div>
+                </div>
+            </div>
+
+        </div><!-- /page-content -->
+    </main>
+
+    <script>
+    // ── Auth helpers (same pattern as all admin templates) ─────────────────
+    function getAdminToken()  { return localStorage.getItem('admin_token'); }
+    function getAuthHeaders() { return { 'Authorization': `Bearer ${getAdminToken()}` }; }
+
+    async function checkAuth() {
+        const token = getAdminToken();
+        if (!token) { window.location.href = '/admin/login'; return; }
+        try {
+            const res = await fetch('/admin/api/validate', { headers: getAuthHeaders() });
+            if (!res.ok) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return; }
+            const data = await res.json();
+            if (data.valid && data.employee) {
+                document.getElementById('employeeName').textContent  = data.employee.full_name;
+                document.getElementById('employeeRole').textContent  = data.employee.role.charAt(0).toUpperCase() + data.employee.role.slice(1);
+                document.getElementById('employeeAvatar').textContent = data.employee.full_name.charAt(0).toUpperCase();
+            }
+        } catch(e) { window.location.href = '/admin/login'; }
+    }
+
+    // ── State ──────────────────────────────────────────────────────────────
+    let autoScroll    = true;
+    let liveUpdate    = true;
+    let lastLogTs     = null;
+    let localLogLines = [];
+    let pollInterval  = null;
+
+    const AGENT_COLORS = {
+        ticket_handler:   '#0ea5e9',
+        business_analyst: '#8b5cf6',
+        bug_scanner:      '#ef4444',
+        code_reviewer:    '#10b981',
+        pipeline:         '#f59e0b',
+        scheduler:        '#64748b',
+    };
+
+    // ── Polling ────────────────────────────────────────────────────────────
+    function startPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        fetchAll();
+        pollInterval = setInterval(fetchAll, 3000);
+    }
+
+    async function fetchAll() {
+        try {
+            const [statusRes, logsRes] = await Promise.all([
+                fetch('/admin/api/agents/status', { headers: getAuthHeaders() }),
+                fetch('/admin/api/agents/logs' + (lastLogTs ? `?since=${encodeURIComponent(lastLogTs)}&limit=100` : '?limit=200'), { headers: getAuthHeaders() }),
+            ]);
+            if (!statusRes.ok || !logsRes.ok) return;
+            const status = await statusRes.json();
+            const logs   = await logsRes.json();
+            renderDaemon(status);
+            renderAgents(status.agents);
+            renderPending(status.pending_changes || []);
+            if (logs.logs.length) appendLogs(logs.logs);
+        } catch (e) { /* network error — keep trying */ }
+    }
+
+    // ── Daemon ─────────────────────────────────────────────────────────────
+    function renderDaemon(s) {
+        const running = s.daemon_running;
+        const pulse = document.getElementById('daemonPulse');
+        const status = document.getElementById('daemonStatus');
+        pulse.className = 'pulse ' + (running ? 'pulse-running' : 'pulse-error');
+        status.textContent = running ? 'Scheduler Running' : 'Scheduler Stopped';
+        status.style.color = running ? 'var(--primary)' : '#f87171';
+        document.getElementById('daemonUptime').textContent = formatDuration(s.uptime_s);
+        document.getElementById('daemonTasks').textContent  = s.task_count;
+        document.getElementById('serverTime').textContent   = s.server_time?.slice(11, 19) + ' UTC';
+        document.getElementById('btnStop').style.display  = running ? '' : 'none';
+        document.getElementById('btnStart').style.display = running ? 'none' : '';
+    }
+
+    // ── Agents ─────────────────────────────────────────────────────────────
+    function renderAgents(agents) {
+        const grid = document.getElementById('agentsGrid');
+        grid.innerHTML = '';
+        Object.values(agents).forEach(a => grid.appendChild(agentCard(a)));
+    }
+
+    function agentCard(a) {
+        const div = document.createElement('div');
+        div.className = 'agent-card';
+        div.id = `card-${a.name}`;
+
+        const statusClass = { idle:'idle', running:'running', error:'error', paused:'paused' }[a.status] || 'idle';
+        const pulseClass  = { idle:'pulse-idle', running:'pulse-running', error:'pulse-error' }[a.status] || 'pulse-idle';
+        const lastRun     = a.last_run ? timeAgo(a.last_run) : 'Never';
+        const nextRun     = a.enabled && a.next_run ? 'in ' + timeAgo(a.next_run, true) : '—';
+        const duration    = a.last_run_duration_s != null ? `${a.last_run_duration_s}s` : '—';
+        const resultIcon  = a.last_result === 'success' ? '<i class="bi bi-check-circle-fill" style="color:#10b981;"></i>'
+                          : a.last_result === 'error'   ? '<i class="bi bi-x-circle-fill" style="color:#ef4444;"></i>'
+                          : '';
+
+        div.innerHTML = `
+          <div class="agent-card-accent" style="background:${a.color}"></div>
+          <div class="agent-header">
+            <div class="agent-icon" style="background:${a.color}22; color:${a.color};">
+              <i class="${a.icon}"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div class="agent-title">${a.display_name}</div>
+                <span class="agent-status-badge status-${statusClass}">
+                  <span class="pulse ${pulseClass}"></span>${a.status}
+                </span>
+              </div>
+              <div class="agent-desc">${a.description}</div>
+            </div>
+          </div>
+          <div class="agent-meta">
+            <div class="meta-item"><i class="bi bi-clock" style="color:${a.color};"></i> Last: ${lastRun}</div>
+            <div class="meta-item"><i class="bi bi-arrow-clockwise" style="color:${a.color};"></i> Next: ${nextRun}</div>
+            <div class="meta-item"><i class="bi bi-stopwatch" style="color:${a.color};"></i> ${duration}</div>
+            <div class="meta-item">${resultIcon} Runs today: ${a.runs_today} &nbsp; Total: ${a.run_count}</div>
+          </div>
+          ${a.last_error ? `<div style="font-size:11px;color:#f87171;background:rgba(239,68,68,.08);padding:6px 10px;border-radius:6px;margin-bottom:10px;">${a.last_error}</div>` : ''}
+          <div class="agent-actions">
+            ${a.status === 'running'
+              ? `<button class="btn-run" style="background:rgba(239,68,68,.12);color:#f87171;border-color:rgba(239,68,68,.3);" onclick="killAgent('${a.name}', this)">
+                   <i class="bi bi-stop-fill"></i> Force Stop
+                 </button>`
+              : `<button class="btn-run" onclick="triggerAgent('${a.name}', this)">
+                   <i class="bi bi-play-fill"></i> Run Now
+                 </button>`
+            }
+            <label class="toggle-switch" title="${a.enabled ? 'Click to disable scheduled runs' : 'Click to enable scheduled runs'}">
+              <input type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAgent('${a.name}', this.checked)">
+              <span class="toggle-track"></span>
+              <span>${a.enabled ? 'Scheduled' : 'Paused'}</span>
+            </label>
+          </div>`;
+        return div;
+    }
+
+    // ── Pending changes ─────────────────────────────────────────────────────
+    function renderPending(items) {
+        const list = document.getElementById('pendingList');
+        document.getElementById('pendingCount').textContent = items.filter(i=>i.status==='awaiting_admin_approval').length;
+        if (!items.length) {
+            list.innerHTML = '<div class="empty-state">No pending pipeline changes</div>';
+            return;
+        }
+        list.innerHTML = items.map(c => {
+            const statusBadge = c.status === 'awaiting_admin_approval'
+                ? '<span class="badge badge-pending">Awaiting Approval</span>'
+                : c.status === 'deployed' ? '<span class="badge badge-deployed">Deployed</span>'
+                : c.status === 'denied'   ? '<span class="badge badge-denied">Denied</span>'
+                : `<span class="badge badge-pending">${c.status}</span>`;
+            const testBadge = c.test_passed === true  ? '<span class="badge badge-pass">Tests Passed</span>'
+                            : c.test_passed === false ? '<span class="badge badge-fail">Tests Failed</span>'
+                            : '';
+            const actions = c.status === 'awaiting_admin_approval' ? `
+                <div class="pending-actions">
+                  <button class="btn-approve" onclick="pipelineAction('${c.full_token}','approve',this)">
+                    <i class="bi bi-check-lg"></i> Approve
+                  </button>
+                  <button class="btn-deny" onclick="pipelineAction('${c.full_token}','deny',this)">
+                    <i class="bi bi-x-lg"></i> Deny
+                  </button>
+                </div>` : '';
+            return `<div class="pending-item">
+              <div>
+                <div class="pending-title">${c.title}</div>
+                <div class="pending-meta">${c.branch} &nbsp;·&nbsp; ${timeAgo(c.created_at)}</div>
+              </div>
+              ${statusBadge} ${testBadge} ${actions}
+            </div>`;
+        }).join('');
+    }
+
+    // ── Log rendering ───────────────────────────────────────────────────────
+    function appendLogs(entries) {
+        if (!entries.length) return;
+        const body = document.getElementById('logBody');
+        const wasEmpty = body.children.length === 1 && body.children[0].tagName === 'DIV';
+        if (wasEmpty) body.innerHTML = '';
+
+        entries.forEach(e => {
+            if (lastLogTs === null || e.ts > lastLogTs) lastLogTs = e.ts;
+            localLogLines.push(e);
+            const color = AGENT_COLORS[e.agent] || '#94a3b8';
+            const div = document.createElement('div');
+            div.className = `log-line log-${e.level || 'info'}`;
+            div.innerHTML = `<span class="log-ts">${e.ts.slice(11,19)}</span>
+              <span class="log-agent" style="color:${color};">${e.agent}</span>
+              <span class="log-msg">${escHtml(e.message)}</span>`;
+            body.appendChild(div);
+        });
+
+        // Trim to 500 lines in DOM
+        while (body.children.length > 500) body.removeChild(body.firstChild);
+
+        if (autoScroll) body.scrollTop = body.scrollHeight;
+    }
+
+    function clearLog() {
+        document.getElementById('logBody').innerHTML = '<div style="color:var(--text-muted);padding:12px 0;">Log cleared</div>';
+        localLogLines = [];
+        lastLogTs = null;
+    }
+
+    // ── Controls ────────────────────────────────────────────────────────────
+    async function triggerAgent(name, btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Starting…';
+        const res = await fetch(`/admin/api/agents/${name}/trigger`, {method:'POST', headers: getAuthHeaders()});
+        const data = await res.json();
+        if (!data.success) {
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + (data.error || 'Error');
+            setTimeout(() => { btn.innerHTML='<i class="bi bi-play-fill"></i> Run Now'; btn.disabled=false; }, 3000);
+        }
+        // Card will update on next poll
+    }
+
+    async function killAgent(name, btn) {
+        if (!confirm(`Force stop the ${name} agent? The process will be terminated immediately.`)) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Stopping…';
+        const res  = await fetch(`/admin/api/agents/${name}/kill`, {method:'POST', headers: getAuthHeaders()});
+        const data = await res.json();
+        if (!data.success) {
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error';
+            setTimeout(() => { btn.innerHTML='<i class="bi bi-stop-fill"></i> Force Stop'; btn.disabled=false; }, 2000);
+        }
+        // Card will update on next poll
+    }
+
+    async function toggleAgent(name, enable) {
+        const endpoint = enable ? 'enable' : 'disable';
+        await fetch(`/admin/api/agents/${name}/${endpoint}`, {method:'POST', headers: getAuthHeaders()});
+    }
+
+    async function stopDaemon() {
+        if (!confirm('Stop the agent scheduler? All running agents will finish, but no new runs will start.')) return;
+        await fetch('/admin/api/agents/daemon/stop', {method:'POST', headers: getAuthHeaders()});
+    }
+
+    async function startDaemon() {
+        await fetch('/admin/api/agents/daemon/start', {method:'POST', headers: getAuthHeaders()});
+    }
+
+    async function pipelineAction(token, action, btn) {
+        const label = action === 'approve' ? 'approve and deploy' : 'deny';
+        if (!confirm(`Are you sure you want to ${label} this change?`)) return;
+        btn.disabled = true;
+        const res  = await fetch(`/admin/api/agents/pipeline/${token}/${action}`, {method:'POST', headers: getAuthHeaders()});
+        const data = await res.json();
+        alert(data.message || (data.success ? 'Done' : 'Failed'));
+        fetchAll();
+    }
+
+    function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        document.getElementById('btnAutoScroll').classList.toggle('active', autoScroll);
+    }
+
+    function toggleLiveUpdate() {
+        liveUpdate = !liveUpdate;
+        document.getElementById('btnLiveUpdate').classList.toggle('active', liveUpdate);
+        if (liveUpdate) startPolling(); else clearInterval(pollInterval);
+    }
+
+    // ── Utilities ───────────────────────────────────────────────────────────
+    function timeAgo(iso, future = false) {
+        if (!iso) return '—';
+        const diff = Math.abs(new Date() - new Date(iso)) / 1000;
+        if (diff < 60)   return future ? `${Math.round(diff)}s` : 'just now';
+        if (diff < 3600) return `${Math.floor(diff/60)}m`;
+        if (diff < 86400)return `${Math.floor(diff/3600)}h`;
+        return `${Math.floor(diff/86400)}d`;
+    }
+
+    function formatDuration(s) {
+        if (!s || s < 1) return '< 1s';
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = Math.floor(s % 60);
+        return [h && `${h}h`, m && `${m}m`, `${sec}s`].filter(Boolean).join(' ');
+    }
+
+    function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Shared admin utilities ──────────────────────────────────────────────
+    function logout() {
+        localStorage.removeItem('admin_token');
+        window.location.href = '/admin/login';
+        try { navigator.sendBeacon('/admin/api/logout'); } catch(e) {}
+    }
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('active');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+    }
+    function updateClock() {
+        const el = document.getElementById('currentTime');
+        if (el) el.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+
+    // ── Memory ──────────────────────────────────────────────────────────────
+    async function loadMemory() {
+        const res  = await fetch('/admin/api/agents/memory', { headers: getAuthHeaders() });
+        const data = await res.json();
+        const el   = document.getElementById('memoryContent');
+        const sums = data.summaries || [];
+        if (!sums.length) {
+            el.innerHTML = '<div class="empty-state">No learnings yet — agents learn after their first few runs.</div>';
+            return;
+        }
+        const typeIcon = {mistake:'bi-x-circle-fill', success:'bi-check-circle-fill',
+                          correction:'bi-arrow-repeat', warning:'bi-exclamation-triangle-fill'};
+        const typeColor= {mistake:'#ef4444', success:'#10b981', correction:'#0ea5e9', warning:'#f59e0b'};
+
+        el.innerHTML = sums.map(s => {
+            const byType = Object.entries(s.by_type || {})
+                .map(([t,n]) => `<span style="color:${typeColor[t]||'#94a3b8'};margin-right:8px;"><i class="bi ${typeIcon[t]||'bi-dot'}"></i> ${n} ${t}</span>`)
+                .join('');
+            return `<div class="pending-item" style="cursor:pointer;" onclick="showMemoryDetail('${s.agent}')">
+              <div>
+                <div class="pending-title">${s.agent.replace('_',' ')}</div>
+                <div class="pending-meta">${byType || 'No learnings yet'}</div>
+              </div>
+              <span class="badge badge-pending">${s.total_learnings} lessons</span>
+            </div>`;
+        }).join('');
+    }
+
+    async function showMemoryDetail(agent) {
+        const res  = await fetch(`/admin/api/agents/${agent}/memory`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        const lessons = data.learnings || [];
+        if (!lessons.length) { alert(`${agent} has no learnings yet.`); return; }
+        const text = lessons.slice(-15).reverse()
+            .map(l => `[${l.type?.toUpperCase()}] ${l.lesson}\n  Trigger: ${l.trigger||'—'}  Confidence: ${Math.round((l.confidence||0)*100)}%`)
+            .join('\n\n');
+        alert(`Last ${Math.min(15,lessons.length)} lessons for ${agent}:\n\n${text}`);
+    }
+
+    async function teachAgent() {
+        const agent  = document.getElementById('teachAgent').value;
+        const type   = document.getElementById('teachType').value;
+        const lesson = document.getElementById('teachLesson').value.trim();
+        if (!lesson) { alert('Please enter a lesson.'); return; }
+        const res = await fetch(`/admin/api/agents/${agent}/teach`, {
+            method: 'POST',
+            headers: {...getAuthHeaders(), 'Content-Type':'application/json'},
+            body: JSON.stringify({lesson, type, confidence: 0.95}),
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('teachLesson').value = '';
+            alert(`Lesson recorded for ${agent}. It will apply on the next run.`);
+            loadMemory();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    updateClock();
+    setInterval(updateClock, 1000);
+    checkAuth();
+    startPolling();
+    </script>
+</body>
+</html>

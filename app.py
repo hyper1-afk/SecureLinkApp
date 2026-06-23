@@ -30,6 +30,7 @@ from admin import get_admin_manager, EmployeeRole
 from support_email_monitor import start_support_email_monitor
 from attack_surface_routes import attack_surface_bp, init_attack_surface
 from compliance_routes import compliance_bp, init_compliance
+from agent_routes import agent_bp, init_agent_routes
 from scan_scheduler import get_scan_scheduler
 from domain_scanner import DomainScanner
 from features import (
@@ -214,6 +215,10 @@ app.register_blueprint(attack_surface_bp)
 # Initialize Compliance Center
 init_compliance(config, auth_manager)
 app.register_blueprint(compliance_bp)
+
+# Register Agent control panel
+init_agent_routes(admin_manager)
+app.register_blueprint(agent_bp)
 
 # Initialize Dark Web Monitor
 dark_web_monitor = get_dark_web_monitor(config)
@@ -3179,6 +3184,11 @@ def generate_security_report_pdf():
 
 # ==================== Admin Panel Routes ====================
 
+@app.route('/admin')
+def admin_root():
+    return redirect(url_for('admin_login_page'))
+
+
 @app.route('/admin/login')
 def admin_login_page():
     """Admin login page"""
@@ -5249,6 +5259,61 @@ def seed_forum_categories():
         session.close()
 
 
+@app.route('/api/pipeline/review')
+def pipeline_review():
+    """Handle approve/deny clicks from the Business Manager approval email."""
+    import json, secrets
+    from pathlib import Path
+
+    token = request.args.get('token', '').strip()
+    action = request.args.get('action', '').strip().lower()
+
+    if not token or action not in ('approve', 'deny'):
+        return render_template('pipeline_result.html',
+                               title='Invalid Request',
+                               message='Missing or invalid token/action.',
+                               success=False), 400
+
+    pending_dir = Path(__file__).parent / 'agents' / 'workspace' / 'pending_changes'
+    change_file = pending_dir / f'{token}.json'
+
+    if not change_file.exists():
+        return render_template('pipeline_result.html',
+                               title='Not Found',
+                               message='Change not found. It may have already been processed.',
+                               success=False), 404
+
+    change = json.loads(change_file.read_text())
+
+    if change.get('status') in ('deployed', 'denied'):
+        return render_template('pipeline_result.html',
+                               title='Already Processed',
+                               message=f"This change was already {change['status']}.",
+                               success=False), 409
+
+    import subprocess, sys
+    deploy_script = Path(__file__).parent / 'agents' / 'deploy_agent.py'
+    result = subprocess.run(
+        [sys.executable, str(deploy_script), action, token],
+        capture_output=True, text=True
+    )
+    success = result.returncode == 0
+    output = result.stdout or result.stderr
+
+    logger.info(f"Pipeline {action} for token {token[:16]}...: {'OK' if success else 'FAILED'} — {output}")
+
+    rec_title = change.get('recommendation', {}).get('title', 'Change')
+    if action == 'approve':
+        title = 'Deployed!' if success else 'Deploy Failed'
+        message = f'"{rec_title}" has been merged to main and pushed to production.' if success else f'Deploy failed: {output}'
+    else:
+        title = 'Change Denied'
+        message = f'"{rec_title}" was denied and the branch has been deleted.'
+
+    return render_template('pipeline_result.html',
+                           title=title, message=message, success=success)
+
+
 def setup_logging():
     """Set up file logging"""
     file_handler = RotatingFileHandler(
@@ -5283,7 +5348,9 @@ if __name__ == '__main__':
     # Start attack surface scan scheduler
     scan_scheduler = get_scan_scheduler(config)
     scan_scheduler.start()
+
     logger.info("Attack surface scan scheduler started")
+    logger.info("Hermes agents run via: python agents/run_scheduler.py")
     
     try:
         print("""

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title }} — SecureLink Pipeline</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f3f4f6;display:flex;
+         align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.08);
+          padding:40px 48px;max-width:480px;width:100%;text-align:center}
+    .icon{font-size:48px;margin-bottom:16px}
+    h1{font-size:24px;margin:0 0 12px;color:#111827}
+    p{color:#6b7280;line-height:1.6;margin:0 0 24px}
+    a{display:inline-block;background:#1e3a5f;color:#fff;padding:10px 24px;
+      border-radius:6px;text-decoration:none;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">{{ '✅' if success else '❌' }}</div>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <a href="/">Back to SecureLink</a>
+  </div>
+</body>
+</html>
