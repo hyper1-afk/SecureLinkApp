@@ -4,7 +4,8 @@
 name: securelink
 
 services:
-  # PostgreSQL Database
+
+  # ── PostgreSQL Database ───────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: securelink-db
@@ -22,9 +23,26 @@ services:
       retries: 5
     networks:
       - securelink-internal
-    # Database should NOT be exposed to the host — only accessible via internal network
 
-  # SecureLinkApp Web Application
+  # ── Ollama (LLM runtime for Hermes agents) ────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: securelink-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - securelink-internal
+    # Pull hermes3 on first start (no-op if already pulled)
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull hermes3 && wait"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # ── Flask Web Application ─────────────────────────────────────────────────
   web:
     build:
       context: .
@@ -32,70 +50,55 @@ services:
     container_name: securelink-web
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${PORT:-5000}:5000"   # Bind to localhost only
+      - "127.0.0.1:${PORT:-5000}:5000"
+    env_file: .env
     environment:
-      # Required
-      SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-securelink}
-      APP_URL: ${APP_URL:-https://securelinkapp.com}
-      APP_NAME: ${APP_NAME:-SecureLink}
-      ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY}
-      FERNET_ENCRYPTION_KEY: ${FERNET_ENCRYPTION_KEY}
-      
-      # Flask
-      FLASK_ENV: ${FLASK_ENV:-production}
-      DEBUG: "false"
-      
-      # Stripe (required for payments)
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      
-      # Google OAuth (optional)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      
-      # API Keys (optional - for enhanced scanning)
-      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
-      GOOGLE_SAFE_BROWSING_API_KEY: ${GOOGLE_SAFE_BROWSING_API_KEY:-}
-      HIBP_API_KEY: ${HIBP_API_KEY:-}
-      
-      # SMTP for emails (optional)
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USERNAME: ${SMTP_USERNAME:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      
-      # Firewall (optional — comma-separated blocked IPs)
-      BLOCKED_IPS: ${BLOCKED_IPS:-}
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - agent_workspace:/app/agents/workspace   # shared with agents container
     depends_on:
       db:
         condition: service_healthy
     networks:
       - securelink-internal
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
-  # Optional: Nginx reverse proxy for production
-  # Uncomment if you want to use Nginx
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: securelink-nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./certs:/etc/nginx/certs:ro
-  #   depends_on:
-  #     - web
-  #   networks:
-  #     - securelink-internal
+  # ── Hermes Agent Scheduler (24/7 autonomous agents) ──────────────────────
+  agents:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: securelink-agents
+    restart: unless-stopped
+    command: ["python", "agents/run_scheduler.py"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-securelink}
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - agent_workspace:/app/agents/workspace   # shared with web container
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - securelink-internal
 
 volumes:
   postgres_data:
+    driver: local
+  ollama_data:
+    driver: local
+  agent_workspace:
     driver: local
 
 networks:
   securelink-internal:
     driver: bridge
-    internal: false  # Set to true if running behind nginx proxy
