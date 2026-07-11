@@ -1344,8 +1344,17 @@ def get_profile():
 @require_auth
 def update_profile():
     """Update user profile"""
-    data = request.get_json()
-    result = auth_manager.update_profile(request.current_user['id'], data)
+    data = request.get_json() or {}
+    ALLOWED_FIELDS = {'full_name', 'username', 'bio', 'location', 'website', 'avatar_url'}
+    MAX_LENGTHS = {'full_name': 100, 'username': 50, 'bio': 500, 'location': 100, 'website': 255, 'avatar_url': 500}
+    sanitized = {}
+    for field in ALLOWED_FIELDS:
+        if field in data:
+            val = str(data[field]).strip() if data[field] is not None else ''
+            if len(val) > MAX_LENGTHS.get(field, 255):
+                return jsonify({'error': f'{field} exceeds maximum length'}), 400
+            sanitized[field] = val
+    result = auth_manager.update_profile(request.current_user['id'], sanitized)
     return jsonify(result)
 
 
@@ -2843,6 +2852,7 @@ def manage_blacklist():
 
 
 @app.route('/api/lookup/<path:url>', methods=['GET'])
+@require_auth
 def lookup_url(url):
     """Look up previous verification for a URL"""
     result = db.get_verification_by_url(url)
@@ -3884,13 +3894,21 @@ def create_support_ticket():
     data = request.get_json()
     user = request.current_user
     
-    subject = data.get('subject', '').strip()
-    description = data.get('description', '').strip()
-    category = data.get('category', 'general')
-    priority = data.get('priority', 'medium')
-    
+    subject = str(data.get('subject', '')).strip()
+    description = str(data.get('description', '')).strip()
+    category = str(data.get('category', 'general')).strip()
+    priority = str(data.get('priority', 'medium')).strip()
+
     if not subject or not description:
         return jsonify({'error': 'Subject and description are required'}), 400
+    if len(subject) > 200:
+        return jsonify({'error': 'Subject must be 200 characters or less'}), 400
+    if len(description) > 5000:
+        return jsonify({'error': 'Description must be 5000 characters or less'}), 400
+    if category not in ('general', 'billing', 'technical', 'security', 'feature', 'other'):
+        category = 'general'
+    if priority not in ('low', 'medium', 'high', 'urgent'):
+        priority = 'medium'
     
     result = admin_manager.create_ticket(
         customer_email=user.get('email'),
@@ -4256,6 +4274,8 @@ def fetch_live_threats():
 
 
 @app.route('/api/threatmap/check-ip/<ip>', methods=['GET'])
+@require_auth
+@limiter.limit("30 per minute")
 def check_ip_abuse(ip):
     """Check an IP's reputation using AbuseIPDB"""
     from features import check_ip_reputation
@@ -4337,11 +4357,13 @@ def invite_organization_member(org_id):
     if not member or member.get('role') != 'admin':
         return jsonify({'error': 'Only admins can invite members'}), 403
     
-    email = data.get('email', '').strip()
-    role = data.get('role', 'member')
-    
+    email = str(data.get('email', '')).strip()
+    role = str(data.get('role', 'member')).strip()
+
     if not email:
         return jsonify({'error': 'Email is required'}), 400
+    if role not in ('admin', 'member', 'viewer'):
+        return jsonify({'error': 'Invalid role. Must be admin, member, or viewer'}), 400
     
     # Find user by email
     invited_user = auth_manager.get_user_by_email_only(email)
@@ -4371,11 +4393,28 @@ def update_organization_webhooks(org_id):
     if not member or member.get('role') != 'admin':
         return jsonify({'error': 'Only admins can update webhooks'}), 403
     
+    def _validate_webhook_url(url):
+        if not url:
+            return None
+        url = str(url).strip()
+        if len(url) > 500:
+            return None
+        if not url.startswith('https://'):
+            raise ValueError(f'Webhook URL must use HTTPS: {url[:60]}')
+        return url
+
+    try:
+        slack_webhook   = _validate_webhook_url(data.get('slack_webhook'))
+        discord_webhook = _validate_webhook_url(data.get('discord_webhook'))
+        teams_webhook   = _validate_webhook_url(data.get('teams_webhook'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
     result = db.update_organization_webhooks(
         org_id=org_id,
-        slack_webhook=data.get('slack_webhook'),
-        discord_webhook=data.get('discord_webhook'),
-        teams_webhook=data.get('teams_webhook')
+        slack_webhook=slack_webhook,
+        discord_webhook=discord_webhook,
+        teams_webhook=teams_webhook,
     )
     
     if result:
@@ -4853,11 +4892,17 @@ def explain_threat():
     """Get AI explanation for a threat"""
     data = request.get_json()
     
-    url = data.get('url', '')
-    risk_score = data.get('risk_score', 0)
+    url = str(data.get('url', ''))[:2000]
+    risk_score = float(data.get('risk_score', 0))
+    risk_score = max(0.0, min(1.0, risk_score))
     threat_types = data.get('threat_types', [])
+    if not isinstance(threat_types, list):
+        threat_types = []
+    threat_types = [str(t)[:100] for t in threat_types[:20]]
     threat_details = data.get('threat_details', {})
-    
+    if not isinstance(threat_details, dict):
+        threat_details = {}
+
     explanation = get_ai_threat_explanation(
         url=url,
         risk_score=risk_score,
