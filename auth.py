@@ -617,11 +617,13 @@ class AuthManager:
             print(f"Failed to send verification email: {e}")
             return False
     
-    def _send_welcome_email(self, email: str, username: str, full_name: Optional[str] = None) -> bool:
+    def _send_welcome_email(self, email: str, username: str, full_name: Optional[str] = None,
+                            subscription_tier: str = 'free') -> bool:
         """Send a welcome email after a user successfully verifies their account"""
         try:
             display_name = full_name or username
             login_url = 'https://securelinkapp.com/login'
+            upgrade_url = 'https://securelinkapp.com/profile#upgrade'
 
             html_content = f"""
             <!DOCTYPE html>
@@ -679,6 +681,13 @@ class AuthManager:
                     <p style="text-align: center;">
                         <a href="{login_url}" class="btn">Go to Your Dashboard</a>
                     </p>
+                    {f'''
+                    <div style="background:#0f172a;border:1px solid #0ea5e9;border-radius:12px;padding:20px 24px;margin:24px 0;">
+                        <p style="margin:0 0 8px;color:#f8fafc;font-weight:600;">&#11088; Complete your {subscription_tier.capitalize()} upgrade</p>
+                        <p style="margin:0 0 14px;color:#cbd5e1;font-size:14px;">You selected the <strong>{subscription_tier.capitalize()} plan</strong> during sign-up. Your account is currently on the free tier — activate your plan to unlock all {subscription_tier.capitalize()} features.</p>
+                        <a href="{upgrade_url}" style="display:inline-block;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;text-decoration:none;padding:10px 24px;border-radius:8px;font-weight:600;font-size:14px;">Activate {subscription_tier.capitalize()} Plan</a>
+                    </div>
+                    ''' if subscription_tier not in ('free', None, '') else ''}
                     <p>If you have any questions, just reply to this email — we're happy to help.</p>
                     <div class="footer">
                         <p>&#169; 2026 SecureLink &mdash; securelinkapp.com</p>
@@ -689,6 +698,13 @@ class AuthManager:
             </body>
             </html>
             """
+
+            upgrade_note = (
+                f"\n⭐ Complete your {subscription_tier.capitalize()} upgrade\n"
+                f"You selected the {subscription_tier.capitalize()} plan during sign-up. "
+                f"Your account is currently on the free tier — activate your plan here:\n"
+                f"{upgrade_url}\n"
+            ) if subscription_tier not in ('free', None, '') else ''
 
             text_content = f"""
 Welcome to SecureLink, {display_name}!
@@ -702,7 +718,7 @@ Here's what you can do right away:
 - Threat Intelligence: Live threat feeds and dark web monitoring.
 
 Log in and get started: {login_url}
-
+{upgrade_note}
 If you have any questions, just reply to this email.
 
 © 2026 SecureLink — securelinkapp.com
@@ -1024,7 +1040,8 @@ If you have any questions, just reply to this email.
             session.commit()
 
             # Send welcome email now that the account is confirmed
-            self._send_welcome_email(user_email, user_username, user_full_name)
+            self._send_welcome_email(user_email, user_username, user_full_name,
+                                     subscription_tier=str(user.subscription_tier or 'free'))
 
             return {
                 'success': True,
