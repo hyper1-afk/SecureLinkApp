@@ -3485,6 +3485,31 @@ def admin_api_delete_customer(user_id):
     return jsonify(result) if result['success'] else (jsonify(result), 400)
 
 
+@app.route('/admin/api/customers/<int:user_id>/subscription', methods=['PUT'])
+@require_admin_role('manager')
+def admin_api_update_customer_subscription(user_id):
+    """Manually override a customer's subscription tier (manager only)."""
+    data = request.get_json()
+    plan = data.get('plan', '').lower()
+    if plan not in ('free', 'pro', 'enterprise'):
+        return jsonify({'success': False, 'error': 'Invalid plan. Must be free, pro, or enterprise'}), 400
+
+    user_data = auth_manager.get_user_by_id(user_id)
+    if not user_data:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    from datetime import datetime, timedelta
+    expires_at = None if plan == 'free' else datetime.utcnow() + timedelta(days=365)
+    result = auth_manager.update_subscription(user_id, plan, expires_at)
+
+    admin_user = request.current_employee
+    logger.info(
+        f"Admin {admin_user.get('username')} manually set user {user_id} "
+        f"({user_data.get('email')}) to {plan}"
+    )
+    return jsonify({'success': True, 'plan': plan, 'user_id': user_id})
+
+
 @app.route('/admin/api/customers/by-email', methods=['DELETE'])
 @require_admin_role('manager')
 def admin_api_delete_customer_by_email():

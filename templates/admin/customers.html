@@ -212,6 +212,9 @@
                                 <button class="btn btn-secondary btn-sm" onclick="viewCustomerTickets('${escapeHtml(c.email)}')" title="View Tickets">
                                     <i class="bi bi-ticket-detailed"></i>
                                 </button>
+                                <button class="btn btn-secondary btn-sm" onclick="openChangePlan(${c.id}, '${escapeHtml(c.email)}', '${tier}')" title="Change Plan">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
                                 <button class="btn btn-danger btn-sm" onclick="confirmDeleteCustomer(${c.id}, '${escapeHtml(c.email)}')" title="Delete Customer">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -268,6 +271,40 @@
             } catch (e) { alert('Error deleting customer. Please try again.'); }
         }
 
+        // ── Change Plan ──────────────────────────────────────────────────
+        let _changePlanUserId = null;
+
+        function openChangePlan(userId, email, currentTier) {
+            _changePlanUserId = userId;
+            document.getElementById('changePlanEmail').textContent = email;
+            document.getElementById('changePlanSelect').value = currentTier;
+            document.getElementById('changePlanModal').style.display = 'flex';
+        }
+        function closeChangePlan() {
+            document.getElementById('changePlanModal').style.display = 'none';
+            _changePlanUserId = null;
+        }
+        async function submitChangePlan() {
+            const plan = document.getElementById('changePlanSelect').value;
+            const btn  = document.getElementById('changePlanBtn');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const res  = await fetch(`/admin/api/customers/${_changePlanUserId}/subscription`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeChangePlan();
+                    loadCustomers(currentPage);
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) { alert('Request failed. Please try again.'); }
+            btn.disabled = false; btn.textContent = 'Save';
+        }
+
         function formatDate(s) { return s ? new Date(s).toLocaleDateString() : '—'; }
         function escapeHtml(text) {
             const d = document.createElement('div');
@@ -287,5 +324,23 @@
 
         checkAuth();
     </script>
+
+<!-- Change Plan Modal -->
+<div id="changePlanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:400px;margin:20px">
+        <h3 style="margin-bottom:6px;font-size:1.1rem;color:var(--text-white)">Change Plan</h3>
+        <p style="color:var(--text-secondary);font-size:.875rem;margin-bottom:20px" id="changePlanEmail"></p>
+        <label style="display:block;margin-bottom:8px;font-size:.85rem;color:var(--text-secondary)">New plan</label>
+        <select id="changePlanSelect" style="width:100%;padding:10px 12px;background:var(--bg-body);border:1px solid var(--border);border-radius:8px;color:var(--text-white);font-size:.95rem;margin-bottom:20px">
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
+        </select>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-secondary" onclick="closeChangePlan()">Cancel</button>
+            <button class="btn btn-primary" id="changePlanBtn" onclick="submitChangePlan()">Save</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
