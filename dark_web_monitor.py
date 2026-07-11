@@ -144,6 +144,18 @@ class DarkWebMonitor:
                 time.sleep(self.RATE_LIMIT_DELAY - elapsed)
             self._last_request_time = time.time()
 
+    def _hibp_get(self, url: str, **kwargs) -> requests.Response:
+        """GET with automatic one-retry on 429 using Retry-After header (max 30s wait)."""
+        response = requests.get(url, headers=self._get_headers(), **kwargs)
+        if response.status_code == 429:
+            retry_after = min(int(response.headers.get('Retry-After', '6')), 30)
+            logger.warning(f"HIBP rate limited; retrying in {retry_after}s")
+            time.sleep(retry_after)
+            with self._lock:
+                self._last_request_time = time.time()
+            response = requests.get(url, headers=self._get_headers(), **kwargs)
+        return response
+
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers for HIBP API"""
         headers = {
@@ -177,11 +189,10 @@ class DarkWebMonitor:
                 'includeUnverified': str(include_unverified).lower()
             }
 
-            response = requests.get(
+            response = self._hibp_get(
                 f"{self.HIBP_API_BASE}/breachedaccount/{requests.utils.quote(email)}",
-                headers=self._get_headers(),
                 params=params,
-                timeout=15
+                timeout=15,
             )
 
             if response.status_code == 200:
@@ -214,8 +225,7 @@ class DarkWebMonitor:
                 return [], "API key required for email breach lookups"
 
             elif response.status_code == 429:
-                retry_after = response.headers.get('Retry-After', '2')
-                return [], f"Rate limited. Retry after {retry_after}s"
+                return [], "HIBP rate limit reached. Please try again in a few seconds."
 
             elif response.status_code == 403:
                 return [], "API key invalid or insufficient permissions"
@@ -244,10 +254,9 @@ class DarkWebMonitor:
         self._rate_limit()
 
         try:
-            response = requests.get(
+            response = self._hibp_get(
                 f"{self.HIBP_API_BASE}/pasteaccount/{requests.utils.quote(email)}",
-                headers=self._get_headers(),
-                timeout=15
+                timeout=15,
             )
 
             if response.status_code == 200:
@@ -269,7 +278,7 @@ class DarkWebMonitor:
                 return [], "API key required for paste lookups"
 
             elif response.status_code == 429:
-                return [], "Rate limited"
+                return [], "HIBP rate limit reached. Please try again in a few seconds."
 
             else:
                 return [], f"HIBP paste API error: {response.status_code}"

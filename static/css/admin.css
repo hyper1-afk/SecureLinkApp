@@ -827,6 +827,17 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     .main-content { margin-left: 0; padding: 20px 16px; }
     .mobile-toggle { display: flex !important; }
 
+    /* Sticky topbar so sign-out is always accessible while scrolling */
+    .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 150;
+        background: var(--bg-body);
+        padding: 10px 0;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+
     /* Stack topbar on small tablets */
     .topbar-right .topbar-time { display: none; }
 }

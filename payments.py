@@ -11,19 +11,18 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Stripe Price IDs - Replace with your actual Stripe Price IDs
 STRIPE_PRICES = {
-    'pro_monthly':        'price_1SwwuEPTu7BHdtL9Q7BIafqg',   # $19.99/month
-    'pro_yearly':         'price_1SwwuEPTu7BHdtL9lfo8A4ga',   # $199.99/year
-    'team_monthly':       'price_team_monthly_placeholder',    # $49.99/month
-    'team_yearly':        'price_team_yearly_placeholder',     # $499.99/year
-    'enterprise_monthly': 'price_1SwwuFPTu7BHdtL92eGnbVCT',   # $99.99/month
-    'enterprise_yearly':  'price_1SwwuFPTu7BHdtL9R1KpiIph',   # $999.99/year
-    # Org seat-based prices (per-seat, quantity = seat count)
-    'team_pro_monthly':        'price_team_pro_monthly',        # $15.99/seat/month
-    'team_pro_yearly':         'price_team_pro_yearly',         # $159.99/seat/year
-    'team_enterprise_monthly': 'price_team_enterprise_monthly', # $29.99/seat/month
-    'team_enterprise_yearly':  'price_team_enterprise_yearly',  # $299.99/seat/year
+    # Individual plans
+    'pro_monthly':            'price_1TroYhPTu7BHdtL9JFLj83Hl',
+    'pro_yearly':             'price_1TroYhPTu7BHdtL9nKaC2XJN',
+    'enterprise_monthly':     'price_1TroYiPTu7BHdtL9d0uIW6nV',
+    'enterprise_yearly':      'price_1TroYiPTu7BHdtL9xxNJJ81A',
+
+    # Team / org seat-based plans (quantity = seat count)
+    'team_pro_monthly':       'price_1TroYiPTu7BHdtL9CPt7JCQv',
+    'team_pro_yearly':        'price_1TroYjPTu7BHdtL9SKw1asMr',
+    'team_enterprise_monthly':'price_1TroYjPTu7BHdtL9p4RAftdQ',
+    'team_enterprise_yearly': 'price_1TroYjPTu7BHdtL96drHFgc8',
 }
 
 # Per-seat prices shown in the UI (org licensing)
@@ -42,16 +41,16 @@ TEAM_SEAT_PRICES = {
 
 PLAN_PRICES = {
     'pro': {
-        'monthly': 19.99,
-        'yearly': 199.99,
+        'monthly': 14.99,
+        'yearly': 149.99,
     },
     'team': {
         'monthly': 49.99,
         'yearly': 499.99,
     },
     'enterprise': {
-        'monthly': 99.99,
-        'yearly': 999.99,
+        'monthly': 59.99,
+        'yearly': 599.99,
     },
 }
 
