@@ -532,11 +532,11 @@ def register():
                 msg['To'] = admin_email
 
                 body = (
-                    f"New user signed up on SecureLink.\n\n"
+                    f"New user registered on SecureLink.\n\n"
                     f"Name:     {full_name or 'N/A'}\n"
                     f"Username: {username}\n"
                     f"Email:    {email}\n"
-                    f"Plan:     {subscription_tier}\n"
+                    f"Intended plan: {subscription_tier} (not yet paid — account starts on free tier)\n"
                     f"Time:     {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n"
                 )
                 msg.attach(MIMEText(body, 'plain'))
