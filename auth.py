@@ -1302,9 +1302,14 @@ If you have any questions, just reply to this email.
             session.query(PasswordResetToken).filter(PasswordResetToken.user_id == user_id).delete()
             session.query(UserSession).filter(UserSession.user_id == user_id).delete()
             session.query(EmailAccount).filter(EmailAccount.user_id == user_id).delete()
-            
+            session.query(LicenseKey).filter(LicenseKey.user_id == user_id).delete()
+            session.query(UserScanCount).filter(UserScanCount.user_id == user_id).delete()
+            # DarkWebAlert before MonitoredAsset (FK to both)
+            session.query(DarkWebAlert).filter(DarkWebAlert.user_id == user_id).delete()
+            session.query(MonitoredAsset).filter(MonitoredAsset.user_id == user_id).delete()
+
             # Delete community/forum data (no FK constraints but clean up anyway)
-            from database import (VerificationRecord, CommunityReport, ReportVote, 
+            from database import (VerificationRecord, CommunityReport, ReportVote,
                                   UserReputation, ShortLink, OrganizationMember,
                                   ForumPost, ForumComment, ForumVote)
             session.query(VerificationRecord).filter(VerificationRecord.user_id == user_id).delete()
