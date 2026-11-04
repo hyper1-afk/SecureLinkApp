@@ -6,7 +6,9 @@ from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class Settings(BaseSettings):
@@ -52,7 +54,7 @@ def readiness(response: Response) -> HealthResponse:
             checks["postgres"] = "ok"
         finally:
             engine.dispose()
-    except Exception:
+    except (SQLAlchemyError, OSError, TimeoutError):
         checks["postgres"] = "unavailable"
 
     try:
@@ -62,7 +64,7 @@ def readiness(response: Response) -> HealthResponse:
             checks["redis"] = "ok"
         finally:
             client.close()
-    except Exception:
+    except (RedisError, OSError, TimeoutError):
         checks["redis"] = "unavailable"
 
     ready = all(value == "ok" for value in checks.values())
