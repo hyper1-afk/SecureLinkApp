@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-import smtplib
 import secrets
+import smtplib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID, uuid4
