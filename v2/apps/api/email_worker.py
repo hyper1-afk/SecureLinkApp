@@ -20,7 +20,7 @@ MAX_ATTEMPTS = 8
 def process_one() -> bool:
     now = datetime.now(UTC)
     factory = get_session_factory()
-    with factory() as session:
+    with factory() as session:  # noqa: SIM117
         with session.begin():
             row = session.scalar(
                 select(EmailActionToken)
