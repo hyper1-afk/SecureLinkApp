@@ -684,13 +684,23 @@ def accept_organization_invitation(
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     with session.begin():
-        action_token, user = _consume_action_token(session, payload.token, "invite_member")
-        organization_id = action_token.organization_id
-        role = action_token.requested_role
-        if organization_id is None or role is None or not user.email_verified:
+        digest = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+        organization_id = session.scalar(
+            select(EmailActionToken.organization_id).where(
+                EmailActionToken.token_hash == digest,
+                EmailActionToken.purpose == "invite_member",
+                EmailActionToken.consumed_at.is_(None),
+                EmailActionToken.expires_at > func.now(),
+            )
+        )
+        if organization_id is None:
             raise HTTPException(status_code=400, detail="Invalid or expired invitation")
         organization = session.get(Organization, organization_id, with_for_update=True)
         if organization is None:
+            raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+        action_token, user = _consume_action_token(session, payload.token, "invite_member")
+        role = action_token.requested_role
+        if action_token.organization_id != organization_id or role is None or not user.email_verified:
             raise HTTPException(status_code=400, detail="Invalid or expired invitation")
         existing = session.scalar(
             select(Membership.id).where(
