@@ -1,6 +1,5 @@
-from collections.abc import Generator
-
 import json
+from collections.abc import Generator
 
 import pytest
 from cryptography.fernet import Fernet
