@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from urllib.parse import urlencode
 
@@ -12,7 +13,29 @@ def email_delivery_configured() -> bool:
         settings.app_env not in {"production", "staging"}
         or (settings.app_public_url.startswith("https://") and settings.smtp_starttls)
     )
+    try:
+        if settings.email_outbox_encryption_key is None:
+            return False
+        Fernet(settings.email_outbox_encryption_key.encode("ascii"))
+    except (ValueError, UnicodeEncodeError):
+        return False
     return bool(settings.smtp_host and settings.smtp_from_email and valid_transport)
+
+
+def encrypt_action_token(token: str) -> bytes:
+    settings = get_settings()
+    key = settings.email_outbox_encryption_key
+    if key is None:
+        raise RuntimeError("Email outbox encryption key is not configured")
+    return Fernet(key.encode("ascii")).encrypt(token.encode("utf-8"))
+
+
+def decrypt_action_token(ciphertext: bytes) -> str:
+    settings = get_settings()
+    key = settings.email_outbox_encryption_key
+    if key is None:
+        raise RuntimeError("Email outbox encryption key is not configured")
+    return Fernet(key.encode("ascii")).decrypt(ciphertext).decode("utf-8")
 
 
 def send_action_email(purpose: str, recipient: str, token: str) -> None:

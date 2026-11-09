@@ -5,7 +5,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 ## Current API foundation
 
 - Email verification is required before login.
-- Password reset links are single-use, expire, and are stored as token digests.
+- Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
 - Password reset increments a token version and invalidates existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
 - Organization access is checked against current membership on every request; owner/admin roles are required to list organization members.
@@ -16,9 +16,9 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 1. Install Git, Docker Desktop (WSL2 backend), and Python 3.12.
 2. From PowerShell: `cd v2`
-3. Copy `.env.example` to `.env` and set a unique `APP_SECRET_KEY`, database password, and SMTP test account.
+3. Copy `.env.example` to `.env` and set unique `APP_SECRET_KEY` and `EMAIL_OUTBOX_ENCRYPTION_KEY` values, a database password, and an SMTP test account.
 4. Set `APP_PUBLIC_URL` to the local web UI origin that will handle `/verify-email` and `/reset-password` links.
-5. Start services: `docker compose up --build`
+5. Configure `EMAIL_OUTBOX_ENCRYPTION_KEY` with a generated Fernet key, then start services: `docker compose up --build`
 6. API docs: http://localhost:8000/docs; liveness: http://localhost:8000/health/live.
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.

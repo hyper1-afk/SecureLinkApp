@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import hashlib
-import logging
 import re
 import secrets
-import smtplib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID, uuid4
 
 import jwt
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
 from pydantic import BaseModel, Field
@@ -20,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.config import get_settings
 from apps.api.db import get_session
-from apps.api.emailer import email_delivery_configured, send_action_email
+from apps.api.emailer import email_delivery_configured, encrypt_action_token
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
@@ -31,7 +29,6 @@ from packages.security_core.models import (
 )
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 bearer = HTTPBearer(auto_error=False)
 password_hash = PasswordHash.recommended()
 dummy_password_hash = password_hash.hash("invalid-login-dummy-password")
@@ -123,7 +120,7 @@ def _new_action_token(
     user: User,
     purpose: str,
     lifetime: timedelta,
-) -> str:
+) -> None:
     now = datetime.now(UTC)
     session.execute(
         update(EmailActionToken)
@@ -132,7 +129,7 @@ def _new_action_token(
             EmailActionToken.purpose == purpose,
             EmailActionToken.consumed_at.is_(None),
         )
-        .values(consumed_at=now)
+        .values(consumed_at=now, delivery_state="cancelled", delivery_ciphertext=None)
     )
     token = secrets.token_urlsafe(32)
     session.add(
@@ -141,17 +138,11 @@ def _new_action_token(
             purpose=purpose,
             token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
             expires_at=now + lifetime,
+            delivery_ciphertext=encrypt_action_token(token),
+            delivery_state="pending",
+            next_delivery_at=now,
         )
     )
-    return token
-
-
-def _deliver_action_email(purpose: str, email: str, token: str) -> None:
-    try:
-        send_action_email(purpose, email, token)
-    except (OSError, RuntimeError, smtplib.SMTPException):
-        # Do not expose delivery state, recipient existence, or action tokens to the caller.
-        logger.exception("Account action email delivery failed", extra={"purpose": purpose})
 
 
 def _consume_action_token(
@@ -187,7 +178,6 @@ def _consume_action_token(
 )
 def register(
     payload: RegistrationRequest,
-    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
@@ -203,7 +193,6 @@ def register(
         email_verified=False,
     )
     organization = Organization(name=organization_name)
-    token: str | None = None
     try:
         with session.begin():
             session.add_all([user, organization])
@@ -211,7 +200,7 @@ def register(
             session.add(
                 Membership(user_id=user.id, organization_id=organization.id, role="owner")
             )
-            token = _new_action_token(session, user, "verify_email", verification_lifetime)
+            _new_action_token(session, user, "verify_email", verification_lifetime)
             session.add_all(
                 [
                     AuditEvent(
@@ -240,8 +229,6 @@ def register(
         # Keep duplicate and new-address responses indistinguishable.
         return MessageResponse(message=generic_email_message)
 
-    if token is not None:
-        background_tasks.add_task(_deliver_action_email, "verify_email", email, token)
     return MessageResponse(message=generic_email_message)
 
 
@@ -252,20 +239,14 @@ def register(
 )
 def resend_verification(
     payload: EmailRequest,
-    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
     normalized_email = payload.email.strip().casefold()
-    token: str | None = None
-    email: str | None = None
     with session.begin():
         user = session.scalar(select(User).where(User.email_normalized == normalized_email))
         if user is not None and user.is_active and not user.email_verified:
-            token = _new_action_token(session, user, "verify_email", verification_lifetime)
-            email = user.email
-    if token is not None and email is not None:
-        background_tasks.add_task(_deliver_action_email, "verify_email", email, token)
+            _new_action_token(session, user, "verify_email", verification_lifetime)
     return MessageResponse(message=generic_email_message)
 
 
@@ -349,20 +330,14 @@ def login(
 )
 def forgot_password(
     payload: EmailRequest,
-    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
     normalized_email = payload.email.strip().casefold()
-    token: str | None = None
-    email: str | None = None
     with session.begin():
         user = session.scalar(select(User).where(User.email_normalized == normalized_email))
         if user is not None and user.is_active and user.email_verified:
-            token = _new_action_token(session, user, "reset_password", reset_lifetime)
-            email = user.email
-    if token is not None and email is not None:
-        background_tasks.add_task(_deliver_action_email, "reset_password", email, token)
+            _new_action_token(session, user, "reset_password", reset_lifetime)
     return MessageResponse(message=generic_email_message)
 
 

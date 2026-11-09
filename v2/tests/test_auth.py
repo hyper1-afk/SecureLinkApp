@@ -1,12 +1,13 @@
 from collections.abc import Generator
 
 import pytest
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import auth, main, rate_limits
+from apps.api import auth, email_worker, emailer, main, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import AuditEvent, Base, EmailActionToken, Membership, User
@@ -36,19 +37,18 @@ def client(monkeypatch) -> Generator[TestClient, None, None]:
     )
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-    sent_emails: list[tuple[str, str, str]] = []
-    monkeypatch.setattr(auth, "get_settings", lambda: Settings(
+    test_settings = Settings(
         app_secret_key=TEST_SECRET,
         smtp_host="mail.example.test",
         smtp_from_email="no-reply@example.test",
-    ))
+        email_outbox_encryption_key=Fernet.generate_key().decode("ascii"),
+    )
+    monkeypatch.setattr(auth, "get_settings", lambda: test_settings)
+    monkeypatch.setattr(emailer, "get_settings", lambda: test_settings)
+    monkeypatch.setattr(email_worker, "get_session_factory", lambda: factory)
     redis = FakeRedis()
     monkeypatch.setattr(rate_limits, "get_rate_limit_client", lambda: redis)
 
-    def fake_send(purpose: str, email: str, token: str) -> None:
-        sent_emails.append((purpose, email, token))
-
-    monkeypatch.setattr(auth, "send_action_email", fake_send)
     monkeypatch.setattr(auth, "email_delivery_configured", lambda: True)
 
     def override_session():
@@ -56,7 +56,6 @@ def client(monkeypatch) -> Generator[TestClient, None, None]:
             yield session
 
     main.app.state.test_session_factory = factory
-    main.app.state.sent_emails = sent_emails
     main.app.dependency_overrides[get_session] = override_session
     with TestClient(main.app) as test_client:
         yield test_client
@@ -77,10 +76,20 @@ def register_unverified(client: TestClient, email: str) -> None:
     assert response.json()["message"]
 
 
+def action_token(client: TestClient, purpose: str) -> str:
+    with client.app.state.test_session_factory() as session:
+        row = session.scalar(
+            select(EmailActionToken)
+            .where(EmailActionToken.purpose == purpose)
+            .order_by(EmailActionToken.created_at.desc())
+        )
+        assert row is not None and row.delivery_ciphertext is not None
+        return emailer.decrypt_action_token(row.delivery_ciphertext)
+
+
 def register(client: TestClient, email: str) -> dict[str, str]:
     register_unverified(client, email)
-    purpose, sent_to, verify_token = client.app.state.sent_emails[-1]
-    assert (purpose, sent_to) == ("verify_email", email)
+    verify_token = action_token(client, "verify_email")
     verified = client.post("/auth/verify-email", json={"token": verify_token})
     assert verified.status_code == 200
 
@@ -100,8 +109,7 @@ def test_registration_requires_email_verification_before_login(client: TestClien
     )
     assert rejected.status_code == 401
 
-    purpose, sent_to, token = client.app.state.sent_emails[-1]
-    assert (purpose, sent_to) == ("verify_email", "pending@example.test")
+    token = action_token(client, "verify_email")
     with client.app.state.test_session_factory() as session:
         stored_hash = session.scalar(
             select(EmailActionToken.token_hash).where(EmailActionToken.purpose == "verify_email")
@@ -235,8 +243,7 @@ def test_password_reset_revokes_prior_tokens_and_changes_password(client: TestCl
     registered = register(client, "reset@example.test")
     forgot = client.post("/auth/password/forgot", json={"email": "reset@example.test"})
     assert forgot.status_code == 200
-    purpose, sent_to, reset_token = client.app.state.sent_emails[-1]
-    assert (purpose, sent_to) == ("reset_password", "reset@example.test")
+    reset_token = action_token(client, "reset_password")
 
     reset = client.post(
         "/auth/password/reset",
@@ -272,3 +279,31 @@ def test_registration_requires_configured_email_delivery(client: TestClient, mon
         },
     )
     assert response.status_code == 503
+
+
+
+def test_email_worker_sends_and_clears_encrypted_payload(client: TestClient, monkeypatch):
+    register_unverified(client, "worker@example.test")
+    delivered = []
+    monkeypatch.setattr(email_worker, "send_action_email", lambda purpose, recipient, token: delivered.append((purpose, recipient, token)))
+    assert email_worker.process_one()
+    assert delivered[0][0:2] == ("verify_email", "worker@example.test")
+    with client.app.state.test_session_factory() as session:
+        row = session.scalar(select(EmailActionToken).where(EmailActionToken.purpose == "verify_email"))
+        assert row.delivery_state == "sent"
+        assert row.delivery_ciphertext is None
+        assert row.delivered_at is not None
+
+
+def test_email_worker_retries_without_logging_token_or_recipient(client: TestClient, monkeypatch, caplog):
+    register_unverified(client, "retry@example.test")
+    token = action_token(client, "verify_email")
+    monkeypatch.setattr(email_worker, "send_action_email", lambda *_args: (_ for _ in ()).throw(OSError("smtp down")))
+    assert email_worker.process_one()
+    with client.app.state.test_session_factory() as session:
+        row = session.scalar(select(EmailActionToken).where(EmailActionToken.purpose == "verify_email"))
+        assert row.delivery_state == "pending"
+        assert row.delivery_attempts == 1
+        assert row.delivery_ciphertext is not None
+    assert token not in caplog.text
+    assert "retry@example.test" not in caplog.text
