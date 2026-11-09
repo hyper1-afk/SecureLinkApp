@@ -25,8 +25,9 @@ class FakeEngine:
 
 
 class FakeRedis:
-    def __init__(self, *args, **kwargs):
-        pass
+    @classmethod
+    def from_url(cls, *_args, **_kwargs):
+        return cls()
 
     def ping(self):
         return True
