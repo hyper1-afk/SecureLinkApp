@@ -18,13 +18,13 @@ class RecordingRedis:
         return None
 
 
-def make_request(peer: str, forwarded: str = "") -> Request:
+def make_request(peer: str, forwarded: str = "", path: str = "/auth/login") -> Request:
     headers = [(b"x-forwarded-for", forwarded.encode())] if forwarded else []
     return Request(
         {
             "type": "http",
             "method": "POST",
-            "path": "/auth/login",
+            "path": path,
             "client": (peer, 12345),
             "headers": headers,
             "query_string": b"",
@@ -35,7 +35,7 @@ def make_request(peer: str, forwarded: str = "") -> Request:
 
 
 def key_for(client_ip: str) -> str:
-    material = f"login:/auth/login:{client_ip}"
+    material = f"login:{client_ip}"
     digest = hashlib.sha256(material.encode()).hexdigest()
     return f"securelink:rate:v1:{digest}"
 
@@ -80,3 +80,15 @@ def test_malformed_forwarded_header_falls_back_to_trusted_peer(monkeypatch):
     dependency(make_request("10.0.0.5", "not-an-ip"))
 
     assert redis.keys == [key_for("10.0.0.5")]
+
+
+def test_dynamic_route_parameters_do_not_create_new_redis_keys(monkeypatch):
+    redis = RecordingRedis()
+    monkeypatch.setattr(rate_limits, "get_rate_limit_client", lambda: redis)
+    monkeypatch.setattr(rate_limits, "get_settings", lambda: Settings())
+    dependency = rate_limits.rate_limit("url_scan", 20, 60)
+
+    dependency(make_request("198.51.100.8", path="/organizations/org-one/scans"))
+    dependency(make_request("198.51.100.8", path="/organizations/org-two/scans"))
+
+    assert redis.keys == [redis.keys[0], redis.keys[0]]

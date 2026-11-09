@@ -82,7 +82,9 @@ def _client_address(request: Request) -> str:
 def rate_limit(bucket: str, maximum: int, window_seconds: int) -> Callable[[Request], None]:
     def enforce(request: Request) -> None:
         client_ip = _client_address(request)
-        key_material = f"{bucket}:{request.url.path}:{client_ip}"
+        # The bucket identifies the operation. Excluding dynamic route parameters
+        # keeps attacker-controlled IDs from creating unbounded Redis keys.
+        key_material = f"{bucket}:{client_ip}"
         key_hash = hashlib.sha256(key_material.encode("utf-8")).hexdigest()
         client = get_rate_limit_client()
         try:
