@@ -10,7 +10,15 @@ from sqlalchemy.pool import StaticPool
 from apps.api import auth, emailer, main, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
-from packages.security_core.models import Base, EmailActionToken, Finding, Membership, ScanEvidence, UrlScan, User
+from packages.security_core.models import (
+    Base,
+    EmailActionToken,
+    Finding,
+    Membership,
+    ScanEvidence,
+    UrlScan,
+    User,
+)
 from packages.security_core.url_analysis import InvalidScanURL, analyze_url
 
 
