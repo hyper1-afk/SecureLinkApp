@@ -7,25 +7,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
-      email-worker:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    command: ["python", "-m", "apps.api.email_worker"]
-    env_file: .env
-    depends_on:
       postgres:
-        condition: service_healthy
-    read_only: true
-    tmpfs:
-      - /tmp
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    restart: unless-stopped
-
-  postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -42,6 +24,24 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
+    restart: unless-stopped
+
+  email-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.api.email_worker"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
 
   postgres:

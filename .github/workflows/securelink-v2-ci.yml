@@ -67,5 +67,10 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+      - name: Validate Docker Compose configuration
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
       - name: Build API container
         run: docker build -f apps/api/Dockerfile -t securelink-v2-api:ci .
