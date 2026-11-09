@@ -19,7 +19,7 @@ Internal code review of the V2 foundation; this is not an external penetration t
 2. **Product dashboard:** the account page supports registration, sign-in, verification and recovery. The security-scanning dashboard and customer workflows are not implemented. Account action links use URL fragments, remove them from history before exchange, and return `no-store`/`no-referrer` headers under a restrictive CSP.
 3. **Browser auth:** the legacy extension is not integrated with V2. Design OAuth authorization code with PKCE, extension-specific scopes, and short-lived sessions before linking accounts.
 4. **Authorization breadth:** invitations, ownership transfer, organization switching and a complete permission matrix need implementation and negative tests.
-5. **Session controls:** logout/session revocation and refresh-token rotation are not implemented.
+5. **Session controls:** logout revokes all of a user's current access tokens through a token-version increment. Refresh-token rotation and per-device session management are not implemented.
 6. **Abuse/load testing:** distributed load, proxy hops, rate-limit boundaries, and customer NAT behavior need staging validation.
 7. **Operational recovery:** no staging deployment or restore drill has run. Validate SMTP, TLS, backup restoration, alerts, rollback, data retention and secret rotation in isolated DigitalOcean staging.
 

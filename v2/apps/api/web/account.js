@@ -48,11 +48,25 @@ byId("login-form").addEventListener("submit", async (event) => {
   say("login-status", "Signed in.");
 });
 
-byId("sign-out").addEventListener("click", () => {
+byId("sign-out").addEventListener("click", async () => {
+  const token = sessionStorage.getItem("securelink.accessToken");
+  if (token) {
+    try {
+      await fetch("/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+        cache: "no-store",
+        referrerPolicy: "no-referrer",
+      });
+    } catch {
+      // Clear local credentials even when the network is unavailable.
+    }
+  }
   sessionStorage.removeItem("securelink.accessToken");
   sessionStorage.removeItem("securelink.organizationId");
   byId("sign-out").hidden = true;
-  say("session-status", "You are signed out.");
+  say("session-status", "You are signed out. The access token was revoked when the server was reachable.");
   say("login-status", "");
 });
 

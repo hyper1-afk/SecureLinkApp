@@ -415,3 +415,21 @@ def test_admin_cannot_manage_another_admin_or_grant_admin_role(client: TestClien
     assert promote_admin.status_code == 403
     assert change_admin.status_code == 403
     assert remove_owner.status_code == 403
+
+
+def test_logout_revokes_existing_access_token(client: TestClient):
+    registered = register(client, "logout@example.test")
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    logout_response = client.post("/auth/logout", headers=headers)
+    assert logout_response.status_code == 204
+
+    rejected = client.get(
+        f"/organizations/{registered['organization_id']}",
+        headers=headers,
+    )
+    assert rejected.status_code == 401
+    with client.app.state.test_session_factory() as session:
+        logout_events = session.scalar(
+            select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "user.logout")
+        )
+    assert logout_events == 1

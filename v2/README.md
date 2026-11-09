@@ -6,7 +6,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 - Email verification is required before login. A same-origin account page supports registration, sign-in, verification, resend, and password recovery.
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
-- Password reset increments a token version and invalidates existing access tokens.
+- Password reset and logout increment a token version and invalidate existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
 - Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
 - Audit events are append-only in PostgreSQL.

@@ -422,6 +422,36 @@ def current_principal(
     return Principal(user_id=user_id)
 
 
+
+@router.post("/auth/logout", status_code=204)
+def logout(
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    user = session.get(User, principal.user_id, with_for_update=True)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    membership = session.scalar(
+        select(Membership)
+        .where(Membership.user_id == user.id)
+        .order_by(Membership.created_at, Membership.id)
+        .limit(1)
+    )
+    user.token_version += 1
+    session.add(
+        AuditEvent(
+            organization_id=membership.organization_id if membership else None,
+            actor_user_id=user.id,
+            actor_type="user",
+            action="user.logout",
+            target_type="user",
+            target_id=user.id,
+            details="{}",
+        )
+    )
+    session.commit()
+
+
 def organization_membership(
     organization_id: str,
     principal: Annotated[Principal, Depends(current_principal)],
