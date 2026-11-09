@@ -310,3 +310,108 @@ def test_email_worker_retries_without_logging_token_or_recipient(client: TestCli
         assert row.delivery_ciphertext is not None
     assert token not in caplog.text
     assert "retry@example.test" not in caplog.text
+
+
+
+def test_owner_can_change_roles_and_mutations_create_audit_events(client: TestClient):
+    owner = register(client, "role-owner@example.test")
+    register(client, "role-analyst@example.test")
+    with client.app.state.test_session_factory() as session:
+        analyst_user_id = session.scalar(
+            select(User.id).where(User.email_normalized == "role-analyst@example.test")
+        )
+        analyst_membership = Membership(
+            organization_id=owner["organization_id"],
+            user_id=analyst_user_id,
+            role="viewer",
+        )
+        session.add(analyst_membership)
+        session.commit()
+        analyst_membership_id = analyst_membership.id
+
+    changed = client.patch(
+        f"/organizations/{owner['organization_id']}/members/{analyst_membership_id}",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"role": "analyst"},
+    )
+    assert changed.status_code == 200
+    assert changed.json()["role"] == "analyst"
+
+    removed = client.delete(
+        f"/organizations/{owner['organization_id']}/members/{analyst_membership_id}",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert removed.status_code == 204
+    with client.app.state.test_session_factory() as session:
+        actions = set(session.scalars(
+            select(AuditEvent.action).where(
+                AuditEvent.action.in_(["membership.role_changed", "membership.removed"])
+            )
+        ))
+    assert actions == {"membership.role_changed", "membership.removed"}
+
+
+def test_last_owner_cannot_be_demoted_or_removed(client: TestClient):
+    owner = register(client, "last-owner@example.test")
+    with client.app.state.test_session_factory() as session:
+        owner_membership_id = session.scalar(
+            select(Membership.id).where(
+                Membership.organization_id == owner["organization_id"],
+                Membership.role == "owner",
+            )
+        )
+
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    path = f"/organizations/{owner['organization_id']}/members/{owner_membership_id}"
+    demote = client.patch(path, headers=headers, json={"role": "admin"})
+    remove = client.delete(path, headers=headers)
+    assert demote.status_code == 409
+    assert remove.status_code == 409
+
+
+def test_admin_cannot_manage_another_admin_or_grant_admin_role(client: TestClient):
+    owner = register(client, "org-owner@example.test")
+    admin = register(client, "org-admin@example.test")
+    register(client, "org-analyst@example.test")
+    with client.app.state.test_session_factory() as session:
+        admin_user = session.scalar(select(User).where(User.email_normalized == "org-admin@example.test"))
+        analyst_user = session.scalar(select(User).where(User.email_normalized == "org-analyst@example.test"))
+        admin_member = Membership(
+            organization_id=owner["organization_id"],
+            user_id=admin_user.id,
+            role="admin",
+        )
+        analyst_member = Membership(
+            organization_id=owner["organization_id"],
+            user_id=analyst_user.id,
+            role="analyst",
+        )
+        session.add_all([admin_member, analyst_member])
+        session.commit()
+        owner_membership_id = session.scalar(
+            select(Membership.id).where(
+                Membership.organization_id == owner["organization_id"],
+                Membership.role == "owner",
+            )
+        )
+        admin_membership_id = admin_member.id
+        analyst_membership_id = analyst_member.id
+
+    headers = {"Authorization": f"Bearer {admin['access_token']}"}
+    promote_admin = client.patch(
+        f"/organizations/{owner['organization_id']}/members/{analyst_membership_id}",
+        headers=headers,
+        json={"role": "admin"},
+    )
+    change_admin = client.patch(
+        f"/organizations/{owner['organization_id']}/members/{admin_membership_id}",
+        headers=headers,
+        json={"role": "viewer"},
+    )
+    remove_owner = client.delete(
+        f"/organizations/{owner['organization_id']}/members/{owner_membership_id}",
+        headers=headers,
+    )
+    assert promote_admin.status_code == 403
+    assert change_admin.status_code == 403
+    assert remove_owner.status_code == 403

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 import jwt
@@ -443,6 +444,121 @@ def require_org_admin(
     if membership.role not in {"owner", "admin"}:
         raise HTTPException(status_code=403, detail="Owner or admin role required")
     return membership
+
+
+class MembershipRoleUpdate(BaseModel):
+    role: Literal["owner", "admin", "analyst", "viewer"]
+
+
+class MembershipMutationResponse(BaseModel):
+    membership_id: str
+    user_id: str
+    role: str
+
+
+def _target_membership(
+    session: Session,
+    organization_id: str,
+    membership_id: str,
+) -> Membership:
+    organization = session.get(Organization, organization_id, with_for_update=True)
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    target = session.scalar(
+        select(Membership)
+        .where(
+            Membership.id == membership_id,
+            Membership.organization_id == organization_id,
+        )
+        .with_for_update()
+    )
+    if target is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    return target
+
+
+def _ensure_admin_can_manage(actor: Membership, target: Membership, new_role: str | None = None) -> None:
+    if actor.role == "owner":
+        return
+    if target.role in {"owner", "admin"} or new_role in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Only an owner can manage owners or admins")
+
+
+def _owner_count(session: Session, organization_id: str) -> int:
+    return session.scalar(
+        select(func.count())
+        .select_from(Membership)
+        .where(
+            Membership.organization_id == organization_id,
+            Membership.role == "owner",
+        )
+    ) or 0
+
+
+@router.patch(
+    "/organizations/{organization_id}/members/{membership_id}",
+    response_model=MembershipMutationResponse,
+)
+def update_organization_member_role(
+    organization_id: str,
+    membership_id: str,
+    payload: MembershipRoleUpdate,
+    actor: Annotated[Membership, Depends(require_org_admin)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MembershipMutationResponse:
+    target = _target_membership(session, actor.organization_id, membership_id)
+    _ensure_admin_can_manage(actor, target, payload.role)
+    if target.role == "owner" and payload.role != "owner" and _owner_count(session, actor.organization_id) <= 1:
+        raise HTTPException(status_code=409, detail="The organization must retain an owner")
+    previous_role = target.role
+    if previous_role != payload.role:
+        target.role = payload.role
+        session.add(
+            AuditEvent(
+                organization_id=actor.organization_id,
+                actor_user_id=actor.user_id,
+                actor_type="user",
+                action="membership.role_changed",
+                target_type="membership",
+                target_id=target.id,
+                details=json.dumps({"from": previous_role, "to": payload.role}, separators=(",", ":")),
+            )
+        )
+        session.commit()
+    return MembershipMutationResponse(
+        membership_id=target.id,
+        user_id=target.user_id,
+        role=target.role,
+    )
+
+
+@router.delete(
+    "/organizations/{organization_id}/members/{membership_id}",
+    status_code=204,
+)
+def remove_organization_member(
+    organization_id: str,
+    membership_id: str,
+    actor: Annotated[Membership, Depends(require_org_admin)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    target = _target_membership(session, actor.organization_id, membership_id)
+    _ensure_admin_can_manage(actor, target)
+    if target.role == "owner" and _owner_count(session, actor.organization_id) <= 1:
+        raise HTTPException(status_code=409, detail="The organization must retain an owner")
+    session.add(
+        AuditEvent(
+            organization_id=actor.organization_id,
+            actor_user_id=actor.user_id,
+            actor_type="user",
+            action="membership.removed",
+            target_type="membership",
+            target_id=target.id,
+            details=json.dumps({"role": target.role}, separators=(",", ":")),
+        )
+    )
+    session.delete(target)
+    session.commit()
 
 
 class OrganizationMemberResponse(BaseModel):

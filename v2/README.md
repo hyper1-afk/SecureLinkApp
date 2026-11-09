@@ -8,7 +8,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
 - Password reset increments a token version and invalidates existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
-- Organization access is checked against current membership on every request; owner/admin roles are required to list organization members.
+- Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
 - Audit events are append-only in PostgreSQL.
 - Access tokens expire after 15 minutes.
 
@@ -33,4 +33,4 @@ SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never comm
 
 ## Production status
 
-Not production-ready. The account page and email verification/reset pages are implemented; the product dashboard and security-scanning workflows are not. Membership invitations/role changes, MFA, refresh-token/session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account page and email verification/reset pages are implemented; the product dashboard and security-scanning workflows are not. Membership invitations/ownership transfer, MFA, refresh-token/session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
