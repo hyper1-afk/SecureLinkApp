@@ -4,6 +4,8 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 ## Current API foundation
 
+- Organization-scoped passive URL hygiene scans store redacted evidence and deterministic findings. They make no outbound network requests and do not produce malware/reputation verdicts.
+
 - Email verification is required before login. A same-origin account page supports registration, sign-in, verification, resend, and password recovery.
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
 - Password reset and logout increment a token version and invalidate existing access tokens.
@@ -22,6 +24,8 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 6. API docs: http://localhost:8000/docs; liveness: http://localhost:8000/health/live.
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
+
+Active URL fetching and the full security-scanning dashboard are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
 
 ## Workspace
 

@@ -12,6 +12,7 @@ Internal code review of the V2 foundation; this is not an external penetration t
 - Organization access checks current membership. Cross-organization access and owner/admin-only member listing are tested. Owner/admin member role changes and removals are audited; admins cannot manage owners/admins, and the last owner cannot be demoted or removed.
 - PostgreSQL installs an append-only audit trigger; CI verifies update rejection against PostgreSQL.
 - Account email is transactionally queued in PostgreSQL; the token delivery payload is encrypted and a separate worker leases, retries, and clears it after success.
+- The first URL scan is passive and makes no network requests. URLs are redacted before persistence; evidence and findings are organization-scoped and PostgreSQL scan evidence is immutable.
 
 ## Open findings / release gates
 

@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     LargeBinary,
@@ -139,3 +140,81 @@ class EmailActionToken(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class UrlScan(Base):
+    __tablename__ = "url_scans"
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id", name="uq_url_scans_id_organization"),
+        CheckConstraint("status = 'completed'", name="ck_url_scans_status"),
+        Index("ix_url_scans_organization_created", "organization_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    requested_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    display_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    hostname: Mapped[str] = mapped_column(String(253), nullable=False)
+    scheme: Mapped[str] = mapped_column(String(5), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="completed", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class ScanEvidence(Base):
+    __tablename__ = "scan_evidence"
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id", name="uq_scan_evidence_id_organization"),
+        ForeignKeyConstraint(
+            ["scan_id", "organization_id"],
+            ["url_scans.id", "url_scans.organization_id"],
+            name="fk_scan_evidence_scan_organization",
+            ondelete="CASCADE",
+        ),
+        Index("ix_scan_evidence_scan", "scan_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    scan_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    detector_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class Finding(Base):
+    __tablename__ = "findings"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["scan_id", "organization_id"],
+            ["url_scans.id", "url_scans.organization_id"],
+            name="fk_findings_scan_organization",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["evidence_id", "organization_id"],
+            ["scan_evidence.id", "scan_evidence.organization_id"],
+            name="fk_findings_evidence_organization",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("scan_id", "detector_code", name="uq_findings_scan_detector"),
+        CheckConstraint(
+            "severity IN ('critical', 'high', 'medium', 'low', 'informational')",
+            name="ck_findings_severity",
+        ),
+        Index("ix_findings_organization_created", "organization_id", "created_at"),
+        Index("ix_findings_scan", "scan_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    scan_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    evidence_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    detector_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    description: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
