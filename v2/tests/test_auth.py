@@ -2,14 +2,14 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from apps.api import auth, main
 from apps.api.config import Settings
 from apps.api.db import get_session
-from packages.security_core.models import Base
+from packages.security_core.models import AuditEvent, Base, User
 
 TEST_SECRET = "test-secret-key-with-at-least-32-bytes"
 
@@ -29,6 +29,7 @@ def client(monkeypatch) -> Generator[TestClient, None, None]:
             yield session
 
     monkeypatch.setattr(auth, "get_settings", lambda: Settings(app_secret_key=TEST_SECRET))
+    main.app.state.test_session_factory = factory
     main.app.dependency_overrides[get_session] = override_session
     with TestClient(main.app) as test_client:
         yield test_client
@@ -66,6 +67,11 @@ def test_registration_creates_owner_and_login_issues_access_token(client: TestCl
     )
     assert login.status_code == 200
     assert login.json()["organization_id"] == registered["organization_id"]
+    with client.app.state.test_session_factory() as session:
+        login_events = session.scalar(
+            select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "user.login")
+        )
+    assert login_events == 1
 
 
 def test_user_cannot_read_another_organizations_record(client: TestClient):
@@ -91,6 +97,45 @@ def test_authentication_rejects_invalid_credentials_and_tokens(client: TestClien
         headers={"Authorization": "Bearer invalid-token"},
     )
     assert invalid_token.status_code == 401
+
+    registered = register(client, "token@example.test")
+    token = registered["access_token"]
+    tampered_token = f"x{token[1:]}"
+    tampered = client.get(
+        f"/organizations/{registered['organization_id']}",
+        headers={"Authorization": f"Bearer {tampered_token}"},
+    )
+    assert tampered.status_code == 401
+
+
+def test_disabling_a_user_invalidates_existing_access_tokens(client: TestClient):
+    registered = register(client, "disabled@example.test")
+    with client.app.state.test_session_factory() as session:
+        session.execute(
+            update(User)
+            .where(User.email_normalized == "disabled@example.test")
+            .values(is_active=False)
+        )
+        session.commit()
+
+    response = client.get(
+        f"/organizations/{registered['organization_id']}",
+        headers={"Authorization": f"Bearer {registered['access_token']}"},
+    )
+    assert response.status_code == 401
+
+
+def test_duplicate_email_registration_is_rejected(client: TestClient):
+    register(client, "duplicate@example.test")
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "DUPLICATE@example.test",
+            "password": "another-long-password",
+            "organization_name": "Second Org",
+        },
+    )
+    assert response.status_code == 409
 
 
 def test_registration_requires_configured_signing_secret(client: TestClient, monkeypatch):
