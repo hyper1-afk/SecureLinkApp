@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from apps.api.auth import router as auth_router
-from apps.api.scanning import router as scanning_router
 from apps.api.config import get_settings
+from apps.api.scanning import router as scanning_router
 
 
 class HealthResponse(BaseModel):
