@@ -18,10 +18,10 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 1. Install Git, Docker Desktop (WSL2 backend), and Python 3.12.
 2. From PowerShell: `cd v2`
-3. Copy `.env.example` to `.env` and set unique `APP_SECRET_KEY` and `EMAIL_OUTBOX_ENCRYPTION_KEY` values, a database password, and an SMTP test account.
-4. Set `APP_PUBLIC_URL` to the local API origin; it also serves the account pages and securely exchanges the one-time email links.
-5. Configure `EMAIL_OUTBOX_ENCRYPTION_KEY` with a generated Fernet key, then start services: `docker compose up --build`
-6. API docs: http://localhost:8000/docs; liveness: http://localhost:8000/health/live.
+3. Generate a development-only environment file: `python scripts/init_local_env.py`. It creates unique secrets in `.env` and configures Mailpit for local email capture.
+4. Start the local stack: `docker compose --profile local-mail up --build`.
+5. Open the account page at http://localhost:8000, the Mailpit inbox at http://localhost:8025, API docs at http://localhost:8000/docs, and liveness at http://localhost:8000/health/live.
+6. Verification, password-reset, and invitation emails are captured locally by Mailpit; no real mail is sent. This profile is for local development only.
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 

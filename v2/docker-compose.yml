@@ -44,6 +44,14 @@ services:
       - ALL
     restart: unless-stopped
 
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    profiles:
+      - local-mail
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     environment:

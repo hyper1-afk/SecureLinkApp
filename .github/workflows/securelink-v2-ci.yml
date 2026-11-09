@@ -72,13 +72,13 @@ jobs:
 
       - name: Validate Docker Compose configuration
         run: |
-          cp .env.example .env
-          docker compose config --quiet
+          python scripts/init_local_env.py
+          docker compose --profile local-mail config --quiet
 
       - name: Start local stack and verify readiness
         run: |
-          trap 'docker compose down --volumes' EXIT
-          docker compose up --build --detach
+          trap 'docker compose --profile local-mail down --volumes' EXIT
+          docker compose --profile local-mail up --build --detach
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8000/health/ready; then
               exit 0
