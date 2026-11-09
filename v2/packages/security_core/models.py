@@ -103,7 +103,7 @@ class EmailActionToken(Base):
     __tablename__ = "email_action_tokens"
     __table_args__ = (
         CheckConstraint(
-            "purpose IN ('verify_email', 'reset_password')",
+            "purpose IN ('verify_email', 'reset_password', 'invite_member')",
             name="ck_email_action_tokens_purpose",
         ),
         UniqueConstraint("token_hash", name="uq_email_action_tokens_hash"),
@@ -111,6 +111,7 @@ class EmailActionToken(Base):
             "delivery_state IN ('pending', 'sending', 'sent', 'failed', 'cancelled')",
             name="ck_email_action_tokens_delivery_state",
         ),
+        CheckConstraint("requested_role IS NULL OR requested_role IN ('owner', 'admin', 'analyst', 'viewer')", name="ck_email_action_tokens_requested_role"),
         Index("ix_email_action_tokens_delivery", "delivery_state", "next_delivery_at"),
     )
 
@@ -122,6 +123,8 @@ class EmailActionToken(Base):
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    organization_id: Mapped[str | None] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
+    requested_role: Mapped[str | None] = mapped_column(String(16), nullable=True)
     delivery_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     delivery_state: Mapped[str] = mapped_column(
         String(12), default="pending", server_default="pending", nullable=False

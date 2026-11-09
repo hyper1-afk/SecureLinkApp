@@ -70,6 +70,26 @@ byId("sign-out").addEventListener("click", async () => {
   say("login-status", "");
 });
 
+byId("invite-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const token = sessionStorage.getItem("securelink.accessToken");
+  const organizationId = sessionStorage.getItem("securelink.organizationId");
+  if (!token || !organizationId) {
+    say("invite-status", "Sign in first. Only organization owners and admins can invite members.");
+    return;
+  }
+  const response = await fetch(`/organizations/${encodeURIComponent(organizationId)}/invitations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email: byId("invite-email").value, role: byId("invite-role").value }),
+    credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer",
+  });
+  say("invite-status", response.ok
+    ? "If the account is eligible, an invitation will be sent."
+    : "Invitation could not be sent. Check your role, account status, and organization access.");
+  if (response.ok) event.target.reset();
+});
+
 byId("recovery-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   await fetch("/auth/password/forgot", {

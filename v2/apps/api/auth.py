@@ -39,6 +39,7 @@ token_audience = "securelink-v2-api"
 access_token_minutes = 15
 verification_lifetime = timedelta(hours=24)
 reset_lifetime = timedelta(hours=1)
+invitation_lifetime = timedelta(hours=48)
 generic_email_message = "If the address is eligible, an email will be sent with next steps."
 
 
@@ -67,6 +68,11 @@ class PasswordResetRequest(ActionTokenRequest):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class InvitationRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    role: Literal["owner", "admin", "analyst", "viewer"]
 
 
 class TokenResponse(BaseModel):
@@ -589,6 +595,130 @@ def remove_organization_member(
     )
     session.delete(target)
     session.commit()
+
+
+
+
+@router.post(
+    "/organizations/{organization_id}/invitations",
+    response_model=MessageResponse,
+    status_code=202,
+    dependencies=[Depends(rate_limit("member_invite", 10, 3600))],
+)
+def invite_organization_member(
+    organization_id: str,
+    payload: InvitationRequest,
+    actor: Annotated[Membership, Depends(require_org_admin)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    _require_email_delivery()
+    email = payload.email.strip()
+    if not email_pattern.fullmatch(email):
+        raise HTTPException(status_code=422, detail="Invalid email")
+    if actor.role == "admin" and payload.role in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Only an owner can invite owners or admins")
+
+    session.get(Organization, actor.organization_id, with_for_update=True)
+    invited_user = session.scalar(
+        select(User).where(User.email_normalized == email.casefold())
+    )
+    response = MessageResponse(message="If the account is eligible, an invitation will be sent.")
+    if invited_user is None or not invited_user.is_active or not invited_user.email_verified:
+        return response
+    existing = session.scalar(
+        select(Membership.id).where(
+            Membership.organization_id == actor.organization_id,
+            Membership.user_id == invited_user.id,
+        )
+    )
+    if existing is not None:
+        return response
+
+    now = datetime.now(UTC)
+    session.execute(
+        update(EmailActionToken)
+        .where(
+            EmailActionToken.user_id == invited_user.id,
+            EmailActionToken.organization_id == actor.organization_id,
+            EmailActionToken.purpose == "invite_member",
+            EmailActionToken.consumed_at.is_(None),
+        )
+        .values(consumed_at=now, delivery_state="cancelled", delivery_ciphertext=None)
+    )
+    raw_token = secrets.token_urlsafe(32)
+    session.add(
+        EmailActionToken(
+            user_id=invited_user.id,
+            organization_id=actor.organization_id,
+            requested_role=payload.role,
+            purpose="invite_member",
+            token_hash=hashlib.sha256(raw_token.encode("utf-8")).hexdigest(),
+            expires_at=now + invitation_lifetime,
+            delivery_ciphertext=encrypt_action_token(raw_token),
+            delivery_state="pending",
+            next_delivery_at=now,
+        )
+    )
+    session.add(
+        AuditEvent(
+            organization_id=actor.organization_id,
+            actor_user_id=actor.user_id,
+            actor_type="user",
+            action="membership.invitation_created",
+            target_type="user",
+            target_id=invited_user.id,
+            details=json.dumps({"role": payload.role}, separators=(",", ":")),
+        )
+    )
+    session.commit()
+    return response
+
+
+@router.post(
+    "/auth/invitations/accept",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("invitation_accept", 10, 3600))],
+)
+def accept_organization_invitation(
+    payload: ActionTokenRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    with session.begin():
+        action_token, user = _consume_action_token(session, payload.token, "invite_member")
+        organization_id = action_token.organization_id
+        role = action_token.requested_role
+        if organization_id is None or role is None or not user.email_verified:
+            raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+        organization = session.get(Organization, organization_id, with_for_update=True)
+        if organization is None:
+            raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+        existing = session.scalar(
+            select(Membership.id).where(
+                Membership.organization_id == organization_id,
+                Membership.user_id == user.id,
+            )
+        )
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="Already a member of this organization")
+        membership = Membership(
+            organization_id=organization_id,
+            user_id=user.id,
+            role=role,
+        )
+        session.add(membership)
+        session.flush()
+        session.add(
+            AuditEvent(
+                organization_id=organization_id,
+                actor_user_id=user.id,
+                actor_type="user",
+                action="membership.invitation_accepted",
+                target_type="membership",
+                target_id=membership.id,
+                details=json.dumps({"role": role}, separators=(",", ":")),
+            )
+        )
+    return MessageResponse(message="Invitation accepted")
 
 
 class OrganizationMemberResponse(BaseModel):

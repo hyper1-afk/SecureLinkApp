@@ -41,6 +41,17 @@
       <p id="login-status" role="status" aria-live="polite"></p>
     </section>
     <section class="card">
+      <h2>Invite a teammate</h2>
+      <form id="invite-form">
+        <label for="invite-email">Verified SecureLink account email</label>
+        <input id="invite-email" type="email" maxlength="320" autocomplete="email" required>
+        <label for="invite-role">Organization role</label>
+        <select id="invite-role"><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Admin</option><option value="owner">Owner</option></select>
+        <button type="submit">Send invitation</button>
+      </form>
+      <p id="invite-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card">
       <h2>Recover account access</h2>
       <form id="recovery-form">
         <label for="recovery-email">Email</label>

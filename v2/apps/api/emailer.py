@@ -51,6 +51,10 @@ def send_action_email(purpose: str, recipient: str, token: str) -> None:
         path = "/reset-password"
         subject = "Reset your SecureLink password"
         action = "reset your password"
+    elif purpose == "invite_member":
+        path = "/accept-invitation"
+        subject = "You are invited to a SecureLink organization"
+        action = "accept your organization invitation"
     else:
         raise ValueError("Unsupported account email action")
 

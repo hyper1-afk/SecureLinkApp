@@ -433,3 +433,77 @@ def test_logout_revokes_existing_access_token(client: TestClient):
             select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "user.logout")
         )
     assert logout_events == 1
+
+
+def test_invitation_requires_verified_account_and_accepts_once(client: TestClient):
+    owner = register(client, "invite-owner@example.test")
+    register(client, "invitee@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    invited_response = client.post(
+        f"/organizations/{owner['organization_id']}/invitations",
+        headers=headers,
+        json={"email": "invitee@example.test", "role": "analyst"},
+    )
+    assert invited_response.status_code == 202
+    assert "eligible" in invited_response.json()["message"]
+
+    with client.app.state.test_session_factory() as session:
+        action = session.scalar(
+            select(EmailActionToken)
+            .join(User, User.id == EmailActionToken.user_id)
+            .where(
+                EmailActionToken.purpose == "invite_member",
+                EmailActionToken.organization_id == owner["organization_id"],
+                User.email_normalized == "invitee@example.test",
+            )
+        )
+        assert action is not None and action.delivery_ciphertext is not None
+        invitation_token = emailer.decrypt_action_token(action.delivery_ciphertext)
+
+    accepted = client.post("/auth/invitations/accept", json={"token": invitation_token})
+    assert accepted.status_code == 200
+    replay = client.post("/auth/invitations/accept", json={"token": invitation_token})
+    assert replay.status_code == 400
+
+    with client.app.state.test_session_factory() as session:
+        role = session.scalar(
+            select(Membership.role).where(
+                Membership.organization_id == owner["organization_id"],
+                Membership.user_id == session.scalar(
+                    select(User.id).where(User.email_normalized == "invitee@example.test")
+                ),
+            )
+        )
+        audit_count = session.scalar(
+            select(func.count()).select_from(AuditEvent).where(
+                AuditEvent.organization_id == owner["organization_id"],
+                AuditEvent.action.in_(
+                    ["membership.invitation_created", "membership.invitation_accepted"]
+                ),
+            )
+        )
+    assert role == "analyst"
+    assert audit_count == 2
+
+
+def test_admin_cannot_invite_owner_or_admin(client: TestClient):
+    owner = register(client, "invite-org-owner@example.test")
+    admin = register(client, "invite-org-admin@example.test")
+    register(client, "invite-target@example.test")
+    with client.app.state.test_session_factory() as session:
+        admin_user = session.scalar(select(User).where(User.email_normalized == "invite-org-admin@example.test"))
+        session.add(
+            Membership(
+                organization_id=owner["organization_id"],
+                user_id=admin_user.id,
+                role="admin",
+            )
+        )
+        session.commit()
+
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/invitations",
+        headers={"Authorization": f"Bearer {admin['access_token']}"},
+        json={"email": "invite-target@example.test", "role": "owner"},
+    )
+    assert response.status_code == 403

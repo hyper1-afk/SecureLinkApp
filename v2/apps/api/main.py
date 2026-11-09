@@ -57,6 +57,11 @@ def reset_password_page() -> FileResponse:
     return _account_page("reset-password.html")
 
 
+@app.get("/accept-invitation", include_in_schema=False)
+def accept_invitation_page() -> FileResponse:
+    return _account_page("accept-invitation.html")
+
+
 @app.get("/health/live", response_model=HealthResponse, tags=["health"])
 def liveness() -> HealthResponse:
     return HealthResponse(status="ok")

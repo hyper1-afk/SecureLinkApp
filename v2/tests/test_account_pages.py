@@ -7,7 +7,7 @@ from apps.api.config import Settings
 
 def test_account_pages_have_sensitive_page_headers_and_assets():
     client = TestClient(main.app)
-    for path in ("/", "/verify-email", "/reset-password"):
+    for path in ("/", "/verify-email", "/reset-password", "/accept-invitation"):
         response = client.get(path)
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store"
@@ -16,6 +16,7 @@ def test_account_pages_have_sensitive_page_headers_and_assets():
 
     assert client.get("/assets/verify-email.js").status_code == 200
     assert client.get("/assets/reset-password.js").status_code == 200
+    assert client.get("/assets/accept-invitation.js").status_code == 200
 
 
 def test_account_action_email_keeps_token_in_url_fragment(monkeypatch):
