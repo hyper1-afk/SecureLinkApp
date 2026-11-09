@@ -72,5 +72,16 @@ jobs:
           cp .env.example .env
           docker compose config --quiet
 
-      - name: Build API container
-        run: docker build -f apps/api/Dockerfile -t securelink-v2-api:ci .
+      - name: Start local stack and verify readiness
+        run: |
+          trap 'docker compose down --volumes' EXIT
+          docker compose up --build --detach
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/health/ready; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs api
+          exit 1
