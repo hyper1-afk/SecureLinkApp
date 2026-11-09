@@ -76,12 +76,15 @@ def register_unverified(client: TestClient, email: str) -> None:
     assert response.json()["message"]
 
 
-def action_token(client: TestClient, purpose: str) -> str:
+def action_token(client: TestClient, purpose: str, email: str) -> str:
     with client.app.state.test_session_factory() as session:
         row = session.scalar(
             select(EmailActionToken)
-            .where(EmailActionToken.purpose == purpose)
-            .order_by(EmailActionToken.created_at.desc())
+            .join(User, User.id == EmailActionToken.user_id)
+            .where(
+                EmailActionToken.purpose == purpose,
+                User.email_normalized == email.casefold(),
+            )
         )
         assert row is not None and row.delivery_ciphertext is not None
         return emailer.decrypt_action_token(row.delivery_ciphertext)
@@ -89,7 +92,7 @@ def action_token(client: TestClient, purpose: str) -> str:
 
 def register(client: TestClient, email: str) -> dict[str, str]:
     register_unverified(client, email)
-    verify_token = action_token(client, "verify_email")
+    verify_token = action_token(client, "verify_email", email)
     verified = client.post("/auth/verify-email", json={"token": verify_token})
     assert verified.status_code == 200
 
@@ -109,7 +112,7 @@ def test_registration_requires_email_verification_before_login(client: TestClien
     )
     assert rejected.status_code == 401
 
-    token = action_token(client, "verify_email")
+    token = action_token(client, "verify_email", "pending@example.test")
     with client.app.state.test_session_factory() as session:
         stored_hash = session.scalar(
             select(EmailActionToken.token_hash).where(EmailActionToken.purpose == "verify_email")
@@ -243,7 +246,7 @@ def test_password_reset_revokes_prior_tokens_and_changes_password(client: TestCl
     registered = register(client, "reset@example.test")
     forgot = client.post("/auth/password/forgot", json={"email": "reset@example.test"})
     assert forgot.status_code == 200
-    reset_token = action_token(client, "reset_password")
+    reset_token = action_token(client, "reset_password", "reset@example.test")
 
     reset = client.post(
         "/auth/password/reset",
@@ -297,7 +300,7 @@ def test_email_worker_sends_and_clears_encrypted_payload(client: TestClient, mon
 
 def test_email_worker_retries_without_logging_token_or_recipient(client: TestClient, monkeypatch, caplog):
     register_unverified(client, "retry@example.test")
-    token = action_token(client, "verify_email")
+    token = action_token(client, "verify_email", "retry@example.test")
     monkeypatch.setattr(email_worker, "send_action_email", lambda *_args: (_ for _ in ()).throw(OSError("smtp down")))
     assert email_worker.process_one()
     with client.app.state.test_session_factory() as session:

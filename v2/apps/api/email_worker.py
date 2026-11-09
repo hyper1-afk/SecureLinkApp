@@ -17,6 +17,10 @@ LEASE = timedelta(minutes=2)
 MAX_ATTEMPTS = 8
 
 
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
+
+
 def process_one() -> bool:
     now = datetime.now(UTC)
     factory = get_session_factory()
@@ -38,7 +42,7 @@ def process_one() -> bool:
             )
             if row is None:
                 return False
-            if row.consumed_at is not None or row.expires_at <= now:
+            if row.consumed_at is not None or _as_utc(row.expires_at) <= now:
                 row.delivery_state = "cancelled" if row.consumed_at is not None else "failed"
                 row.delivery_ciphertext = None
                 row.delivery_lease_until = None
@@ -70,7 +74,7 @@ def process_one() -> bool:
             row = session.get(EmailActionToken, token_id, with_for_update=True)
             if row is not None and row.delivery_state == "sending":
                 now = datetime.now(UTC)
-                if row.expires_at <= now or row.delivery_attempts >= MAX_ATTEMPTS:
+                if _as_utc(row.expires_at) <= now or row.delivery_attempts >= MAX_ATTEMPTS:
                     row.delivery_state = "failed"
                     row.delivery_ciphertext = None
                     row.delivery_lease_until = None
