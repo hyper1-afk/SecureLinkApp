@@ -267,6 +267,11 @@ def resend_verification(
     return MessageResponse(message=generic_email_message)
 
 
+@router.post(
+    "/auth/verify-email",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("verify_email", 10, 3600))],
+)
 def verify_email(
     payload: ActionTokenRequest,
     session: Annotated[Session, Depends(get_session)],
@@ -358,6 +363,11 @@ def forgot_password(
     return MessageResponse(message=generic_email_message)
 
 
+@router.post(
+    "/auth/password/reset",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("password_reset", 5, 3600))],
+)
 def reset_password(
     payload: PasswordResetRequest,
     session: Annotated[Session, Depends(get_session)],
