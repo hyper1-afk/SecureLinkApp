@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>SecureLink account</title>
+  <link rel="stylesheet" href="/assets/account.css">
+</head>
+<body>
+  <main class="layout">
+    <header class="card">
+      <p class="brand">SecureLink 2.0</p>
+      <h1>Account access</h1>
+      <p>Protect your account with email verification and short-lived sign-in sessions.</p>
+      <p id="session-status" role="status" aria-live="polite"></p>
+      <button id="sign-out" type="button" hidden>Sign out</button>
+    </header>
+    <section class="card">
+      <h2>Create an account</h2>
+      <form id="register-form">
+        <label for="register-email">Email</label>
+        <input id="register-email" type="email" maxlength="320" autocomplete="email" required>
+        <label for="organization">Organization</label>
+        <input id="organization" maxlength="200" required>
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required>
+        <button type="submit">Create account</button>
+      </form>
+      <p id="register-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card">
+      <h2>Sign in</h2>
+      <form id="login-form">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" maxlength="320" autocomplete="email" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" maxlength="128" autocomplete="current-password" required>
+        <button type="submit">Sign in</button>
+      </form>
+      <p id="login-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card">
+      <h2>Recover account access</h2>
+      <form id="recovery-form">
+        <label for="recovery-email">Email</label>
+        <input id="recovery-email" type="email" maxlength="320" autocomplete="email" required>
+        <button type="submit">Send recovery link</button>
+      </form>
+      <p id="recovery-status" role="status" aria-live="polite"></p>
+      <form id="resend-form">
+        <label for="resend-email">Need another verification email?</label>
+        <input id="resend-email" type="email" maxlength="320" autocomplete="email" required>
+        <button type="submit">Resend verification</button>
+      </form>
+      <p id="resend-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <script src="/assets/account.js" defer></script>
+</body>
+</html>

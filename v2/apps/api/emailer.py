@@ -54,7 +54,7 @@ def send_action_email(purpose: str, recipient: str, token: str) -> None:
     else:
         raise ValueError("Unsupported account email action")
 
-    action_url = f"{settings.app_public_url.rstrip('/')}{path}?{urlencode({'token': token})}"
+    action_url = f"{settings.app_public_url.rstrip('/')}{path}#{urlencode({'token': token})}"
     message = EmailMessage()
     message["From"] = settings.smtp_from_email
     message["To"] = recipient

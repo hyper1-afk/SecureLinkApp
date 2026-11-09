@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, Response, status
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from redis import Redis
 from redis.exceptions import RedisError
@@ -21,7 +25,36 @@ app = FastAPI(
     version="0.1.0",
     description="Evidence-first security operations API",
 )
+WEB_DIR = Path(__file__).with_name("web")
+ACCOUNT_HEADERS = {
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self'; connect-src 'self'",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+}
+
 app.include_router(auth_router)
+app.mount("/assets", StaticFiles(directory=WEB_DIR), name="account-assets")
+
+
+def _account_page(filename: str) -> FileResponse:
+    return FileResponse(WEB_DIR / filename, headers=ACCOUNT_HEADERS)
+
+
+@app.get("/", include_in_schema=False)
+def account_home() -> FileResponse:
+    return _account_page("index.html")
+
+
+@app.get("/verify-email", include_in_schema=False)
+def verify_email_page() -> FileResponse:
+    return _account_page("verify-email.html")
+
+
+@app.get("/reset-password", include_in_schema=False)
+def reset_password_page() -> FileResponse:
+    return _account_page("reset-password.html")
 
 
 @app.get("/health/live", response_model=HealthResponse, tags=["health"])

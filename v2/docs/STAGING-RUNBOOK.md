@@ -12,7 +12,7 @@ Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `E
 
 1. Provision isolated API and email-worker components, PostgreSQL, and Valkey resources. Run the worker as a separate long-running component from the same image and give it only the required environment secrets. Restrict database trusted sources to the staging app and authorized admin path; prefer same-region private networking.
 2. Add SMTP provider credentials dedicated to staging. Configure a test sender and inbox. Do not deliver staging mail to real users.
-3. Configure the app health check to `/health/ready` and a separate liveness check to `/health/live`.
+3. The API image also serves a minimal same-origin account page and verification/reset pages. Configure the app health check to `/health/ready` and a separate liveness check to `/health/live`.
 4. Keep deployment manual while migrations and auth workflows are being exercised. Run `alembic upgrade head` as a single deployment step before shifting traffic; do not run concurrent migrations from every app replica.
 5. Confirm the database is on the expected migration revision. Exercise registration, email verification, login, password reset, reset-token replay, role denial, cross-tenant denial, Redis throttling, and expired access tokens.
 6. Verify logs omit email action tokens and passwords. Verify 429 behavior and 503 fail-closed behavior when Valkey is unavailable.

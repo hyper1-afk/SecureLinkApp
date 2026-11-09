@@ -16,7 +16,7 @@ Internal code review of the V2 foundation; this is not an external penetration t
 ## Open findings / release gates
 
 1. **Trusted proxy deployment configuration:** rate limits honor `X-Forwarded-For` only when the immediate peer is inside explicitly configured `TRUSTED_PROXY_CIDRS`; without configured ranges the direct peer address is used. Before staging, obtain DigitalOcean’s actual app ingress ranges and verify the full forwarded chain behavior; do not guess ranges.
-2. **Email link UI:** the V2 web app does not exist yet. Build verification/reset pages that immediately exchange the one-time token, remove it from browser history, set `Referrer-Policy: no-referrer`, and avoid third-party scripts on token pages.
+2. **Product dashboard:** the account page supports registration, sign-in, verification and recovery. The security-scanning dashboard and customer workflows are not implemented. Account action links use URL fragments, remove them from history before exchange, and return `no-store`/`no-referrer` headers under a restrictive CSP.
 3. **Browser auth:** the legacy extension is not integrated with V2. Design OAuth authorization code with PKCE, extension-specific scopes, and short-lived sessions before linking accounts.
 4. **Authorization breadth:** invitation, role changes, last-owner protection, organization switching and permission matrices need implementation and negative tests.
 5. **Session controls:** logout/session revocation and refresh-token rotation are not implemented.
