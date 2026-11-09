@@ -61,6 +61,14 @@ jobs:
       - name: Lint
         run: ruff check apps tests
 
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check apps/api/web/account.js
+          node --check apps/api/web/accept-invitation.js
+          node --check apps/api/web/dashboard.js
+          node --check apps/api/web/reset-password.js
+          node --check apps/api/web/verify-email.js
+
       - name: Audit Python dependencies
         run: pip-audit
 
