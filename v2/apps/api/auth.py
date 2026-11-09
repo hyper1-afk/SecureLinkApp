@@ -22,6 +22,7 @@ from packages.security_core.models import AuditEvent, Membership, Organization, 
 router = APIRouter()
 bearer = HTTPBearer(auto_error=False)
 password_hash = PasswordHash.recommended()
+dummy_password_hash = password_hash.hash("invalid-login-dummy-password")
 email_pattern = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 token_issuer = "securelink-v2"
 token_audience = "securelink-v2-api"
@@ -140,7 +141,9 @@ def login(
     user = session.scalar(
         select(User).where(User.email_normalized == payload.email.strip().casefold())
     )
-    if user is None or not user.is_active or not password_hash.verify(payload.password, user.password_hash):
+    stored_hash = user.password_hash if user is not None else dummy_password_hash
+    password_matches = password_hash.verify(payload.password, stored_hash)
+    if user is None or not user.is_active or not password_matches:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     membership = session.scalar(
@@ -223,6 +226,46 @@ def organization_membership(
     if membership is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     return membership
+
+
+def require_org_admin(
+    membership: Annotated[Membership, Depends(organization_membership)],
+) -> Membership:
+    if membership.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Owner or admin role required")
+    return membership
+
+
+class OrganizationMemberResponse(BaseModel):
+    membership_id: str
+    user_id: str
+    email: str
+    role: str
+
+
+@router.get(
+    "/organizations/{organization_id}/members",
+    response_model=list[OrganizationMemberResponse],
+)
+def list_organization_members(
+    membership: Annotated[Membership, Depends(require_org_admin)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[OrganizationMemberResponse]:
+    rows = session.execute(
+        select(Membership, User.email)
+        .join(User, User.id == Membership.user_id)
+        .where(Membership.organization_id == membership.organization_id)
+        .order_by(User.email_normalized)
+    ).all()
+    return [
+        OrganizationMemberResponse(
+            membership_id=member.id,
+            user_id=member.user_id,
+            email=email,
+            role=member.role,
+        )
+        for member, email in rows
+    ]
 
 
 class OrganizationResponse(BaseModel):
