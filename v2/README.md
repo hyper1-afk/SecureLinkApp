@@ -37,4 +37,4 @@ Active URL fetching and the full security-scanning dashboard are not implemented
 
 ## Production status
 
-Not production-ready. The account page and email verification/reset pages are implemented; the product dashboard and security-scanning workflows are not. Membership invitations/ownership transfer, MFA, refresh-token/session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account page and email verification/reset pages are implemented; the product dashboard and security-scanning workflows are not. Invitations to existing verified accounts are implemented. New-user invitation onboarding and ownership transfer, MFA, refresh-token/per-device session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
