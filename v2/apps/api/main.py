@@ -1,27 +1,14 @@
 from __future__ import annotations
 
-from functools import lru_cache
-
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis import Redis
 from redis.exceptions import RedisError
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    app_env: str = "development"
-    database_url: str = "postgresql+psycopg://securelink:change-this-local-password@localhost:5432/securelink"
-    redis_url: str = "redis://localhost:6379/0"
-
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
+from apps.api.auth import router as auth_router
+from apps.api.config import get_settings
 
 
 class HealthResponse(BaseModel):
@@ -34,6 +21,7 @@ app = FastAPI(
     version="0.1.0",
     description="Evidence-first security operations API",
 )
+app.include_router(auth_router)
 
 
 @app.get("/health/live", response_model=HealthResponse, tags=["health"])

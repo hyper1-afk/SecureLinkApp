@@ -66,9 +66,24 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_audit_events_organization_id", "audit_events", ["organization_id"])
+    op.execute("""
+        CREATE FUNCTION reject_audit_event_mutation() RETURNS trigger
+        LANGUAGE plpgsql AS $
+        BEGIN
+            RAISE EXCEPTION 'audit events are append-only';
+        END;
+        $
+    """)
+    op.execute("""
+        CREATE TRIGGER audit_events_append_only
+        BEFORE UPDATE OR DELETE ON audit_events
+        FOR EACH ROW EXECUTE FUNCTION reject_audit_event_mutation()
+    """)
 
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER audit_events_append_only ON audit_events")
+    op.execute("DROP FUNCTION reject_audit_event_mutation()")
     op.drop_index("ix_audit_events_organization_id", table_name="audit_events")
     op.drop_table("audit_events")
     op.drop_index("ix_memberships_user_id", table_name="memberships")
