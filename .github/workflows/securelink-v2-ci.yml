@@ -15,6 +15,22 @@ permissions:
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: securelink
+          POSTGRES_PASSWORD: securelink-ci-password
+          POSTGRES_DB: securelink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U securelink -d securelink"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://securelink:securelink-ci-password@localhost:5432/securelink
     defaults:
       run:
         working-directory: v2
@@ -34,6 +50,9 @@ jobs:
 
       - name: Lint
         run: ruff check apps tests
+
+      - name: Apply PostgreSQL migrations
+        run: alembic upgrade head
 
       - name: Run tests
         run: pytest -q
