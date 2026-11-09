@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
-from functools import lru_cache
 from collections.abc import Callable
+from functools import lru_cache
 
 from fastapi import HTTPException, Request
 from redis import Redis
