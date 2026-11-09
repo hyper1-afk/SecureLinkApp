@@ -68,11 +68,9 @@ def upgrade() -> None:
     op.create_index("ix_audit_events_organization_id", "audit_events", ["organization_id"])
     op.execute("""
         CREATE FUNCTION reject_audit_event_mutation() RETURNS trigger
-        LANGUAGE plpgsql AS $
-        BEGIN
-            RAISE EXCEPTION 'audit events are append-only';
-        END;
-        $
+        LANGUAGE plpgsql AS 'BEGIN
+            RAISE EXCEPTION ''audit events are append-only'';
+        END;'
     """)
     op.execute("""
         CREATE TRIGGER audit_events_append_only
