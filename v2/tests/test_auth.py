@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from apps.api import auth, main
 from apps.api.config import Settings
 from apps.api.db import get_session
-from packages.security_core.models import AuditEvent, Base, User
+from packages.security_core.models import AuditEvent, Base, Membership, User
 
 TEST_SECRET = "test-secret-key-with-at-least-32-bytes"
 
@@ -91,6 +91,11 @@ def test_authentication_rejects_invalid_credentials_and_tokens(client: TestClien
         json={"email": "person@example.test", "password": "incorrect-password"},
     )
     assert invalid_login.status_code == 401
+    unknown_login = client.post(
+        "/auth/login",
+        json={"email": "missing@example.test", "password": "incorrect-password"},
+    )
+    assert unknown_login.status_code == 401
 
     invalid_token = client.get(
         "/organizations/not-an-org",
@@ -106,6 +111,36 @@ def test_authentication_rejects_invalid_credentials_and_tokens(client: TestClien
         headers={"Authorization": f"Bearer {tampered_token}"},
     )
     assert tampered.status_code == 401
+
+
+def test_only_owners_and_admins_can_list_organization_members(client: TestClient):
+    owner = register(client, "team-owner@example.test")
+    viewer = register(client, "team-viewer@example.test")
+    with client.app.state.test_session_factory() as session:
+        viewer_id = session.scalar(
+            select(User.id).where(User.email_normalized == "team-viewer@example.test")
+        )
+        session.add(
+            Membership(
+                organization_id=owner["organization_id"],
+                user_id=viewer_id,
+                role="viewer",
+            )
+        )
+        session.commit()
+
+    owner_response = client.get(
+        f"/organizations/{owner['organization_id']}/members",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert owner_response.status_code == 200
+    assert {item["role"] for item in owner_response.json()} == {"owner", "viewer"}
+
+    viewer_response = client.get(
+        f"/organizations/{owner['organization_id']}/members",
+        headers={"Authorization": f"Bearer {viewer['access_token']}"},
+    )
+    assert viewer_response.status_code == 403
 
 
 def test_disabling_a_user_invalidates_existing_access_tokens(client: TestClient):
