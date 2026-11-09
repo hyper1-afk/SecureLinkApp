@@ -1,5 +1,7 @@
 from collections.abc import Generator
 
+import json
+
 import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
@@ -106,8 +108,9 @@ def test_passive_url_analysis_redacts_sensitive_parts():
     assert result.evidence["credentials_present"] is True
     assert result.evidence["sensitive_query_present"] is True
     assert result.evidence["redirect_parameter_present"] is True
+    evidence_values = json.dumps(list(result.evidence.values()))
     assert all(
-        secret not in str(result.evidence) and secret not in result.display_url
+        secret not in evidence_values and secret not in result.display_url
         for secret in ("alice", "secret", "topsecret", "private/path", "fragment")
     )
     assert {finding.detector_code for finding in result.findings} >= {
