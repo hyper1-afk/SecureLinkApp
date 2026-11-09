@@ -4,7 +4,7 @@ import json
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
@@ -136,6 +136,7 @@ def login(
     payload: LoginRequest,
     session: Annotated[Session, Depends(get_session)],
 ) -> TokenResponse:
+    _secret_key()
     user = session.scalar(
         select(User).where(User.email_normalized == payload.email.strip().casefold())
     )
@@ -150,11 +151,24 @@ def login(
     )
     if membership is None:
         raise HTTPException(status_code=403, detail="Account has no organization membership")
+    session.add(
+        AuditEvent(
+            organization_id=membership.organization_id,
+            actor_user_id=user.id,
+            actor_type="user",
+            action="user.login",
+            target_type="user",
+            target_id=user.id,
+            details="{}",
+        )
+    )
+    session.commit()
     return _token_response(user.id, membership.organization_id)
 
 
 def current_principal(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> Principal:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
@@ -177,7 +191,22 @@ def current_principal(
             detail="Invalid or expired access token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
-    return Principal(user_id=claims["sub"])
+    try:
+        user_id = str(UUID(claims["sub"]))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    user = session.get(User, user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=401,
+            detail="Account is inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return Principal(user_id=user_id)
 
 
 def organization_membership(
