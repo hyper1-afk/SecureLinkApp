@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_starttls: bool = True
     email_outbox_encryption_key: str | None = None
+    trusted_proxy_cidrs: str = ""
 
 
 @lru_cache

@@ -6,7 +6,7 @@ This is a preparation runbook. It creates no DigitalOcean resources and contains
 
 Create a distinct DigitalOcean App Platform app named `securelink-v2-staging` from branch `securelink-v2`, with a staging-only hostname. Place the app, Managed PostgreSQL, and Managed Valkey in the same region and private network where supported. Do not bind staging to the legacy production database or production mail account.
 
-Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `EMAIL_OUTBOX_ENCRYPTION_KEY`, `DATABASE_URL`, `REDIS_URL`, and SMTP credentials. Generate a unique Fernet key for each environment and protect it as a high-impact secret. Use staging-only values. Configure `APP_ENV=staging`, `APP_PUBLIC_URL=https://<staging-host>`, `SMTP_STARTTLS=true`, and a least-privilege database user. Never put secrets in this runbook, app spec, or GitHub commit.
+Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `EMAIL_OUTBOX_ENCRYPTION_KEY`, `DATABASE_URL`, `REDIS_URL`, and SMTP credentials. Set `TRUSTED_PROXY_CIDRS` only to verified ingress proxy CIDRs; leave it empty until the real immediate peer ranges are confirmed. Never trust client-provided forwarding headers by default. Generate a unique Fernet key for each environment and protect it as a high-impact secret. Use staging-only values. Configure `APP_ENV=staging`, `APP_PUBLIC_URL=https://<staging-host>`, `SMTP_STARTTLS=true`, and a least-privilege database user. Never put secrets in this runbook, app spec, or GitHub commit.
 
 ## Deployment sequence
 
@@ -25,6 +25,6 @@ Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `E
 - Alert on failed health checks, elevated 5xx/429 rates, database/Valkey unavailability, failed mail delivery, and migration failures.
 - Limit SMTP and database credentials to the staging resources; rotate them after staging validation.
 - Establish retention and access controls for staging logs and test accounts.
-- Confirm the reverse proxy preserves client IP safely before relying on IP-based throttling. Do not trust arbitrary client-supplied `X-Forwarded-For` values.
+- Confirm the reverse proxy's actual peer ranges and forwarded chain in staging before populating `TRUSTED_PROXY_CIDRS`; verify spoofed forwarding headers cannot change the rate-limit key.
 - Maintain an app image/commit rollback procedure and a compatible database migration downgrade or forward-fix plan.
 - No production DNS cutover or production secret reuse is part of this runbook.
