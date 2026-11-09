@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import json
+import hashlib
+import logging
 import re
+import smtplib
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -11,15 +14,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.config import get_settings
 from apps.api.db import get_session
-from packages.security_core.models import AuditEvent, Membership, Organization, User
+from apps.api.emailer import email_delivery_configured, send_action_email
+from apps.api.rate_limits import rate_limit
+from packages.security_core.models import (
+    AuditEvent,
+    EmailActionToken,
+    Membership,
+    Organization,
+    User,
+)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 bearer = HTTPBearer(auto_error=False)
 password_hash = PasswordHash.recommended()
 dummy_password_hash = password_hash.hash("invalid-login-dummy-password")
@@ -27,6 +39,9 @@ email_pattern = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 token_issuer = "securelink-v2"
 token_audience = "securelink-v2-api"
 access_token_minutes = 15
+verification_lifetime = timedelta(hours=24)
+reset_lifetime = timedelta(hours=1)
+generic_email_message = "If the address is eligible, an email will be sent with next steps."
 
 
 class RegistrationRequest(BaseModel):
@@ -38,6 +53,22 @@ class RegistrationRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1, max_length=128)
+
+
+class EmailRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class ActionTokenRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+
+
+class PasswordResetRequest(ActionTokenRequest):
+    new_password: str = Field(min_length=12, max_length=128)
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 class TokenResponse(BaseModel):
@@ -58,11 +89,17 @@ def _secret_key() -> str:
     return key
 
 
-def _issue_token(user_id: str) -> str:
+def _require_email_delivery() -> None:
+    if not email_delivery_configured():
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+
+def _issue_token(user_id: str, token_version: int) -> str:
     now = datetime.now(UTC)
     return jwt.encode(
         {
             "sub": user_id,
+            "ver": token_version,
             "iss": token_issuer,
             "aud": token_audience,
             "iat": now,
@@ -74,16 +111,85 @@ def _issue_token(user_id: str) -> str:
     )
 
 
-def _token_response(user_id: str, organization_id: str) -> TokenResponse:
-    return TokenResponse(access_token=_issue_token(user_id), organization_id=organization_id)
+def _token_response(user: User, organization_id: str) -> TokenResponse:
+    return TokenResponse(
+        access_token=_issue_token(user.id, user.token_version),
+        organization_id=organization_id,
+    )
 
 
-@router.post("/auth/register", response_model=TokenResponse, status_code=201)
+def _new_action_token(
+    session: Session,
+    user: User,
+    purpose: str,
+    lifetime: timedelta,
+) -> str:
+    now = datetime.now(UTC)
+    session.execute(
+        update(EmailActionToken)
+        .where(
+            EmailActionToken.user_id == user.id,
+            EmailActionToken.purpose == purpose,
+            EmailActionToken.consumed_at.is_(None),
+        )
+        .values(consumed_at=now)
+    )
+    token = secrets.token_urlsafe(32)
+    session.add(
+        EmailActionToken(
+            user_id=user.id,
+            purpose=purpose,
+            token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+            expires_at=now + lifetime,
+        )
+    )
+    return token
+
+
+def _deliver_action_email(purpose: str, email: str, token: str) -> None:
+    try:
+        send_action_email(purpose, email, token)
+    except (OSError, RuntimeError, smtplib.SMTPException):
+        # Do not expose delivery state, recipient existence, or action tokens to the caller.
+        logger.exception("Account action email delivery failed", extra={"purpose": purpose})
+
+
+def _consume_action_token(
+    session: Session,
+    token: str,
+    purpose: str,
+) -> tuple[EmailActionToken, User]:
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    action_token = session.scalar(
+        select(EmailActionToken)
+        .where(
+            EmailActionToken.token_hash == digest,
+            EmailActionToken.purpose == purpose,
+            EmailActionToken.consumed_at.is_(None),
+            EmailActionToken.expires_at > func.now(),
+        )
+        .with_for_update()
+    )
+    if action_token is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired action token")
+    user = session.get(User, action_token.user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=400, detail="Invalid or expired action token")
+    action_token.consumed_at = datetime.now(UTC)
+    return action_token, user
+
+
+@router.post(
+    "/auth/register",
+    response_model=MessageResponse,
+    status_code=202,
+    dependencies=[Depends(rate_limit("register", 5, 3600))],
+)
 def register(
     payload: RegistrationRequest,
     session: Annotated[Session, Depends(get_session)],
-) -> TokenResponse:
-    _secret_key()
+) -> MessageResponse:
+    _require_email_delivery()
     email = payload.email.strip()
     organization_name = payload.organization_name.strip()
     if not email_pattern.fullmatch(email) or not organization_name:
@@ -93,8 +199,10 @@ def register(
         email=email,
         email_normalized=email.casefold(),
         password_hash=password_hash.hash(payload.password),
+        email_verified=False,
     )
     organization = Organization(name=organization_name)
+    token: str | None = None
     try:
         with session.begin():
             session.add_all([user, organization])
@@ -102,6 +210,7 @@ def register(
             session.add(
                 Membership(user_id=user.id, organization_id=organization.id, role="owner")
             )
+            token = _new_action_token(session, user, "verify_email", verification_lifetime)
             session.add_all(
                 [
                     AuditEvent(
@@ -125,14 +234,71 @@ def register(
                 ]
             )
             session.flush()
-    except IntegrityError as exc:
+    except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=409, detail="An account with that email already exists") from exc
+        # Keep duplicate and new-address responses indistinguishable.
+        return MessageResponse(message=generic_email_message)
 
-    return _token_response(user.id, organization.id)
+    if token is not None:
+        _deliver_action_email("verify_email", email, token)
+    return MessageResponse(message=generic_email_message)
 
 
-@router.post("/auth/login", response_model=TokenResponse)
+@router.post(
+    "/auth/verification/resend",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("verification_resend", 3, 3600))],
+)
+def resend_verification(
+    payload: EmailRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    _require_email_delivery()
+    normalized_email = payload.email.strip().casefold()
+    token: str | None = None
+    email: str | None = None
+    with session.begin():
+        user = session.scalar(select(User).where(User.email_normalized == normalized_email))
+        if user is not None and user.is_active and not user.email_verified:
+            token = _new_action_token(session, user, "verify_email", verification_lifetime)
+            email = user.email
+    if token is not None and email is not None:
+        _deliver_action_email("verify_email", email, token)
+    return MessageResponse(message=generic_email_message)
+
+
+def verify_email(
+    payload: ActionTokenRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    with session.begin():
+        _, user = _consume_action_token(session, payload.token, "verify_email")
+        user.email_verified = True
+        membership = session.scalar(
+            select(Membership)
+            .where(Membership.user_id == user.id)
+            .order_by(Membership.created_at, Membership.id)
+            .limit(1)
+        )
+        session.add(
+            AuditEvent(
+                organization_id=membership.organization_id if membership else None,
+                actor_user_id=user.id,
+                actor_type="user",
+                action="user.email_verified",
+                target_type="user",
+                target_id=user.id,
+                details="{}",
+            )
+        )
+    return MessageResponse(message="Email address verified")
+
+
+@router.post(
+    "/auth/login",
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("login", 10, 60))],
+)
 def login(
     payload: LoginRequest,
     session: Annotated[Session, Depends(get_session)],
@@ -143,7 +309,7 @@ def login(
     )
     stored_hash = user.password_hash if user is not None else dummy_password_hash
     password_matches = password_hash.verify(payload.password, stored_hash)
-    if user is None or not user.is_active or not password_matches:
+    if user is None or not user.is_active or not user.email_verified or not password_matches:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     membership = session.scalar(
@@ -166,7 +332,68 @@ def login(
         )
     )
     session.commit()
-    return _token_response(user.id, membership.organization_id)
+    return _token_response(user, membership.organization_id)
+
+
+@router.post(
+    "/auth/password/forgot",
+    response_model=MessageResponse,
+    dependencies=[Depends(rate_limit("password_forgot", 3, 3600))],
+)
+def forgot_password(
+    payload: EmailRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    _require_email_delivery()
+    normalized_email = payload.email.strip().casefold()
+    token: str | None = None
+    email: str | None = None
+    with session.begin():
+        user = session.scalar(select(User).where(User.email_normalized == normalized_email))
+        if user is not None and user.is_active and user.email_verified:
+            token = _new_action_token(session, user, "reset_password", reset_lifetime)
+            email = user.email
+    if token is not None and email is not None:
+        _deliver_action_email("reset_password", email, token)
+    return MessageResponse(message=generic_email_message)
+
+
+def reset_password(
+    payload: PasswordResetRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> MessageResponse:
+    with session.begin():
+        _, user = _consume_action_token(session, payload.token, "reset_password")
+        user.password_hash = password_hash.hash(payload.new_password)
+        user.token_version += 1
+        now = datetime.now(UTC)
+        session.execute(
+            update(EmailActionToken)
+            .where(
+                EmailActionToken.user_id == user.id,
+                EmailActionToken.purpose == "reset_password",
+                EmailActionToken.consumed_at.is_(None),
+            )
+            .values(consumed_at=now)
+        )
+        membership = session.scalar(
+            select(Membership)
+            .where(Membership.user_id == user.id)
+            .order_by(Membership.created_at, Membership.id)
+            .limit(1)
+        )
+        session.add(
+            AuditEvent(
+                organization_id=membership.organization_id if membership else None,
+                actor_user_id=user.id,
+                actor_type="user",
+                action="user.password_reset",
+                target_type="user",
+                target_id=user.id,
+                details="{}",
+            )
+        )
+    return MessageResponse(message="Password reset complete")
 
 
 def current_principal(
@@ -186,27 +413,21 @@ def current_principal(
             algorithms=["HS256"],
             audience=token_audience,
             issuer=token_issuer,
-            options={"require": ["sub", "exp", "iat", "iss", "aud", "jti"]},
+            options={"require": ["sub", "ver", "exp", "iat", "iss", "aud", "jti"]},
         )
-    except jwt.InvalidTokenError as exc:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired access token",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
-    try:
         user_id = str(UUID(claims["sub"]))
-    except (AttributeError, TypeError, ValueError) as exc:
+    except (jwt.InvalidTokenError, AttributeError, TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired access token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
     user = session.get(User, user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or claims["ver"] != user.token_version:
         raise HTTPException(
             status_code=401,
-            detail="Account is inactive",
+            detail="Invalid or expired access token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return Principal(user_id=user_id)
@@ -283,26 +504,3 @@ def get_organization(
     if organization is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     return OrganizationResponse(id=organization.id, name=organization.name, role=membership.role)
-
-
-def record_audit_event(
-    session: Session,
-    *,
-    organization_id: str,
-    actor_user_id: str,
-    action: str,
-    target_type: str,
-    target_id: str | None,
-    details: dict[str, object] | None = None,
-) -> None:
-    session.add(
-        AuditEvent(
-            organization_id=organization_id,
-            actor_user_id=actor_user_id,
-            actor_type="user",
-            action=action,
-            target_type=target_type,
-            target_id=target_id,
-            details=json.dumps(details or {}, sort_keys=True, separators=(",", ":")),
-        )
-    )

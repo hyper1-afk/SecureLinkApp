@@ -1,40 +1,36 @@
 # SecureLink 2.0
 
-SecureLink 2.0 is a ground-up, evidence-first security operations platform. The legacy application remains intact at the repository root while V2 is developed in this isolated workspace.
+SecureLink 2.0 is an evidence-first security operations platform developed separately from the legacy application at the repository root. Do not connect production customer data until the migration and security reviews are approved.
 
-## Development principles
-- Detection engines and integrations produce facts; AI correlates, explains, and recommends.
-- Every conclusion links to evidence, source, observation time, and confidence.
-- AI tools are permission-scoped and read-only by default. No autonomous remediation or privilege elevation.
-- Every tenant-owned record is organization-scoped and authorization is enforced server-side.
-- Cloud and self-hosted deployments share one application image and configuration contract.
+## Current API foundation
 
-## Initial stack
-- API: Python 3.12, FastAPI, Pydantic, SQLAlchemy 2, Alembic
-- Data: PostgreSQL 16; Redis 7 for queues, caching, and distributed limits
-- Jobs: Celery (worker boundary to be added after API foundations)
-- Web: Next.js + TypeScript (separate app, next milestone)
-- Search: OpenSearch adapter planned; do not make it a source of truth
-- Observability: structured logs, OpenTelemetry hooks, health/readiness endpoints
-- Packaging: Docker Compose for Windows development and self-hosted deployment
+- Email verification is required before login.
+- Password reset links are single-use, expire, and are stored as token digests.
+- Password reset increments a token version and invalidates existing access tokens.
+- Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
+- Organization access is checked against current membership on every request; owner/admin roles are required to list organization members.
+- Audit events are append-only in PostgreSQL.
+- Access tokens expire after 15 minutes.
 
-## Windows quick start
+## Development
+
 1. Install Git, Docker Desktop (WSL2 backend), and Python 3.12.
-2. Open this repository in VS Code.
-3. From PowerShell: `cd v2`
-4. Copy config: `Copy-Item .env.example .env`
-5. Set a unique `APP_SECRET_KEY` and local database password in `.env`.
-6. Start dependencies and API: `docker compose up --build`
-7. API docs: http://localhost:8000/docs; liveness: http://localhost:8000/health/live.
+2. From PowerShell: `cd v2`
+3. Copy `.env.example` to `.env` and set a unique `APP_SECRET_KEY`, database password, and SMTP test account.
+4. Set `APP_PUBLIC_URL` to the local web UI origin that will handle `/verify-email` and `/reset-password` links.
+5. Start services: `docker compose up --build`
+6. API docs: http://localhost:8000/docs; liveness: http://localhost:8000/health/live.
 
-Never put production credentials in this file or commit a populated .env.
+SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 
 ## Workspace
-- `apps/api`: HTTP API and application composition
-- `packages/security_core`: domain contracts and security primitives
-- `docs`: audit, architecture, threat model and decisions
-- `infra`: deployment configuration
-- `tests`: automated tests
 
-## Status
-M0 audit and scaffold only. No production traffic, legacy database, or live deployment is connected. Do not migrate customer data until the legacy audit and migration plan are approved.
+- `apps/api`: HTTP API and application composition
+- `packages/security_core`: identity and tenant data models
+- `migrations`: Alembic migrations
+- `docs`: architecture, threat model, staging runbook and extension redesign
+- `tests`: unit, PostgreSQL migration and API tests
+
+## Production status
+
+Not production-ready. The web application and email link pages are not implemented. Membership invitations/role changes, MFA, refresh-token/session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
