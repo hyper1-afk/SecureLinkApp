@@ -61,6 +61,9 @@ jobs:
       - name: Lint
         run: ruff check apps tests
 
+      - name: Audit Python dependencies
+        run: pip-audit
+
       - name: Apply PostgreSQL migrations
         run: alembic upgrade head
 
