@@ -9,7 +9,7 @@ from apps.api.config import get_settings
 def email_delivery_configured() -> bool:
     settings = get_settings()
     valid_transport = (
-        settings.app_env != "production"
+        settings.app_env not in {"production", "staging"}
         or (settings.app_public_url.startswith("https://") and settings.smtp_starttls)
     )
     return bool(settings.smtp_host and settings.smtp_from_email and valid_transport)

@@ -10,7 +10,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
 from pydantic import BaseModel, Field
@@ -187,6 +187,7 @@ def _consume_action_token(
 )
 def register(
     payload: RegistrationRequest,
+    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
@@ -240,7 +241,7 @@ def register(
         return MessageResponse(message=generic_email_message)
 
     if token is not None:
-        _deliver_action_email("verify_email", email, token)
+        background_tasks.add_task(_deliver_action_email, "verify_email", email, token)
     return MessageResponse(message=generic_email_message)
 
 
@@ -251,6 +252,7 @@ def register(
 )
 def resend_verification(
     payload: EmailRequest,
+    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
@@ -263,7 +265,7 @@ def resend_verification(
             token = _new_action_token(session, user, "verify_email", verification_lifetime)
             email = user.email
     if token is not None and email is not None:
-        _deliver_action_email("verify_email", email, token)
+        background_tasks.add_task(_deliver_action_email, "verify_email", email, token)
     return MessageResponse(message=generic_email_message)
 
 
@@ -347,6 +349,7 @@ def login(
 )
 def forgot_password(
     payload: EmailRequest,
+    background_tasks: BackgroundTasks,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     _require_email_delivery()
@@ -359,7 +362,7 @@ def forgot_password(
             token = _new_action_token(session, user, "reset_password", reset_lifetime)
             email = user.email
     if token is not None and email is not None:
-        _deliver_action_email("reset_password", email, token)
+        background_tasks.add_task(_deliver_action_email, "reset_password", email, token)
     return MessageResponse(message=generic_email_message)
 
 

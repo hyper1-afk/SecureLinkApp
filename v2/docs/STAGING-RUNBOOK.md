@@ -21,6 +21,7 @@ Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `D
 
 ## Operational gates
 
+- Account-action email currently runs as an in-process post-response task. It reduces response-time account enumeration, but process termination can lose an email; implement a durable outbox/worker and delivery retries before production.
 - Alert on failed health checks, elevated 5xx/429 rates, database/Valkey unavailability, failed mail delivery, and migration failures.
 - Limit SMTP and database credentials to the staging resources; rotate them after staging validation.
 - Establish retention and access controls for staging logs and test accounts.
