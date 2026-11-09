@@ -25,7 +25,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 
-Active URL fetching and the full security-scanning dashboard are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
+The dashboard currently supports passive URL hygiene analysis and scan history. Active URL fetching, third-party reputation checks, and the broader investigations workflow are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
 
 ## Workspace
 
@@ -37,4 +37,4 @@ Active URL fetching and the full security-scanning dashboard are not implemented
 
 ## Production status
 
-Not production-ready. The account page and email verification/reset pages are implemented; the product dashboard and security-scanning workflows are not. Invitations to existing verified accounts are implemented. New-user invitation onboarding and ownership transfer, MFA, refresh-token/per-device session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing verified accounts are implemented. New-user invitation onboarding and ownership transfer, MFA, refresh-token/per-device session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.

@@ -44,6 +44,7 @@ byId("login-form").addEventListener("submit", async (event) => {
   sessionStorage.setItem("securelink.organizationId", session.organization_id);
   event.target.reset();
   byId("sign-out").hidden = false;
+  byId("dashboard-link").hidden = false;
   say("session-status", "You are signed in for this browser tab. Your access token stays in session storage.");
   say("login-status", "Signed in.");
 });
@@ -66,6 +67,7 @@ byId("sign-out").addEventListener("click", async () => {
   sessionStorage.removeItem("securelink.accessToken");
   sessionStorage.removeItem("securelink.organizationId");
   byId("sign-out").hidden = true;
+  byId("dashboard-link").hidden = true;
   say("session-status", "You are signed out. The access token was revoked when the server was reachable.");
   say("login-status", "");
 });
@@ -120,5 +122,6 @@ byId("resend-form").addEventListener("submit", async (event) => {
 
 if (sessionStorage.getItem("securelink.accessToken")) {
   byId("sign-out").hidden = false;
+  byId("dashboard-link").hidden = false;
   say("session-status", "You are signed in for this browser tab.");
 }

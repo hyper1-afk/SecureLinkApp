@@ -49,6 +49,11 @@ def account_home() -> FileResponse:
     return _account_page("index.html")
 
 
+@app.get("/dashboard", include_in_schema=False)
+def dashboard_page() -> FileResponse:
+    return _account_page("dashboard.html")
+
+
 @app.get("/verify-email", include_in_schema=False)
 def verify_email_page() -> FileResponse:
     return _account_page("verify-email.html")

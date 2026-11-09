@@ -1,0 +1,37 @@
+:root {
+  color-scheme: light;
+  font: 16px/1.5 system-ui, sans-serif;
+  color: #142033;
+  background: #f2f5f9;
+}
+* { box-sizing: border-box; }
+body { min-height: 100vh; margin: 0; padding: 1.5rem; }
+a { color: #1355c7; }
+button, input { font: inherit; }
+button { padding: .65rem 1rem; border: 0; border-radius: .4rem; background: #1355c7; color: #fff; font-weight: 650; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #85b5ff; outline-offset: 2px; }
+.shell { width: min(100%, 64rem); margin: 0 auto; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+.topbar nav { display: flex; align-items: center; gap: 1rem; }
+.brand { margin: 0; color: #1355c7; font-weight: 750; letter-spacing: .04em; }
+h1 { margin: .2rem 0; font-size: 1.7rem; }
+h2 { margin: 0 0 .5rem; }
+.muted, footer { color: #53627a; }
+.panel { margin: 1rem 0; padding: 1.5rem; background: #fff; border: 1px solid #dce3ed; border-radius: .8rem; box-shadow: 0 .5rem 1.5rem #1223440a; }
+.notice { padding: .8rem 1rem; border-left: 4px solid #d59b16; background: #fff8e5; }
+label { display: block; margin: 1rem 0 .4rem; font-weight: 650; }
+input { width: 100%; padding: .75rem; border: 1px solid #9ba9bc; border-radius: .4rem; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.scan-list { list-style: none; padding: 0; }
+.scan-item { margin: .75rem 0; padding: 1rem; border: 1px solid #dce3ed; border-radius: .5rem; overflow-wrap: anywhere; }
+.scan-item h3 { margin: 0 0 .25rem; font-size: 1rem; }
+.scan-item ul { margin-bottom: 0; }
+.finding { margin: .5rem 0; }
+.severity { display: inline-block; margin-right: .35rem; padding: 0 .4rem; border-radius: .25rem; background: #e7edf6; font-size: .85rem; font-weight: 700; }
+footer { padding: .5rem; text-align: center; }
+@media (max-width: 600px) {
+  body { padding: .75rem; }
+  .topbar { align-items: flex-start; }
+  .panel { padding: 1rem; }
+}

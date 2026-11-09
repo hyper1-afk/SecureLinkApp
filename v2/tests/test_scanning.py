@@ -182,3 +182,13 @@ def test_viewers_cannot_start_scans(client: TestClient):
         json={"url": "https://example.com"},
     )
     assert response.status_code == 403
+
+
+def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: TestClient):
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert "does not fetch the submitted URL" in response.text
+    assert "not a safety verdict" in response.text
