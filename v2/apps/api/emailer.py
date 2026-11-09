@@ -1,8 +1,9 @@
 import smtplib
 import ssl
-from cryptography.fernet import Fernet
 from email.message import EmailMessage
 from urllib.parse import urlencode
+
+from cryptography.fernet import Fernet
 
 from apps.api.config import get_settings
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import smtplib
 import time
 from datetime import UTC, datetime, timedelta
 
+from cryptography.fernet import InvalidToken
 from sqlalchemy import or_, select
 
 from apps.api.db import get_session_factory
@@ -36,10 +38,7 @@ def process_one() -> bool:
             )
             if row is None:
                 return False
-            expires_at = row.expires_at
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=UTC)
-            if row.consumed_at is not None or expires_at <= now:
+            if row.consumed_at is not None or row.expires_at <= now:
                 row.delivery_state = "cancelled" if row.consumed_at is not None else "failed"
                 row.delivery_ciphertext = None
                 row.delivery_lease_until = None
@@ -63,7 +62,7 @@ def process_one() -> bool:
     try:
         token = decrypt_action_token(ciphertext)
         send_action_email(purpose, recipient, token)
-    except Exception as exc:
+    except (InvalidToken, OSError, RuntimeError, UnicodeDecodeError, ValueError, smtplib.SMTPException) as exc:
         # Keep logs free of token, message, and recipient data.
         error_code = type(exc).__name__[:60] or "delivery_error"
         logger.warning("Account email delivery failed (%s)", error_code)
