@@ -94,9 +94,11 @@ async function scanUrl(rawUrl) {
     credentials: "omit",
     referrerPolicy: "no-referrer",
   });
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     await chrome.storage.session.remove([TOKEN_KEY, ORG_KEY, TOKEN_META_KEY]);
-    throw new Error("Your SecureLink session expired. Connect again to continue.");
+    throw new Error(response.status === 401
+      ? "Your SecureLink session expired. Connect again to continue."
+      : "Your account no longer has permission to scan. Check your organization role and MFA settings.");
   }
   if (!response.ok) throw new Error("SecureLink could not scan this link.");
   return response.json();

@@ -17,3 +17,9 @@ test("extension messages are accepted only from its own popup page", () => {
   assert.match(serviceWorker, /sender\.url === chrome\.runtime\.getURL\("popup\.html"\)/);
   assert.match(serviceWorker, /if \(!isPopupSender\(sender\)\)/);
 });
+
+test("expired and forbidden scan sessions are cleared from extension storage", () => {
+  assert.match(serviceWorker, /response\.status === 401 \|\| response\.status === 403/);
+  assert.match(serviceWorker, /storage\.session\.remove\(\[TOKEN_KEY, ORG_KEY, TOKEN_META_KEY\]\)/);
+  assert.match(serviceWorker, /no longer has permission to scan/);
+});
