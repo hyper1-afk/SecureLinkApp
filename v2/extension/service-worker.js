@@ -5,10 +5,8 @@ import {
   readAuthorizationCallback,
   validateApiOrigin,
 } from "./oauth.js";
+import { API_BASE_URL } from "./api-config.js";
 import { redactUrlForSubmission } from "./url-privacy.js";
-
-// Local preview default. Change this origin when preparing a staging package.
-const API_BASE_URL = "http://localhost:8000";
 const TOKEN_KEY = "extensionAccessToken";
 const ORG_KEY = "organizationId";
 const TOKEN_META_KEY = "tokenExpiresAt";

@@ -97,10 +97,13 @@ jobs:
           node --check extension/service-worker.js
           node --check extension/popup.js
           node --check extension/oauth.js
+          node --check extension/api-config.js
           node --check extension/url-privacy.js
+          node --check scripts/package-extension.mjs
           node --test extension/tests/oauth.test.js
           node --test extension/tests/url-privacy.test.js
           node --test extension/tests/permissions.test.js
+          node --test extension/tests/package-build.test.js
           node --check ../browser-extension/background.js
           node --check ../browser-extension/content.js
           node --check ../browser-extension/popup.js

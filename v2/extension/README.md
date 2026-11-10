@@ -23,10 +23,17 @@ users.
    as safe. Disconnect from the popup or revoke the session from the dashboard.
 
 The preview uses `http://localhost:8000` and declares only that local API origin
-in `manifest.json`. For staging, package a separate build with the staging API
-origin in `service-worker.js` and `manifest.json`, and add the staging extension's
-exact Chrome identity callback to `EXTENSION_REDIRECT_URIS`. Use HTTPS for every
-non-local API. Do not use a wildcard host permission or callback URI.
+in `manifest.json`. To package for staging, run this from `v2/extension`:
+
+```sh
+npm run package -- --api-origin https://your-staging-host.example
+```
+
+The command writes a separate package under `v2/dist/extension`, sets its API
+origin, and grants that exact origin in the generated manifest. It never edits
+the unpacked local preview. Add the generated package's exact Chrome identity
+callback to `EXTENSION_REDIRECT_URIS`. Use HTTPS for every non-local API. Do not
+use a wildcard host permission or callback URI.
 
 The access token is held in the extension service worker and Chrome session
 storage, expires after 12 hours, and grants only URL scan submission. The
