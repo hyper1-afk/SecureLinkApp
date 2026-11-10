@@ -139,6 +139,13 @@ def _expire_approval(session: Session, approval: CaseApproval, case: IncidentCas
     ))
 
 
+def _approval_has_expired(approval: CaseApproval, now: datetime) -> bool:
+    expires_at = approval.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    return expires_at <= now
+
+
 def _case_response(
     case: IncidentCase,
     hostname: str,
@@ -726,7 +733,7 @@ def request_case_approval(
             )
             .with_for_update()
         )
-        if pending_approval is not None and pending_approval.expires_at <= now:
+        if pending_approval is not None and _approval_has_expired(pending_approval, now):
             _expire_approval(session, pending_approval, case, now)
             session.flush()
     if case.status != "investigating":
@@ -800,7 +807,7 @@ def decide_case_approval(
     if approval.status != "pending":
         raise HTTPException(status_code=409, detail="Approval is no longer pending")
     now = datetime.now(UTC)
-    if approval.expires_at <= now:
+    if _approval_has_expired(approval, now):
         _expire_approval(session, approval, case, now)
         session.commit()
         raise HTTPException(status_code=409, detail="Approval expired")
@@ -850,7 +857,7 @@ def list_case_approvals(
     now = datetime.now(UTC)
     expired_any = False
     for approval in approvals:
-        if approval.status == "pending" and approval.expires_at <= now:
+        if approval.status == "pending" and _approval_has_expired(approval, now):
             _expire_approval(session, approval, case, now)
             expired_any = True
     if expired_any:
