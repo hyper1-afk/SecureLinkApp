@@ -10,7 +10,14 @@ from sqlalchemy.pool import StaticPool
 from apps.api import auth, email_worker, emailer, main, mfa, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
-from packages.security_core.models import AuditEvent, Base, EmailActionToken, MFARecoveryCode, Membership, User
+from packages.security_core.models import (
+    AuditEvent,
+    Base,
+    EmailActionToken,
+    Membership,
+    MFARecoveryCode,
+    User,
+)
 
 TEST_SECRET = "test-secret-key-with-at-least-32-bytes"
 

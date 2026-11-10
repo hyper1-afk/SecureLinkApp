@@ -7,11 +7,10 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
-
 from urllib.parse import quote
 
-from cryptography.fernet import Fernet
 import jwt
+from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
