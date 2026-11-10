@@ -248,8 +248,39 @@ async function loadOrganization() {
   byId("asset-submit").disabled = !canManageAssets;
   if (!canScan) setStatus("scan-status", "Your viewer role can review results but cannot scan or update cases.");
   if (!canManageAssets) setStatus("asset-status", "Only organization owners and admins can add or verify domains.");
+  const preferenceResponse = await request(`${apiBase}/notification-preferences`);
+  if (preferenceResponse.ok) {
+    const preferences = await preferenceResponse.json();
+    byId("priority-email-enabled").checked = preferences.priority_email_enabled;
+    setStatus("notification-preference-status", canManageAssets
+      ? "Enabled alerts are emailed to verified owners and admins in this organization."
+      : "Only organization owners and admins receive these alerts.");
+  } else {
+    setStatus("notification-preference-status", "Email alert preferences could not be loaded.");
+  }
   return true;
 }
+
+byId("priority-email-enabled").addEventListener("change", async (event) => {
+  const checkbox = event.currentTarget;
+  checkbox.disabled = true;
+  try {
+    const response = await request(`${apiBase}/notification-preferences`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority_email_enabled: checkbox.checked }),
+    });
+    if (!response.ok) throw new Error("preference_update_failed");
+    const result = await response.json();
+    checkbox.checked = result.priority_email_enabled;
+    setStatus("notification-preference-status", "Email alert preference saved.");
+  } catch {
+    checkbox.checked = !checkbox.checked;
+    setStatus("notification-preference-status", "Preference could not be saved. Try again.");
+  } finally {
+    checkbox.disabled = false;
+  }
+});
 
 async function loadMyOrganizations() {
   const response = await request("/auth/organizations");

@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from cryptography.fernet import InvalidToken
 from sqlalchemy import or_, select
 
+from apps.api import notification_worker
 from apps.api.db import get_session_factory
 from apps.api.emailer import decrypt_action_token, send_action_email
 from packages.security_core.models import EmailActionToken, User
@@ -100,7 +101,9 @@ def process_one() -> bool:
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     while True:
-        if not process_one():
+        processed = process_one()
+        processed |= notification_worker.process_one()
+        if not processed:
             time.sleep(2)
 
 

@@ -19,8 +19,10 @@ from packages.security_core.models import (
     Finding,
     IncidentCase,
     Membership,
+    SecurityNotificationOutbox,
     ScanEvidence,
     UrlScan,
+    User,
 )
 from packages.security_core.url_analysis import (
     PARSER_VERSION,
@@ -187,6 +189,19 @@ async def _create_scan(
         )
         session.add(case)
         session.flush()
+        recipients = session.execute(
+            select(Membership.user_id).join(User, User.id == Membership.user_id).where(
+                Membership.organization_id == organization_id,
+                Membership.role.in_(("owner", "admin")),
+                Membership.priority_email_enabled.is_(True),
+                User.is_active.is_(True),
+                User.email_verified.is_(True),
+            )
+        ).scalars().all()
+        session.add_all(
+            SecurityNotificationOutbox(organization_id=organization_id, case_id=case.id, user_id=recipient)
+            for recipient in recipients
+        )
         session.add_all(
             CaseFinding(
                 organization_id=organization_id,

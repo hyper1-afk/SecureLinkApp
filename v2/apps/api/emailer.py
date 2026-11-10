@@ -77,3 +77,32 @@ def send_action_email(purpose: str, recipient: str, token: str) -> None:
         if settings.smtp_username:
             client.login(settings.smtp_username, settings.smtp_password or "")
         client.send_message(message)
+
+
+def send_high_priority_case_email(
+    recipient: str, organization_name: str, severity: str, hostname: str, case_id: str
+) -> None:
+    settings = get_settings()
+    if not email_delivery_configured():
+        raise RuntimeError("Secure SMTP email delivery is not configured")
+    if severity not in {"critical", "high"} or not case_id.isascii() or len(case_id) > 64:
+        raise ValueError("Invalid priority case notification")
+    safe_hostname = hostname.encode("idna").decode("ascii")[:253]
+    dashboard_url = f"{settings.app_public_url.rstrip('/')}/dashboard"
+    message = EmailMessage()
+    message["From"] = settings.smtp_from_email
+    message["To"] = recipient
+    message["Subject"] = f"SecureLink {severity} priority security case"
+    message.set_content(
+        "SecureLink opened a case after a passive URL check detected a high-priority indicator.\n\n"
+        f"Organization: {organization_name[:120]}\nSeverity: {severity}\n"
+        f"Hostname: {safe_hostname}\nCase ID: {case_id}\n\n"
+        f"Review the evidence in your SecureLink dashboard: {dashboard_url}\n\n"
+        "This is an indicator for review, not a verdict that a URL is malicious."
+    )
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as client:
+        if settings.smtp_starttls:
+            client.starttls(context=ssl.create_default_context())
+        if settings.smtp_username:
+            client.login(settings.smtp_username, settings.smtp_password or "")
+        client.send_message(message)

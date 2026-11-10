@@ -1077,3 +1077,53 @@ def get_organization(
     if organization is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     return OrganizationResponse(id=organization.id, name=organization.name, role=membership.role)
+
+
+class NotificationPreferenceUpdate(BaseModel):
+    priority_email_enabled: bool
+
+
+class NotificationPreferenceResponse(BaseModel):
+    priority_email_enabled: bool
+
+
+@router.get(
+    "/organizations/{organization_id}/notification-preferences",
+    response_model=NotificationPreferenceResponse,
+)
+def get_notification_preferences(
+    membership: Annotated[Membership, Depends(organization_membership)],
+    response: Response,
+) -> NotificationPreferenceResponse:
+    response.headers["Cache-Control"] = "no-store"
+    return NotificationPreferenceResponse(priority_email_enabled=membership.priority_email_enabled)
+
+
+@router.patch(
+    "/organizations/{organization_id}/notification-preferences",
+    response_model=NotificationPreferenceResponse,
+)
+def update_notification_preferences(
+    payload: NotificationPreferenceUpdate,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+    response: Response,
+) -> NotificationPreferenceResponse:
+    current = session.scalar(select(Membership).where(Membership.id == membership.id).with_for_update())
+    if current is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    old_value = current.priority_email_enabled
+    current.priority_email_enabled = payload.priority_email_enabled
+    if old_value != payload.priority_email_enabled:
+        session.add(AuditEvent(
+            organization_id=current.organization_id,
+            actor_user_id=current.user_id,
+            actor_type="user",
+            action="notification.priority_email_preference_changed",
+            target_type="membership",
+            target_id=current.id,
+            details=json.dumps({"enabled": payload.priority_email_enabled}, separators=(",", ":")),
+        ))
+    session.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return NotificationPreferenceResponse(priority_email_enabled=current.priority_email_enabled)

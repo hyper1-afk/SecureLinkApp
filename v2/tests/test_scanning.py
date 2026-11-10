@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import assets, auth, emailer, extension_auth, main, rate_limits
+from apps.api import assets, auth, emailer, extension_auth, main, notification_worker, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
@@ -27,6 +27,7 @@ from packages.security_core.models import (
     IncidentCase,
     Membership,
     ScanEvidence,
+    SecurityNotificationOutbox,
     UrlScan,
     User,
 )
@@ -306,6 +307,12 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
     other = register(client, "case-other@example.test")
     owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
     other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    with client.app.state.test_session_factory() as session, session.begin():
+        analyst_user = session.scalar(select(User).where(User.email_normalized == "case-other@example.test"))
+        assert analyst_user is not None
+        session.add(Membership(
+            organization_id=owner["organization_id"], user_id=analyst_user.id, role="analyst"
+        ))
 
     scan_response = client.post(
         f"/organizations/{owner['organization_id']}/scans",
@@ -381,6 +388,36 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
             event.action == "case.auto_created_from_scan" and event.actor_type == "system"
             for event in events
         )
+        notifications = session.scalars(
+            select(SecurityNotificationOutbox).where(SecurityNotificationOutbox.case_id == case["id"])
+        ).all()
+        owner_membership = session.scalar(select(Membership).where(
+            Membership.organization_id == owner["organization_id"], Membership.role == "owner"
+        ))
+        assert len(notifications) == 1
+        assert owner_membership is not None and notifications[0].user_id == owner_membership.user_id
+
+
+def test_priority_notification_worker_sends_hostname_only(client: TestClient, monkeypatch):
+    owner = register(client, "alert-worker@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=headers,
+        json={"url": "https://alice:secret@example.com/private?token=private"},
+    )
+    assert response.status_code == 201
+    sent = []
+    monkeypatch.setattr(notification_worker, "get_session_factory", lambda: client.app.state.test_session_factory)
+    monkeypatch.setattr(notification_worker, "send_high_priority_case_email", lambda *args: sent.append(args))
+    assert notification_worker.process_one() is True
+    assert len(sent) == 1
+    assert sent[0][2:] == ("high", "example.com", client.get(
+        f"/organizations/{owner['organization_id']}/cases",
+        headers=headers,
+    ).json()[0]["id"])
+    assert "secret" not in repr(sent)
+    assert notification_worker.process_one() is False
 
 
 def test_clean_scan_cannot_open_empty_case(client: TestClient):
@@ -398,6 +435,22 @@ def test_clean_scan_cannot_open_empty_case(client: TestClient):
         headers=headers,
     )
     assert response.status_code == 409
+
+
+def test_priority_email_preference_is_member_scoped_and_audited(client: TestClient):
+    owner = register(client, "alerts-owner@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    path = f"/organizations/{owner['organization_id']}/notification-preferences"
+    assert client.get(path, headers=headers).json() == {"priority_email_enabled": True}
+    response = client.patch(path, headers=headers, json={"priority_email_enabled": False})
+    assert response.status_code == 200
+    assert response.json() == {"priority_email_enabled": False}
+    with client.app.state.test_session_factory() as session:
+        event = session.scalar(select(AuditEvent).where(
+            AuditEvent.action == "notification.priority_email_preference_changed"
+        ))
+        assert event is not None
+        assert json.loads(event.details) == {"enabled": False}
 
 
 def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: TestClient):
