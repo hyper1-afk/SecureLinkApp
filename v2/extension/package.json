@@ -1,0 +1,5 @@
+{
+  "name": "securelink-v2-extension-preview",
+  "private": true,
+  "type": "module"
+}

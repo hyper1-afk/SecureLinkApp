@@ -71,6 +71,8 @@ jobs:
           node --check apps/api/web/verify-email.js
           node --check extension/service-worker.js
           node --check extension/popup.js
+          node --check extension/oauth.js
+          node --test extension/tests/oauth.test.js
 
       - name: Audit Python dependencies
         run: pip-audit

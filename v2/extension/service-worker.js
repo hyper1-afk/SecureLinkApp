@@ -1,3 +1,11 @@
+import {
+  buildAuthorizationUrl,
+  createPkcePair,
+  randomBase64Url,
+  readAuthorizationCallback,
+  validateApiOrigin,
+} from "./oauth.js";
+
 // Local preview default. Change this origin when preparing a staging package.
 const API_BASE_URL = "http://localhost:8000";
 const TOKEN_KEY = "extensionAccessToken";
@@ -5,62 +13,23 @@ const ORG_KEY = "organizationId";
 const TOKEN_META_KEY = "tokenExpiresAt";
 const CLIENT_ID = "securelink-chrome-extension";
 
-function randomBase64Url(byteLength = 32) {
-  const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
-
-async function sha256Base64Url(value) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
-
 function assertApiUrl() {
-  const api = new URL(API_BASE_URL);
-  if (api.username || api.password || api.search || api.hash || api.pathname !== "/") {
-    throw new Error("The API origin in config.js is invalid.");
-  }
-  if (api.protocol !== "https:" && api.hostname !== "localhost") {
-    throw new Error("SecureLink requires HTTPS outside localhost.");
-  }
-  return api;
+  return validateApiOrigin(API_BASE_URL);
 }
 
 async function connect() {
   const api = assertApiUrl();
   const redirectUri = chrome.identity.getRedirectURL();
   const state = randomBase64Url(32);
-  const verifier = randomBase64Url(48);
-  const challenge = await sha256Base64Url(verifier);
-  const authorizeUrl = new URL("/extension/authorize", api);
-  authorizeUrl.search = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: redirectUri,
-    state,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-  });
+  const { verifier, challenge } = await createPkcePair();
+  const authorizeUrl = buildAuthorizationUrl(api.origin, redirectUri, state, challenge);
 
   const callbackUrl = await chrome.identity.launchWebAuthFlow({
-    url: authorizeUrl.href,
+    url: authorizeUrl,
     interactive: true,
   });
   if (!callbackUrl) throw new Error("Authorization was cancelled.");
-  const callback = new URL(callbackUrl);
-  if (callback.origin + callback.pathname !== redirectUri) {
-    throw new Error("SecureLink returned an unexpected authorization address.");
-  }
-  if (callback.searchParams.get("state") !== state) {
-    throw new Error("Authorization state did not match. Please try again.");
-  }
-  const code = callback.searchParams.get("code");
-  if (!code) throw new Error("SecureLink did not return an authorization code.");
+  const code = readAuthorizationCallback(callbackUrl, redirectUri, state);
 
   const response = await fetch(new URL("/extension/oauth/token", api), {
     method: "POST",
