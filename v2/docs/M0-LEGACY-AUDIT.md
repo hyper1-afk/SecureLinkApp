@@ -13,7 +13,7 @@
 ### M0-01 — Confirmed exposed Google Safe Browsing API key
 The tracked `.env.example` contained a non-placeholder Google Safe Browsing API key. The value is intentionally not copied into this report. It has been cleared from the current working-tree version, but Git history confirms it was committed in `ed287bf` and remains in branch history. Treat it as compromised: revoke/rotate it with Google Cloud, review usage, search all refs and build artifacts for secrets, and verify the old key is invalid. Do not rewrite the active production branch as part of this remediation without a coordinated deployment plan. The other credential-like values in `.env.example` were checked and are placeholders; keep all actual credentials out of tracked files.
 
-**Status:** Open until provider-side rotation, usage review, and invalidation are verified. The old key remains in repository history.
+**Status:** Open until provider-side rotation, usage review, and invalidation are verified. The old key remains in repository history. The Gitleaks workflow's passing result is not evidence that this historical credential is invalid; a separate full-history pattern guard now makes CI fail while a Google API key-shaped value remains on fetched refs.
 
 **Priority:** Critical until the key is rotated and verified invalid.
 
