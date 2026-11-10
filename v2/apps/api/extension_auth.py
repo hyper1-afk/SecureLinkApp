@@ -478,7 +478,9 @@ async def create_extension_scan(
     session: Annotated[Session, Depends(get_session)],
 ) -> ScanResponse:
     raw_url = await _read_scan_url(request)
-    return await _create_scan(raw_url, principal.organization_id, principal.user_id, session)
+    return await _create_scan(
+        raw_url, principal.organization_id, principal.user_id, session, "extension_scan",
+    )
 
 
 @router.post("/extension/oauth/revoke", status_code=204)

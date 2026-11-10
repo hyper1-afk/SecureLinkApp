@@ -15,10 +15,12 @@ from apps.api.auth import organization_membership
 from apps.api.db import get_session
 from packages.security_core.models import (
     AuditEvent,
+    CaseSignal,
     CaseFinding,
     Finding,
     IncidentCase,
     Membership,
+    SecuritySignal,
     UrlScan,
 )
 
@@ -46,9 +48,20 @@ class CaseFindingResponse(BaseModel):
     evidence_id: str
 
 
+class SignalResponse(BaseModel):
+    id: str
+    source_type: str
+    signal_type: str
+    subject: str
+    severity: str
+    title: str
+    summary: str
+    observed_at: datetime
+
+
 class CaseResponse(BaseModel):
     id: str
-    scan_id: str
+    scan_id: str | None
     status: str
     severity: str
     title: str
@@ -58,6 +71,7 @@ class CaseResponse(BaseModel):
     updated_at: datetime
     closed_at: datetime | None
     findings: list[CaseFindingResponse]
+    signals: list[SignalResponse]
 
 
 def _require_analyst(membership: Membership) -> None:
@@ -66,7 +80,7 @@ def _require_analyst(membership: Membership) -> None:
 
 
 def _case_response(
-    case: IncidentCase, hostname: str, findings: list[Finding]
+    case: IncidentCase, hostname: str, findings: list[Finding], signals: list[SecuritySignal]
 ) -> CaseResponse:
     return CaseResponse(
         id=case.id,
@@ -90,6 +104,19 @@ def _case_response(
             )
             for finding in findings
         ],
+        signals=[
+            SignalResponse(
+                id=signal.id,
+                source_type=signal.source_type,
+                signal_type=signal.signal_type,
+                subject=signal.subject,
+                severity=signal.severity,
+                title=signal.title,
+                summary=signal.summary,
+                observed_at=signal.observed_at,
+            )
+            for signal in signals
+        ],
     )
 
 
@@ -106,16 +133,67 @@ def _findings_for_case(session: Session, case: IncidentCase) -> list[Finding]:
     ).all()
 
 
-def _case_scan(session: Session, case: IncidentCase) -> UrlScan:
+def _case_signals(session: Session, case: IncidentCase) -> list[SecuritySignal]:
+    return session.scalars(
+        select(SecuritySignal)
+        .join(CaseSignal, CaseSignal.signal_id == SecuritySignal.id)
+        .where(
+            CaseSignal.case_id == case.id,
+            CaseSignal.organization_id == case.organization_id,
+            SecuritySignal.organization_id == case.organization_id,
+        )
+        .order_by(SecuritySignal.observed_at, SecuritySignal.id)
+    ).all()
+
+
+def _case_scan(session: Session, case: IncidentCase) -> UrlScan | None:
+    if case.scan_id is None:
+        return None
     scan = session.scalar(
         select(UrlScan).where(
             UrlScan.id == case.scan_id,
             UrlScan.organization_id == case.organization_id,
         )
     )
-    if scan is None:
+    if scan is None and case.scan_id is not None:
         raise HTTPException(status_code=404, detail="Case not found")
     return scan
+
+
+def _case_response_for_session(session: Session, case: IncidentCase) -> CaseResponse:
+    scan = _case_scan(session, case)
+    signals = _case_signals(session, case)
+    subject = scan.hostname if scan is not None else signals[0].subject if signals else None
+    if subject is None:
+        raise HTTPException(status_code=404, detail="Case evidence not found")
+    return _case_response(case, subject, _findings_for_case(session, case), signals)
+
+
+@router.get("/organizations/{organization_id}/signals", response_model=list[SignalResponse])
+def list_security_signals(
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[SignalResponse]:
+    signals = session.scalars(
+        select(SecuritySignal)
+        .where(SecuritySignal.organization_id == membership.organization_id)
+        .order_by(SecuritySignal.observed_at.desc(), SecuritySignal.id)
+        .limit(limit)
+    ).all()
+    return [
+        SignalResponse(
+            id=signal.id,
+            source_type=signal.source_type,
+            signal_type=signal.signal_type,
+            subject=signal.subject,
+            severity=signal.severity,
+            title=signal.title,
+            summary=signal.summary,
+            observed_at=signal.observed_at,
+        )
+        for signal in signals
+    ]
 
 
 @router.post(
@@ -148,7 +226,7 @@ def create_case_from_scan(
     )
     if existing is not None:
         response.status_code = status.HTTP_200_OK
-        return _case_response(existing, scan.hostname, _findings_for_case(session, existing))
+        return _case_response_for_session(session, existing)
 
     findings = session.scalars(
         select(Finding)
@@ -162,6 +240,15 @@ def create_case_from_scan(
         raise HTTPException(status_code=409, detail="Scan has no findings to open as a case")
 
     severity = min((finding.severity for finding in findings), key=SEVERITY_RANK.__getitem__)
+    signal = session.scalar(
+        select(SecuritySignal).where(
+            SecuritySignal.organization_id == membership.organization_id,
+            SecuritySignal.source_reference == scan.id,
+            SecuritySignal.source_type.in_(("url_scan", "extension_scan")),
+        )
+    )
+    if signal is None:
+        raise HTTPException(status_code=404, detail="Scan signal not found")
     now = datetime.now(UTC)
     case = IncidentCase(
         organization_id=membership.organization_id,
@@ -179,6 +266,9 @@ def create_case_from_scan(
     )
     session.add(case)
     session.flush()
+    session.add(CaseSignal(
+        organization_id=membership.organization_id, case_id=case.id, signal_id=signal.id,
+    ))
     session.add_all(
         CaseFinding(
             organization_id=membership.organization_id,
@@ -213,8 +303,176 @@ def create_case_from_scan(
         if existing is None:
             raise HTTPException(status_code=409, detail="Findings are already linked to a case") from exc
         response.status_code = status.HTTP_200_OK
-        return _case_response(existing, scan.hostname, _findings_for_case(session, existing))
-    return _case_response(case, scan.hostname, findings)
+        return _case_response_for_session(session, existing)
+    return _case_response_for_session(session, case)
+
+
+@router.post(
+    "/organizations/{organization_id}/cases/from-signal/{signal_id}",
+    response_model=CaseResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_case_from_signal(
+    signal_id: UUID,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+    response: Response,
+) -> CaseResponse:
+    _require_analyst(membership)
+    signal = session.scalar(select(SecuritySignal).where(
+        SecuritySignal.id == str(signal_id),
+        SecuritySignal.organization_id == membership.organization_id,
+    ))
+    if signal is None:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    existing = session.scalar(
+        select(IncidentCase)
+        .join(CaseSignal, CaseSignal.case_id == IncidentCase.id)
+        .where(
+            CaseSignal.signal_id == signal.id,
+            CaseSignal.organization_id == membership.organization_id,
+            IncidentCase.organization_id == membership.organization_id,
+        )
+    )
+    if existing is not None:
+        response.status_code = status.HTTP_200_OK
+        return _case_response_for_session(session, existing)
+
+    scan = None
+    if signal.source_type in {"url_scan", "extension_scan"}:
+        scan = session.scalar(select(UrlScan).where(
+            UrlScan.id == signal.source_reference,
+            UrlScan.organization_id == membership.organization_id,
+        ))
+        if scan is None:
+            raise HTTPException(status_code=404, detail="Signal source not found")
+        findings = session.scalars(select(Finding).where(
+            Finding.scan_id == scan.id,
+            Finding.organization_id == membership.organization_id,
+        )).all()
+        if not findings:
+            raise HTTPException(status_code=409, detail="This signal has no findings to open as a case")
+    else:
+        findings = []
+
+    now = datetime.now(UTC)
+    case = IncidentCase(
+        organization_id=membership.organization_id,
+        scan_id=scan.id if scan is not None else None,
+        created_by_user_id=membership.user_id,
+        status="open",
+        severity=signal.severity,
+        title=f"Review {signal.title[:160]}",
+        summary=(signal.summary[:400] + " Review the original evidence before taking action."),
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(case)
+    session.flush()
+    session.add(CaseSignal(
+        organization_id=membership.organization_id, case_id=case.id, signal_id=signal.id,
+    ))
+    session.add_all(
+        CaseFinding(organization_id=membership.organization_id, case_id=case.id, finding_id=finding.id)
+        for finding in findings
+    )
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action="case.created_from_signal",
+        target_type="incident_case",
+        target_id=case.id,
+        details=json.dumps({"signal_id": signal.id, "source_type": signal.source_type}, separators=(",", ":")),
+    ))
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        existing = session.scalar(
+            select(IncidentCase)
+            .join(CaseSignal, CaseSignal.case_id == IncidentCase.id)
+            .where(
+                CaseSignal.signal_id == signal.id,
+                CaseSignal.organization_id == membership.organization_id,
+                IncidentCase.organization_id == membership.organization_id,
+            )
+        )
+        if existing is None:
+            raise HTTPException(status_code=409, detail="Signal is already linked to a case") from exc
+        response.status_code = status.HTTP_200_OK
+        return _case_response_for_session(session, existing)
+    return _case_response_for_session(session, case)
+
+
+@router.post(
+    "/organizations/{organization_id}/cases/{case_id}/signals/{signal_id}",
+    response_model=CaseResponse,
+)
+def attach_signal_to_case(
+    case_id: UUID,
+    signal_id: UUID,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+    response: Response,
+) -> CaseResponse:
+    _require_analyst(membership)
+    case = session.scalar(
+        select(IncidentCase)
+        .where(
+            IncidentCase.id == str(case_id),
+            IncidentCase.organization_id == membership.organization_id,
+        )
+        .with_for_update()
+    )
+    signal = session.scalar(
+        select(SecuritySignal)
+        .where(
+            SecuritySignal.id == str(signal_id),
+            SecuritySignal.organization_id == membership.organization_id,
+        )
+        .with_for_update()
+    )
+    if case is None or signal is None:
+        raise HTTPException(status_code=404, detail="Case or signal not found")
+
+    existing_link = session.scalar(
+        select(CaseSignal).where(
+            CaseSignal.signal_id == signal.id,
+            CaseSignal.organization_id == membership.organization_id,
+        )
+    )
+    if existing_link is not None:
+        if existing_link.case_id != case.id:
+            raise HTTPException(status_code=409, detail="Signal is already linked to another case")
+        response.status_code = status.HTTP_200_OK
+        return _case_response_for_session(session, case)
+    if case.status in {"resolved", "false_positive"}:
+        raise HTTPException(status_code=409, detail="Reopen the case before linking another signal")
+
+    session.add(CaseSignal(
+        organization_id=membership.organization_id,
+        case_id=case.id,
+        signal_id=signal.id,
+    ))
+    if SEVERITY_RANK[signal.severity] < SEVERITY_RANK[case.severity]:
+        case.severity = signal.severity
+    case.updated_at = datetime.now(UTC)
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action="case.signal_linked",
+        target_type="incident_case",
+        target_id=case.id,
+        details=json.dumps({"signal_id": signal.id}, separators=(",", ":")),
+    ))
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Signal was linked to another case concurrently") from exc
+    return _case_response_for_session(session, case)
 
 
 @router.get("/organizations/{organization_id}/cases", response_model=list[CaseResponse])
@@ -231,8 +489,7 @@ def list_cases(
     ).all()
     result = []
     for case in cases:
-        scan = _case_scan(session, case)
-        result.append(_case_response(case, scan.hostname, _findings_for_case(session, case)))
+        result.append(_case_response_for_session(session, case))
     return result
 
 
@@ -253,8 +510,7 @@ def get_case(
     )
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
-    scan = _case_scan(session, case)
-    return _case_response(case, scan.hostname, _findings_for_case(session, case))
+    return _case_response_for_session(session, case)
 
 
 @router.patch(
@@ -300,5 +556,4 @@ def update_case_status(
             )
         )
         session.commit()
-    scan = _case_scan(session, case)
-    return _case_response(case, scan.hostname, _findings_for_case(session, case))
+    return _case_response_for_session(session, case)

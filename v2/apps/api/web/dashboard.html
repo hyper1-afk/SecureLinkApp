@@ -53,6 +53,18 @@
       <ol id="case-list" class="card-list"></ol>
     </section>
 
+    <section class="panel" aria-labelledby="signals-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="signals-title">Security signals</h2>
+          <p class="muted">Tenant-scoped observations from SecureLink sources, linked to cases when investigated.</p>
+        </div>
+        <button id="refresh-signals" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <p id="signal-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="signal-list" class="card-list"></ol>
+    </section>
+
     <section class="panel" aria-labelledby="notification-preferences-title">
       <h2 id="notification-preferences-title">Priority email alerts</h2>
       <p class="muted">Receive email when a passive link check opens a high or critical case. Alerts go only to verified organization owners and admins.</p>

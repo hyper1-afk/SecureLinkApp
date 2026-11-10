@@ -15,12 +15,14 @@ from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
+    CaseSignal,
     CaseFinding,
     Finding,
     IncidentCase,
     Membership,
     ScanEvidence,
     SecurityNotificationOutbox,
+    SecuritySignal,
     UrlScan,
     User,
 )
@@ -110,7 +112,7 @@ async def create_url_scan(
 ) -> ScanResponse:
     _require_scan_role(membership)
     raw_url = await _read_scan_url(request)
-    return await _create_scan(raw_url, membership.organization_id, membership.user_id, session)
+    return await _create_scan(raw_url, membership.organization_id, membership.user_id, session, "url_scan")
 
 
 async def _create_scan(
@@ -118,6 +120,7 @@ async def _create_scan(
     organization_id: str,
     user_id: str,
     session: Session,
+    source_type: str = "url_scan",
 ) -> ScanResponse:
     try:
         analysis = analyze_url(raw_url)
@@ -167,6 +170,31 @@ async def _create_scan(
         for item in analysis.findings
     ]
     session.add_all(findings)
+    severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
+    signal_severity = min(
+        (finding.severity for finding in findings),
+        key=severity_rank.__getitem__,
+        default="informational",
+    )
+    signal = SecuritySignal(
+        organization_id=organization_id,
+        source_type=source_type,
+        source_reference=scan.id,
+        signal_type="passive_url_hygiene",
+        subject=scan.hostname,
+        severity=signal_severity,
+        title="URL hygiene scan observed",
+        summary=(
+            f"Passive URL-structure analysis completed with {len(findings)} indicator(s); "
+            "this is not a safety verdict."
+        ),
+        observed_at=observed_at,
+        payload=serialized_evidence,
+        content_hash=evidence_hash(evidence_payload),
+        created_at=observed_at,
+    )
+    session.add(signal)
+    session.flush()
     priority_findings = [item for item in findings if item.severity in {"critical", "high"}]
     if priority_findings:
         severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
@@ -189,6 +217,9 @@ async def _create_scan(
         )
         session.add(case)
         session.flush()
+        session.add(CaseSignal(
+            organization_id=organization_id, case_id=case.id, signal_id=signal.id,
+        ))
         recipients = session.execute(
             select(Membership.user_id).join(User, User.id == Membership.user_id).where(
                 Membership.organization_id == organization_id,

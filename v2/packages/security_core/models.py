@@ -360,6 +360,38 @@ class Finding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 
+class SecuritySignal(Base):
+    __tablename__ = "security_signals"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "source_type", "source_reference", name="uq_security_signal_source"),
+        UniqueConstraint("id", "organization_id", name="uq_security_signals_id_organization"),
+        CheckConstraint(
+            "source_type IN ('url_scan', 'extension_scan', 'domain_monitor', 'integration')",
+            name="ck_security_signals_source_type",
+        ),
+        CheckConstraint("signal_type <> ''", name="ck_security_signals_type_nonempty"),
+        CheckConstraint(
+            "severity IN ('critical', 'high', 'medium', 'low', 'informational')",
+            name="ck_security_signals_severity",
+        ),
+        Index("ix_security_signals_org_observed", "organization_id", "observed_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    source_reference: Mapped[str] = mapped_column(String(128), nullable=False)
+    signal_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject: Mapped[str] = mapped_column(String(253), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    summary: Mapped[str] = mapped_column(String(512), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class IncidentCase(Base):
     __tablename__ = "incident_cases"
     __table_args__ = (
@@ -386,7 +418,7 @@ class IncidentCase(Base):
     organization_id: Mapped[str] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
     )
-    scan_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    scan_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), nullable=True)
     created_by_user_id: Mapped[str | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -401,6 +433,34 @@ class IncidentCase(Base):
         DateTime(timezone=True), default=utc_now, server_default=func.now(), onupdate=utc_now, nullable=False
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CaseSignal(Base):
+    __tablename__ = "case_signals"
+    __table_args__ = (
+        UniqueConstraint("case_id", "signal_id", name="uq_case_signals_case_signal"),
+        UniqueConstraint("signal_id", "organization_id", name="uq_case_signals_signal_organization"),
+        ForeignKeyConstraint(
+            ["case_id", "organization_id"],
+            ["incident_cases.id", "incident_cases.organization_id"],
+            name="fk_case_signals_case_organization",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["signal_id", "organization_id"],
+            ["security_signals.id", "security_signals.organization_id"],
+            name="fk_case_signals_signal_organization",
+            ondelete="CASCADE",
+        ),
+        Index("ix_case_signals_case", "case_id"),
+        Index("ix_case_signals_signal", "signal_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    case_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    signal_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class CaseFinding(Base):

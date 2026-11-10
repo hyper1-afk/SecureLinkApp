@@ -83,3 +83,77 @@ def test_postgres_scan_evidence_rejects_update_and_delete():
                 transaction.rollback()
     finally:
         engine.dispose()
+
+
+
+
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQL CI service is not configured")
+def test_postgres_security_signals_reject_update_and_delete():
+    engine = create_engine(os.environ["DATABASE_URL"])
+    organization_id = str(uuid4())
+    signal_id = str(uuid4())
+    case_id = str(uuid4())
+    case_signal_id = str(uuid4())
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO organizations (id, name, created_at) "
+                    "VALUES (:id, 'Signal immutability test', now())"
+                ),
+                {"id": organization_id},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO security_signals "
+                    "(id, organization_id, source_type, source_reference, signal_type, subject, "
+                    "severity, title, summary, observed_at, payload, content_hash) "
+                    "VALUES (:id, :org_id, 'integration', 'test-source-1', 'test_signal', "
+                    "'example.test', 'medium', 'Test signal', 'Immutable evidence fixture', "
+                    "now(), '{}', '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')"
+                ),
+                {"id": signal_id, "org_id": organization_id},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO incident_cases "
+                    "(id, organization_id, scan_id, status, severity, title, summary) "
+                    "VALUES (:id, :org_id, NULL, 'open', 'medium', 'Test case', 'Test case summary')"
+                ),
+                {"id": case_id, "org_id": organization_id},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO case_signals (id, organization_id, case_id, signal_id) "
+                    "VALUES (:id, :org_id, :case_id, :signal_id)"
+                ),
+                {
+                    "id": case_signal_id,
+                    "org_id": organization_id,
+                    "case_id": case_id,
+                    "signal_id": signal_id,
+                },
+            )
+        statements = (
+            "UPDATE security_signals SET summary = 'tampered' WHERE id = :id",
+            "DELETE FROM security_signals WHERE id = :id",
+        )
+        for statement in statements:
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                with pytest.raises(DBAPIError):
+                    connection.execute(text(statement), {"id": signal_id})
+                transaction.rollback()
+        for statement in (
+            "UPDATE case_signals SET signal_id = :replacement WHERE id = :id",
+            "DELETE FROM case_signals WHERE id = :id",
+        ):
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                with pytest.raises(DBAPIError):
+                    connection.execute(
+                        text(statement), {"id": case_signal_id, "replacement": str(uuid4())}
+                    )
+                transaction.rollback()
+    finally:
+        engine.dispose()

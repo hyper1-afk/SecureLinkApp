@@ -18,6 +18,7 @@ from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
     AuditEvent,
+    CaseSignal,
     Base,
     CaseFinding,
     DomainAsset,
@@ -29,6 +30,7 @@ from packages.security_core.models import (
     Membership,
     ScanEvidence,
     SecurityNotificationOutbox,
+    SecuritySignal,
     UrlScan,
     User,
 )
@@ -175,6 +177,15 @@ def test_scans_are_tenant_scoped_and_never_store_raw_url(client: TestClient):
         headers={"Authorization": f"Bearer {other['access_token']}"},
     )
     assert cross_tenant.status_code == 404
+    signals = client.get(
+        f"/organizations/{owner['organization_id']}/signals",
+        headers=headers,
+    )
+    assert signals.status_code == 200
+    assert len(signals.json()) == 1
+    assert signals.json()[0]["source_type"] == "url_scan"
+    assert signals.json()[0]["subject"] == "example.com"
+    assert "topsecret" not in signals.text
 
 
 def test_viewers_cannot_start_scans(client: TestClient):
@@ -435,6 +446,8 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
         ))
         assert len(notifications) == 1
         assert owner_membership is not None and notifications[0].user_id == owner_membership.user_id
+        case_signals = session.scalars(select(CaseSignal).where(CaseSignal.case_id == case["id"])).all()
+        assert len(case_signals) == 1
 
 
 def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient):
@@ -487,6 +500,77 @@ def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient
 
     assert client.get(case_url, headers=other_headers).status_code == 404
     assert client.get(scan_url, headers=other_headers).status_code == 404
+    assert client.get(organization_url + "/signals", headers=other_headers).status_code == 404
+
+
+def test_generic_monitor_signal_can_open_a_tenant_scoped_case(client: TestClient):
+    owner = register(client, "monitor-signal-owner@example.test")
+    other = register(client, "monitor-signal-other@example.test")
+    with client.app.state.test_session_factory() as session:
+        signal = SecuritySignal(
+            organization_id=owner["organization_id"],
+            source_type="domain_monitor",
+            source_reference="dns-check-0001",
+            signal_type="dmarc_policy",
+            subject="example.test",
+            severity="high",
+            title="DMARC policy is missing",
+            summary="A verified domain has no DMARC record at the time of this check.",
+            observed_at=datetime.now(UTC),
+            payload='{"record_type":"DMARC","present":false}',
+            content_hash=hashlib.sha256(b'{"record_type":"DMARC","present":false}').hexdigest(),
+        )
+        related_signal = SecuritySignal(
+            organization_id=owner["organization_id"],
+            source_type="domain_monitor",
+            source_reference="dns-check-0002",
+            signal_type="tls_expiry",
+            subject="example.test",
+            severity="critical",
+            title="TLS certificate has expired",
+            summary="The verified domain endpoint returned an expired certificate.",
+            observed_at=datetime.now(UTC),
+            payload='{"certificate_expired":true}',
+            content_hash=hashlib.sha256(b'{"certificate_expired":true}').hexdigest(),
+        )
+        session.add_all([signal, related_signal])
+        session.commit()
+        signal_id = signal.id
+        related_signal_id = related_signal.id
+
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    org_url = f"/organizations/{owner['organization_id']}"
+    listed = client.get(org_url + "/signals", headers=owner_headers)
+    assert listed.status_code == 200
+    assert {item["id"] for item in listed.json()} == {signal_id, related_signal_id}
+    assert client.get(org_url + "/signals", headers=other_headers).status_code == 404
+
+    opened = client.post(org_url + f"/cases/from-signal/{signal_id}", headers=owner_headers)
+    assert opened.status_code == 201
+    case = opened.json()
+    assert case["scan_id"] is None
+    assert case["hostname"] == "example.test"
+    assert case["signals"][0]["id"] == signal_id
+    assert case["findings"] == []
+    linked = client.post(
+        org_url + f"/cases/{case['id']}/signals/{related_signal_id}", headers=owner_headers,
+    )
+    assert linked.status_code == 200
+    assert linked.json()["severity"] == "critical"
+    assert {item["id"] for item in linked.json()["signals"]} == {signal_id, related_signal_id}
+    assert client.post(
+        org_url + f"/cases/{case['id']}/signals/{related_signal_id}", headers=owner_headers,
+    ).status_code == 200
+    assert client.post(
+        f"/organizations/{other['organization_id']}/cases/{case['id']}/signals/{related_signal_id}",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.get(org_url + f"/cases/{case['id']}", headers=owner_headers).status_code == 200
+    assert client.get(org_url + f"/cases/{case['id']}", headers=other_headers).status_code == 404
+    duplicate = client.post(org_url + f"/cases/from-signal/{signal_id}", headers=owner_headers)
+    assert duplicate.status_code == 200
+    assert duplicate.json()["id"] == case["id"]
 
 
 def test_priority_notification_worker_sends_hostname_only(client: TestClient, monkeypatch):
@@ -643,6 +727,10 @@ def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
     assert scan.status_code == 201
     assert scan.json()["display_url"] == "https://example.test/[path and query omitted]"
     assert "private" not in scan.text
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/signals",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    ).json()[0]["source_type"] == "extension_scan"
     assert client.get(
         f"/organizations/{owner['organization_id']}/scans",
         headers=extension_headers,

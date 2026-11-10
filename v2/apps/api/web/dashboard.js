@@ -13,6 +13,8 @@ let canScan = false;
 let canManageAssets = false;
 let canTransferOwnership = false;
 let caseScanIds = new Set();
+let caseSignalIds = new Set();
+let casesCache = [];
 
 function setStatus(id, message) {
   byId(id).textContent = message;
@@ -97,7 +99,9 @@ function renderScans(scans) {
 function renderCases(cases) {
   const list = byId("case-list");
   list.replaceChildren();
+  casesCache = cases;
   caseScanIds = new Set(cases.map((item) => item.scan_id));
+  caseSignalIds = new Set(cases.flatMap((item) => (item.signals || []).map((signal) => signal.id)));
   if (!cases.length) {
     setStatus("case-status", "No cases yet. Open a case from a link check that has findings.");
     return;
@@ -142,6 +146,59 @@ function renderCases(cases) {
       label.append(select);
       controls.append(label, makeButton("Update case", () => updateCase(incident.id, select.value), ""));
       item.append(controls);
+    }
+    list.append(item);
+  }
+}
+
+function renderSignals(signals) {
+  const list = byId("signal-list");
+  list.replaceChildren();
+  if (!signals.length) {
+    setStatus("signal-status", "No security signals recorded yet.");
+    return;
+  }
+  setStatus("signal-status", `${signals.length} recent signal(s).`);
+  for (const signal of signals) {
+    const item = document.createElement("li");
+    item.className = "data-card";
+    const heading = document.createElement("h3");
+    heading.textContent = signal.title;
+    const meta = document.createElement("p");
+    meta.className = "muted";
+    meta.textContent = `${signal.severity} · ${signal.source_type.replaceAll("_", " ")} · ${signal.subject} · ${new Date(signal.observed_at).toLocaleString()}`;
+    const summary = document.createElement("p");
+    summary.textContent = signal.summary;
+    item.append(heading, meta, summary);
+    if (caseSignalIds.has(signal.id)) {
+      const linked = document.createElement("p");
+      linked.className = "muted";
+      linked.textContent = "Linked to a case.";
+      item.append(linked);
+    } else if (canScan) {
+      const openCases = casesCache.filter((incident) => !["resolved", "false_positive"].includes(incident.status));
+      if (openCases.length) {
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", `Choose a case for ${signal.title}`);
+        for (const incident of openCases) {
+          const option = document.createElement("option");
+          option.value = incident.id;
+          option.textContent = `${incident.severity}: ${incident.title}`;
+          select.append(option);
+        }
+        item.append(select, makeButton(
+          "Link to case",
+          () => attachSignalToCase(select.value, signal.id),
+          "button-secondary",
+          "signal-status",
+        ));
+      }
+      // URL and extension signals use the scan-history action, which only offers
+      // case creation when findings exist. Domain/integration signals can be
+      // triaged directly even when they have no URL scan record.
+      if (!["url_scan", "extension_scan"].includes(signal.source_type)) {
+        item.append(makeButton("Open case", () => openCaseFromSignal(signal.id)));
+      }
     }
     list.append(item);
   }
@@ -375,6 +432,17 @@ async function loadScans() {
   renderScans(await response.json());
 }
 
+async function loadSignals() {
+  setStatus("signal-status", "Loading security signals…");
+  const response = await request(`${apiBase}/signals?limit=50`);
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("signal-status", "Security signals could not be loaded.");
+    return;
+  }
+  renderSignals(await response.json());
+}
+
 function renderExtensionSessions(sessions) {
   const list = byId("extension-session-list");
   list.replaceChildren();
@@ -442,8 +510,36 @@ async function revokeExtensionSession(sessionId) {
 }
 
 async function refreshAll() {
-  await Promise.all([loadCases(), loadAssets(), loadExtensionSessions(), loadMembers()]);
-  await loadScans();
+  await loadCases();
+  await Promise.all([loadAssets(), loadExtensionSessions(), loadMembers(), loadSignals(), loadScans()]);
+}
+
+async function openCaseFromSignal(signalId) {
+  setStatus("signal-status", "Opening case from signal…");
+  const response = await request(`${apiBase}/cases/from-signal/${encodeURIComponent(signalId)}`, { method: "POST" });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("signal-status", "A case could not be opened for this signal.");
+    return;
+  }
+  setStatus("signal-status", "Signal linked to a case for review.");
+  await Promise.all([loadCases(), loadSignals()]);
+}
+
+async function attachSignalToCase(caseId, signalId) {
+  const response = await request(
+    `${apiBase}/cases/${encodeURIComponent(caseId)}/signals/${encodeURIComponent(signalId)}`,
+    { method: "POST" },
+  );
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("signal-status", response.status === 409
+      ? "Reopen the case or choose another case before linking this signal."
+      : "The signal could not be linked to that case.");
+    return;
+  }
+  setStatus("signal-status", "Signal linked to the case and recorded in the audit history.");
+  await Promise.all([loadCases(), loadSignals()]);
 }
 
 async function openCase(scanId) {
@@ -457,7 +553,7 @@ async function openCase(scanId) {
     return;
   }
   setStatus("case-status", "Case is ready for review.");
-  await Promise.all([loadCases(), loadScans()]);
+  await Promise.all([loadCases(), loadSignals(), loadScans()]);
 }
 
 async function updateCase(caseId, nextStatus) {
@@ -542,7 +638,7 @@ byId("scan-form").addEventListener("submit", async (event) => {
     await response.json();
     setStatus("scan-status", "URL structure inspection complete. This is not a malware or safety verdict.");
     byId("scan-form").reset();
-    await Promise.all([loadCases(), loadScans(), loadNotificationDeliveryStatus()]);
+    await Promise.all([loadCases(), loadSignals(), loadScans(), loadNotificationDeliveryStatus()]);
   } catch {
     setStatus("scan-status", "SecureLink could not be reached. The URL was not confirmed or classified.");
   } finally {
@@ -582,6 +678,7 @@ byId("asset-form").addEventListener("submit", async (event) => {
 });
 
 byId("refresh-cases").addEventListener("click", loadCases);
+byId("refresh-signals").addEventListener("click", loadSignals);
 byId("refresh-assets").addEventListener("click", loadAssets);
 byId("refresh-members").addEventListener("click", loadMembers);
 byId("refresh-scans").addEventListener("click", loadScans);
