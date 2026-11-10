@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from apps.api import main
+from apps.api.request_limits import MAX_REQUEST_BODY_BYTES
 
 client = TestClient(main.app)
 
@@ -41,6 +42,16 @@ def test_liveness_is_independent_of_dependencies():
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_oversized_request_body_is_rejected_before_route_processing():
+    response = client.post(
+        "/auth/register",
+        content=b"x" * (MAX_REQUEST_BODY_BYTES + 1),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 413
 
 
 def test_readiness_reports_healthy_dependencies(monkeypatch):

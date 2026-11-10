@@ -16,6 +16,7 @@ from apps.api.auth import router as auth_router
 from apps.api.cases import router as cases_router
 from apps.api.config import get_settings
 from apps.api.extension_auth import router as extension_router
+from apps.api.request_limits import RequestBodyLimitMiddleware
 from apps.api.scanning import router as scanning_router
 from apps.api.threat_intel import router as threat_intel_router
 
@@ -30,6 +31,7 @@ app = FastAPI(
     version="0.1.0",
     description="Evidence-first security operations API",
 )
+app.add_middleware(RequestBodyLimitMiddleware)
 WEB_DIR = Path(__file__).with_name("web")
 ACCOUNT_HEADERS = {
     "Cache-Control": "no-store",
