@@ -94,11 +94,11 @@ def send_high_priority_case_email(
     message["To"] = recipient
     message["Subject"] = f"SecureLink {severity} priority security case"
     message.set_content(
-        "SecureLink opened a case after a passive URL check detected a high-priority indicator.\n\n"
+        "SecureLink opened a case after a configured security check detected a high-priority indicator.\n\n"
         f"Organization: {organization_name[:120]}\nSeverity: {severity}\n"
         f"Hostname: {safe_hostname}\nCase ID: {case_id}\n\n"
         f"Review the evidence in your SecureLink dashboard: {dashboard_url}\n\n"
-        "This is an indicator for review, not a verdict that a URL is malicious."
+        "Review the attached case context before taking action; this alert is an indicator, not a threat verdict."
     )
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as client:
         if settings.smtp_starttls:

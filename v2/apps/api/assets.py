@@ -7,7 +7,7 @@ import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 import dns.exception
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from apps.api.auth import organization_membership
 from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
-from packages.security_core.models import AuditEvent, DomainAsset, Membership
+from packages.security_core.models import AuditEvent, DomainAsset, DomainMonitorState, Membership
 
 router = APIRouter()
 DOMAIN_CHALLENGE_PREFIX = "securelink-verification="
@@ -38,10 +38,18 @@ class DomainAssetResponse(BaseModel):
     id: str
     hostname: str
     status: str
+    monitoring_enabled: bool
+    monitoring_state: Literal["paused", "pending", "healthy", "findings", "error"]
+    monitoring_last_checked_at: datetime | None
+    monitoring_finding_count: int
     dns_name: str | None = None
     dns_value: str | None = None
     created_at: datetime
     verified_at: datetime | None
+
+
+class DomainMonitoringRequest(BaseModel):
+    enabled: bool
 
 
 def _admin_required(membership: Membership) -> None:
@@ -83,11 +91,33 @@ def _challenge_hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _response(asset: DomainAsset, token: str | None = None) -> DomainAssetResponse:
+def _response(
+    asset: DomainAsset,
+    token: str | None = None,
+    monitor_state: DomainMonitorState | None = None,
+) -> DomainAssetResponse:
+    try:
+        finding_count = len(json.loads(monitor_state.current_state)) if monitor_state else 0
+    except (TypeError, ValueError):
+        finding_count = 0
+    if not asset.monitoring_enabled:
+        monitor_status = "paused"
+    elif monitor_state is None:
+        monitor_status = "pending"
+    elif monitor_state.last_error:
+        monitor_status = "error"
+    elif monitor_state.last_checked_at is None:
+        monitor_status = "pending"
+    else:
+        monitor_status = "findings" if finding_count else "healthy"
     return DomainAssetResponse(
         id=asset.id,
         hostname=asset.hostname,
         status=asset.status,
+        monitoring_enabled=asset.monitoring_enabled,
+        monitoring_state=monitor_status,
+        monitoring_last_checked_at=monitor_state.last_checked_at if monitor_state else None,
+        monitoring_finding_count=finding_count,
         dns_name=f"_securelink-verification.{asset.hostname}" if token else None,
         dns_value=f"{DOMAIN_CHALLENGE_PREFIX}{token}" if token else None,
         created_at=asset.created_at,
@@ -183,7 +213,14 @@ def list_domain_assets(
         .where(DomainAsset.organization_id == membership.organization_id)
         .order_by(DomainAsset.created_at.desc(), DomainAsset.id)
     ).all()
-    return [_response(asset) for asset in assets]
+    states = session.scalars(
+        select(DomainMonitorState).where(
+            DomainMonitorState.organization_id == membership.organization_id,
+            DomainMonitorState.monitor_type == "email_dns_security",
+        )
+    ).all()
+    state_by_asset = {state.asset_id: state for state in states}
+    return [_response(asset, monitor_state=state_by_asset.get(asset.id)) for asset in assets]
 
 
 @router.post(
@@ -256,6 +293,56 @@ def verify_domain_asset(
     _record_audit(session, membership, "domain_asset.verified", asset)
     session.commit()
     return _response(asset)
+
+
+@router.patch(
+    "/organizations/{organization_id}/assets/domains/{asset_id}/monitoring",
+    response_model=DomainAssetResponse,
+    dependencies=[Depends(rate_limit("domain_monitoring_toggle", 10, 3600))],
+)
+def set_domain_monitoring(
+    asset_id: UUID,
+    payload: DomainMonitoringRequest,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> DomainAssetResponse:
+    _admin_required(membership)
+    asset = _get_asset(session, membership, asset_id)
+    if payload.enabled and asset.status != "verified":
+        raise HTTPException(status_code=409, detail="Verify domain ownership before enabling monitoring")
+    now = datetime.now(UTC)
+    asset.monitoring_enabled = payload.enabled
+    state = session.get(
+        DomainMonitorState,
+        (asset.id, membership.organization_id, "email_dns_security"),
+    )
+    if payload.enabled:
+        if state is None:
+            state = DomainMonitorState(
+                asset_id=asset.id,
+                organization_id=membership.organization_id,
+                monitor_type="email_dns_security",
+                next_check_at=now,
+            )
+            session.add(state)
+        else:
+            state.next_check_at = now
+            state.lease_until = None
+            state.last_error = None
+    elif state is not None:
+        state.next_check_at = now + timedelta(days=3650)
+        state.lease_until = None
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action="domain_asset.monitoring_enabled" if payload.enabled else "domain_asset.monitoring_disabled",
+        target_type="domain_asset",
+        target_id=asset.id,
+        details=json.dumps({"hostname": asset.hostname, "monitor_type": "email_dns_security"}, separators=(",", ":")),
+    ))
+    session.commit()
+    return _response(asset, monitor_state=state)
 
 
 @router.delete(

@@ -9,10 +9,12 @@ from sqlalchemy import or_, select
 from apps.api.db import get_session_factory
 from apps.api.emailer import send_high_priority_case_email
 from packages.security_core.models import (
+    CaseSignal,
     IncidentCase,
     Membership,
     Organization,
     SecurityNotificationOutbox,
+    SecuritySignal,
     UrlScan,
     User,
 )
@@ -64,6 +66,19 @@ def process_one() -> bool:
         case = session.get(IncidentCase, row.case_id)
         organization = session.get(Organization, row.organization_id)
         scan = session.get(UrlScan, case.scan_id) if case is not None else None
+        subject = scan.hostname if scan is not None else None
+        if case is not None and subject is None:
+            subject = session.scalar(
+                select(SecuritySignal.subject)
+                .join(CaseSignal, CaseSignal.signal_id == SecuritySignal.id)
+                .where(
+                    CaseSignal.case_id == case.id,
+                    CaseSignal.organization_id == row.organization_id,
+                    SecuritySignal.organization_id == row.organization_id,
+                )
+                .order_by(SecuritySignal.observed_at.desc(), SecuritySignal.id)
+                .limit(1)
+            )
         if (
             member is None
             or member.role not in {"owner", "admin"}
@@ -74,12 +89,12 @@ def process_one() -> bool:
             or case is None
             or case.severity not in {"critical", "high"}
             or organization is None
-            or scan is None
+            or subject is None
         ):
             row.delivery_state = "cancelled"
             row.delivery_lease_until = None
             return True
-        delivery = (row.id, user.email, organization.name, case.severity, scan.hostname, case.id)
+        delivery = (row.id, user.email, organization.name, case.severity, subject, case.id)
         row.delivery_state = "sending"
         row.delivery_attempts += 1
         row.delivery_lease_until = now + LEASE

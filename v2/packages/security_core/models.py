@@ -77,6 +77,7 @@ class DomainAsset(Base):
     __tablename__ = "domain_assets"
     __table_args__ = (
         UniqueConstraint("organization_id", "hostname", name="uq_domain_assets_org_hostname"),
+        UniqueConstraint("id", "organization_id", name="uq_domain_assets_id_organization"),
         CheckConstraint("status IN ('pending', 'verified')", name="ck_domain_assets_status"),
         CheckConstraint(
             "(status = 'pending' AND verification_token_hash IS NOT NULL "
@@ -94,6 +95,7 @@ class DomainAsset(Base):
     )
     hostname: Mapped[str] = mapped_column(String(253), nullable=False)
     status: Mapped[str] = mapped_column(String(12), default="pending", server_default="pending", nullable=False)
+    monitoring_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
     verification_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -101,6 +103,30 @@ class DomainAsset(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
+
+
+class DomainMonitorState(Base):
+    __tablename__ = "domain_monitor_states"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["asset_id", "organization_id"],
+            ["domain_assets.id", "domain_assets.organization_id"],
+            name="fk_domain_monitor_states_asset_organization",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("generation >= 0", name="ck_domain_monitor_states_generation"),
+        Index("ix_domain_monitor_states_due", "next_check_at", "lease_until"),
+    )
+
+    asset_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    monitor_type: Mapped[str] = mapped_column(String(64), primary_key=True)
+    current_state: Mapped[str] = mapped_column(Text, default="{}", server_default="{}", nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_check_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Membership(Base):

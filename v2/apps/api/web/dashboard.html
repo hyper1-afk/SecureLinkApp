@@ -78,11 +78,11 @@
       <div class="section-heading">
         <div>
           <h2 id="assets-title">Authorized domains</h2>
-          <p class="muted">Verify domain control before SecureLink can include it in future monitoring.</p>
+          <p class="muted">Verify control before enabling optional SPF and DMARC DNS monitoring. Monitoring reads DNS records only and never connects to discovered IP addresses.</p>
         </div>
         <button id="refresh-assets" type="button" class="button-secondary">Refresh</button>
       </div>
-      <p class="notice">Ownership verification only adds a domain to your inventory. Monitoring is not active yet.</p>
+      <p class="notice">Monitoring remains off until an owner or admin explicitly enables it for a verified domain.</p>
       <form id="asset-form">
         <label for="asset-hostname">Domain name</label>
         <div class="form-row">

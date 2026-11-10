@@ -251,6 +251,30 @@ function renderAssets(assets) {
       item.append(makeButton("Show DNS challenge", () => renewChallenge(asset.id), "button-secondary", "asset-status"));
       item.append(makeButton("Verify DNS", () => verifyAsset(asset.id), "button-secondary", "asset-status"));
     }
+    if (asset.status === "verified") {
+      const monitoring = document.createElement("p");
+      monitoring.className = asset.monitoring_enabled ? "state-verified" : "muted";
+      const monitoringLabels = {
+        paused: "paused",
+        pending: "waiting for the first check",
+        healthy: "no SPF/DMARC indicators in the latest check",
+        findings: `${asset.monitoring_finding_count} active SPF/DMARC indicator(s)`,
+        error: "last check failed; retry scheduled",
+      };
+      monitoring.textContent = `SPF/DMARC DNS monitoring ${monitoringLabels[asset.monitoring_state] || "status unavailable"}.`;
+      if (asset.monitoring_last_checked_at) {
+        monitoring.textContent += ` Last checked ${new Date(asset.monitoring_last_checked_at).toLocaleString()}.`;
+      }
+      item.append(monitoring);
+      if (canManageAssets) {
+        item.append(makeButton(
+          asset.monitoring_enabled ? "Pause monitoring" : "Enable monitoring",
+          () => setDomainMonitoring(asset.id, !asset.monitoring_enabled),
+          "button-secondary",
+          "asset-status",
+        ));
+      }
+    }
     if (canManageAssets) {
       item.append(makeButton("Remove", () => deleteAsset(asset.id, asset.hostname), "button-danger", "asset-status"));
     }
@@ -632,7 +656,7 @@ async function verifyAsset(assetId) {
   if (response.status === 401) return clearSession();
   if (response.ok) {
     byId("challenge-panel").hidden = true;
-    setStatus("asset-status", "Domain ownership verified. Monitoring is not active yet.");
+    setStatus("asset-status", "Domain ownership verified. SPF and DMARC monitoring remains off until enabled.");
     await loadAssets();
     return;
   }
@@ -651,6 +675,26 @@ async function deleteAsset(assetId, hostname) {
   }
   byId("challenge-panel").hidden = true;
   setStatus("asset-status", `${hostname} removed from the inventory.`);
+  await loadAssets();
+}
+
+async function setDomainMonitoring(assetId, enabled) {
+  setStatus("asset-status", enabled ? "Enabling DNS monitoring…" : "Pausing DNS monitoring…");
+  const response = await request(`${apiBase}/assets/domains/${encodeURIComponent(assetId)}/monitoring`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("asset-status", response.status === 409
+      ? "Verify domain ownership before enabling monitoring."
+      : "The monitoring preference could not be saved.");
+    return;
+  }
+  setStatus("asset-status", enabled
+    ? "SPF and DMARC DNS monitoring enabled. Initial results will appear in Security signals."
+    : "Domain DNS monitoring paused.");
   await loadAssets();
 }
 

@@ -44,6 +44,24 @@ services:
       - ALL
     restart: unless-stopped
 
+  domain-monitor-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.api.domain_monitor_worker"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
   mailpit:
     image: axllent/mailpit:v1.33.1
     profiles:

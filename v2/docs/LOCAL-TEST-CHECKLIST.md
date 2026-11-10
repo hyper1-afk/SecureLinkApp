@@ -26,6 +26,15 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 4. Review an HTTPS link. Confirm it produces a scan and, for a high-priority indicator, the same dashboard case and email behavior as a website scan.
 5. Disconnect from the extension, then confirm its scan request is rejected until it is connected again. The extension preview must not replace or be uploaded over the published extension.
 
+## Opt-in domain DNS monitoring
+
+1. Add a test domain you control, publish its one-time TXT challenge, and verify ownership.
+2. Confirm monitoring is initially paused. As an owner/admin, enable **SPF and DMARC DNS monitoring** for the verified domain; check the local worker logs for errors without including secrets.
+3. Confirm DNS observations appear in **Security signals**, unchanged findings are not duplicated on each check, and high-priority findings create a case and Mailpit message.
+4. Pause monitoring and confirm no later checks run for that domain. Do not enable it for a domain that does not send email unless missing SPF/DMARC records are expected findings.
+
+The worker queries only the domain's SPF and `_dmarc` TXT records. It does not connect to discovered IP addresses, fetch web pages, or use paid Have I Been Pwned APIs.
+
 The local analyzer is a passive URL-structure check. It makes no outbound URL requests and does not query Have I Been Pwned or another threat-intelligence provider, so results are indicators for review, not a malicious/safe verdict.
 
 ## Report a local issue

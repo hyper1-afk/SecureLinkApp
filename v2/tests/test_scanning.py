@@ -13,7 +13,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import assets, auth, emailer, extension_auth, main, notification_worker, rate_limits
+from apps.api import assets, auth, domain_monitor_worker, emailer, extension_auth, main, notification_worker, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
@@ -22,6 +22,7 @@ from packages.security_core.models import (
     CaseFinding,
     CaseSignal,
     DomainAsset,
+    DomainMonitorState,
     EmailActionToken,
     ExtensionAuthorizationCode,
     ExtensionSession,
@@ -250,6 +251,11 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
         f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}",
         headers=other_headers,
     ).status_code == 404
+    enable_url = (
+        f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}/monitoring"
+    )
+    assert client.patch(enable_url, headers=owner_headers, json={"enabled": True}).status_code == 409
+    assert client.patch(enable_url, headers=other_headers, json={"enabled": True}).status_code == 404
 
     class Resolver:
         timeout = None
@@ -267,7 +273,17 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
     )
     assert verified.status_code == 200
     assert verified.json()["status"] == "verified"
+    assert verified.json()["monitoring_enabled"] is False
+    assert verified.json()["monitoring_state"] == "paused"
     assert verified.json()["dns_value"] is None
+
+    enabled = client.patch(enable_url, headers=owner_headers, json={"enabled": True})
+    assert enabled.status_code == 200
+    assert enabled.json()["monitoring_enabled"] is True
+    assert enabled.json()["monitoring_state"] == "pending"
+    paused = client.patch(enable_url, headers=owner_headers, json={"enabled": False})
+    assert paused.status_code == 200
+    assert paused.json()["monitoring_enabled"] is False
 
     with client.app.state.test_session_factory() as session:
         asset = session.get(DomainAsset, asset_data["id"])
@@ -276,7 +292,10 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
         ).all()
         assert asset.status == "verified"
         assert asset.verification_token_hash is None
-        assert {event.action for event in audit} == {"domain_asset.created", "domain_asset.verified"}
+        assert {event.action for event in audit} == {
+            "domain_asset.created", "domain_asset.verified",
+            "domain_asset.monitoring_enabled", "domain_asset.monitoring_disabled",
+        }
 
 
 @pytest.mark.parametrize(
@@ -337,7 +356,160 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
         asset_id = asset.json()["id"]
         assert client.post(f"{path}/{asset_id}/challenge", headers=headers).status_code == 403
         assert client.post(f"{path}/{asset_id}/verify", headers=headers).status_code == 403
+        assert client.patch(
+            f"{path}/{asset_id}/monitoring", headers=headers, json={"enabled": True},
+        ).status_code == 403
         assert client.delete(f"{path}/{asset_id}", headers=headers).status_code == 403
+
+
+def test_domain_monitor_dns_checks_are_explicit_and_deduplicate_state_transitions(
+    client: TestClient, monkeypatch,
+):
+    owner = register(client, "domain-monitor-owner@example.test")
+    with client.app.state.test_session_factory() as session:
+        user = session.scalar(select(User).where(User.email_normalized == "domain-monitor-owner@example.test"))
+        asset = DomainAsset(
+            organization_id=owner["organization_id"],
+            hostname="mail.example.test",
+            status="verified",
+            monitoring_enabled=True,
+            verified_at=datetime.now(UTC),
+            created_by_user_id=user.id,
+        )
+        session.add(asset)
+        session.flush()
+        asset_id = asset.id
+        session.add(DomainMonitorState(
+            asset_id=asset.id,
+            organization_id=owner["organization_id"],
+            monitor_type="email_dns_security",
+            current_state="{}",
+            generation=0,
+            next_check_at=datetime.now(UTC) - timedelta(seconds=1),
+        ))
+        session.commit()
+
+    monkeypatch.setattr(
+        domain_monitor_worker, "get_session_factory", lambda: client.app.state.test_session_factory,
+    )
+
+    def dns_timeout(_hostname, _resolver):
+        raise assets.dns.exception.Timeout
+
+    monkeypatch.setattr(domain_monitor_worker, "collect_issues", dns_timeout)
+    assert domain_monitor_worker.process_one() is True
+    org_url = f"/organizations/{owner['organization_id']}"
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    assert client.get(org_url + "/signals", headers=headers).json() == []
+    monitor_asset = client.get(org_url + "/assets/domains", headers=headers).json()[0]
+    assert monitor_asset["monitoring_state"] == "error"
+    with client.app.state.test_session_factory() as session:
+        state = session.get(
+            DomainMonitorState,
+            (asset_id, owner["organization_id"], "email_dns_security"),
+        )
+        state.next_check_at = datetime.now(UTC) - timedelta(seconds=1)
+        session.commit()
+    monkeypatch.setattr(
+        domain_monitor_worker,
+        "collect_issues",
+        lambda _hostname, _resolver: {
+            "spf_policy": {
+                "severity": "high",
+                "title": "Multiple SPF records found",
+                "summary": "Conflicting SPF records require review.",
+            },
+            "dmarc_policy": {
+                "severity": "critical",
+                "title": "Multiple DMARC records found",
+                "summary": "Conflicting DMARC records require review.",
+            },
+        },
+    )
+    assert domain_monitor_worker.process_one() is True
+    signals = client.get(org_url + "/signals", headers=headers).json()
+    assert len(signals) == 2
+    assert signals[0]["source_type"] == "domain_monitor"
+    assert signals[0]["subject"] == "mail.example.test"
+    monitor_asset = client.get(org_url + "/assets/domains", headers=headers).json()[0]
+    assert monitor_asset["monitoring_state"] == "findings"
+    assert monitor_asset["monitoring_finding_count"] == 2
+    cases = client.get(org_url + "/cases", headers=headers).json()
+    assert len(cases) == 1
+    assert cases[0]["scan_id"] is None
+    assert cases[0]["severity"] == "critical"
+    assert {item["id"] for item in cases[0]["signals"]} == {item["id"] for item in signals}
+    sent = []
+    monkeypatch.setattr(notification_worker, "send_high_priority_case_email", lambda *args: sent.append(args))
+    assert notification_worker.process_one() is True
+    assert sent[0][3] == "mail.example.test"
+    assert domain_monitor_worker.process_one() is False
+
+    with client.app.state.test_session_factory() as session:
+        state = session.get(
+            DomainMonitorState,
+            (asset_id, owner["organization_id"], "email_dns_security"),
+        )
+        state.next_check_at = datetime.now(UTC) - timedelta(seconds=1)
+        session.commit()
+    monkeypatch.setattr(domain_monitor_worker, "collect_issues", lambda _hostname, _resolver: {})
+    assert domain_monitor_worker.process_one() is True
+    signals = client.get(org_url + "/signals", headers=headers).json()
+    assert len(signals) == 4
+    assert {item["signal_type"] for item in signals} >= {"spf_policy_resolved", "dmarc_policy_resolved"}
+    monitor_asset = client.get(org_url + "/assets/domains", headers=headers).json()[0]
+    assert monitor_asset["monitoring_state"] == "healthy"
+    disabled = client.patch(
+        f"{org_url}/assets/domains/{asset_id}/monitoring",
+        headers=headers,
+        json={"enabled": False},
+    )
+    assert disabled.status_code == 200
+    assert disabled.json()["monitoring_state"] == "paused"
+    assert domain_monitor_worker.process_one() is False
+
+
+def test_domain_monitor_collector_checks_only_spf_and_dmarc_txt_records():
+    class Resolver:
+        def __init__(self, records):
+            self.records = records
+            self.queries = []
+
+        def resolve(self, name, record_type):
+            self.queries.append((name, record_type))
+            values = self.records.get(name, [])
+            return [SimpleNamespace(strings=[value.encode()]) for value in values]
+
+    resolver = Resolver({
+        "mail.example.com": ["v=spf1 include:mail.example.net -all"],
+        "_dmarc.mail.example.com": ["v=DMARC1; p=none; rua=mailto:dmarc@example.com"],
+    })
+    issues = domain_monitor_worker.collect_issues("mail.example.com", resolver)
+    assert set(issues) == {"dmarc_policy"}
+    assert issues["dmarc_policy"]["severity"] == "low"
+    assert resolver.queries == [
+        ("mail.example.com", "TXT"),
+        ("_dmarc.mail.example.com", "TXT"),
+    ]
+    empty = domain_monitor_worker.collect_issues("mail.example.com", Resolver({}))
+    assert set(empty) == {"spf_policy", "dmarc_policy"}
+    duplicate_spf = domain_monitor_worker.collect_issues(
+        "mail.example.com",
+        Resolver({
+            "mail.example.com": ["v=spf1 -all", "v=spf1 ~all"],
+            "_dmarc.mail.example.com": ["v=DMARC1; p=reject"],
+        }),
+    )
+    assert duplicate_spf["spf_policy"]["severity"] == "high"
+    assert "dmarc_policy" not in duplicate_spf
+    malformed_prefix = domain_monitor_worker.collect_issues(
+        "mail.example.com",
+        Resolver({
+            "mail.example.com": ["v=spf10 -all"],
+            "_dmarc.mail.example.com": ["v=DMARC1invalid; p=reject"],
+        }),
+    )
+    assert set(malformed_prefix) == {"spf_policy", "dmarc_policy"}
 
 
 def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
