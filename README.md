@@ -1,11 +1,11 @@
 # SecureLink — Self-Hosted URL Security Platform
 
-SecureLink is an open-source security platform you can deploy on your own server or network. It scans URLs for phishing, malware, and other threats; monitors domain health (SSL, SPF, DMARC); checks emails for breached credentials; and ships a browser extension that auto-scans every page you visit — all pointed at your own infrastructure.
+SecureLink is a proprietary security platform for SaaS and separately licensed self-hosted deployments. It scans URLs for phishing, malware, and other threats; monitors domain health (SSL, SPF, DMARC); and ships a browser extension that auto-scans pages you visit.
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License](https://img.shields.io/badge/License-Proprietary-red.svg)
 
 ---
 
@@ -120,7 +120,7 @@ sudo certbot --nginx -d yourdomain.com
 
 ## Browser Extension
 
-The extension ships with `https://securelinkapp.com` as its default API endpoint. When self-hosting, point it at your own server.
+The extension ships with `https://securelinkapp.com` as its default API endpoint. Licensed self-hosted customers can point it at their own server.
 
 ### Option A — Use the Settings tab (easiest)
 
@@ -251,4 +251,4 @@ FLASK_ENV=development DEBUG=true python app.py
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+SecureLink is proprietary software. The checked-in [LICENSE](LICENSE) governs use of this repository. Running a self-hosted instance requires a separate written commercial license from SecureLink; access to this public repository does not grant redistribution or self-hosting rights. Third-party components remain under their respective licenses.

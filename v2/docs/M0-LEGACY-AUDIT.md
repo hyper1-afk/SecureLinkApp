@@ -10,15 +10,19 @@
 
 ## Findings requiring action
 
-### M0-01 — Credential hygiene / possible exposed API key
-The committed `.env.example` contains a non-placeholder value for a Google Safe Browsing API-key setting. The value is intentionally not copied into this report. Treat it as compromised until proven otherwise: revoke/rotate it with the provider, review usage, search all Git history and artifacts for secrets, and move all credentials to a secret manager. Also inspect email/SMTP example values and repository history. A value in an example file may be real even if the filename says example.
+### M0-01 — Confirmed exposed Google Safe Browsing API key
+The tracked `.env.example` contained a non-placeholder Google Safe Browsing API key. The value is intentionally not copied into this report. It has been cleared from the current working-tree version, but Git history confirms it was committed in `ed287bf` and remains in branch history. Treat it as compromised: revoke/rotate it with Google Cloud, review usage, search all refs and build artifacts for secrets, and verify the old key is invalid. Do not rewrite the active production branch as part of this remediation without a coordinated deployment plan. The other credential-like values in `.env.example` were checked and are placeholders; keep all actual credentials out of tracked files.
+
+**Status:** Open until provider-side rotation, usage review, and invalidation are verified. The old key remains in repository history.
 
 **Priority:** Critical until the key is rotated and verified invalid.
 
 ### M0-02 — License inconsistency
-README advertises MIT while the checked-in LICENSE text identifies itself as proprietary / all rights reserved. Do not assume the code is MIT-licensed or redistribute it under MIT until ownership and licensing are resolved. Obtain legal review and make README, LICENSE, package metadata and third-party notices consistent.
+README previously advertised MIT and open-source self-hosting while the checked-in LICENSE is proprietary. The README now matches the proprietary LICENSE and says self-hosting requires a separate written commercial license. Inventory third-party notices and have counsel review the commercial license before distributing self-hosted packages.
 
-**Priority:** Release blocker.
+**Status:** Repository messaging aligned; commercial license and third-party attribution review remain.
+
+**Priority:** Release blocker for self-hosted distribution until those terms are reviewed.
 
 ### M0-03 — URL scanning boundary / SSRF review
 The URL verifier uses external HTTP provider lookups and URL parsing. Complete a dedicated review of every path that fetches user-supplied URLs, redirect handling, DNS resolution, IPv4/IPv6 private/link-local/loopback/metadata ranges, DNS rebinding, IDNA normalization, ports, schemes, timeouts, response sizes and outbound egress. Do not fetch arbitrary submitted URLs from the API process. Use a restricted scanning worker with egress policy and revalidate every redirect and resolved address.
