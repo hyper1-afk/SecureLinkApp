@@ -1,7 +1,7 @@
 const token = sessionStorage.getItem("securelink.accessToken");
-const organizationId = sessionStorage.getItem("securelink.organizationId");
+let organizationId = sessionStorage.getItem("securelink.organizationId");
 const byId = (id) => document.getElementById(id);
-const apiBase = organizationId ? `/organizations/${encodeURIComponent(organizationId)}` : "";
+let apiBase = organizationId ? `/organizations/${encodeURIComponent(organizationId)}` : "";
 const caseTransitions = {
   open: ["investigating", "resolved", "false_positive"],
   investigating: ["open", "awaiting_approval", "resolved", "false_positive"],
@@ -202,6 +202,37 @@ async function loadOrganization() {
   byId("asset-submit").disabled = !canManageAssets;
   if (!canScan) setStatus("scan-status", "Your viewer role can review results but cannot scan or update cases.");
   if (!canManageAssets) setStatus("asset-status", "Only organization owners and admins can add or verify domains.");
+  return true;
+}
+
+async function loadMyOrganizations() {
+  const response = await request("/auth/organizations");
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("scan-status", "Your organizations could not be loaded.");
+    return false;
+  }
+  const organizations = await response.json();
+  if (!organizations.length) return clearSession();
+  const switcher = byId("organization-switcher");
+  switcher.replaceChildren();
+  for (const organization of organizations) {
+    const option = document.createElement("option");
+    option.value = organization.id;
+    option.textContent = organization.name;
+    switcher.append(option);
+  }
+  if (!organizations.some((item) => item.id === organizationId)) {
+    organizationId = organizations[0].id;
+    sessionStorage.setItem("securelink.organizationId", organizationId);
+    apiBase = `/organizations/${encodeURIComponent(organizationId)}`;
+  }
+  switcher.value = organizationId;
+  switcher.disabled = organizations.length < 2;
+  switcher.addEventListener("change", () => {
+    sessionStorage.setItem("securelink.organizationId", switcher.value);
+    window.location.reload();
+  });
   return true;
 }
 
@@ -458,12 +489,12 @@ byId("sign-out").addEventListener("click", async () => {
   clearSession();
 });
 
-if (!token || !organizationId) {
+if (!token) {
   setStatus("scan-status", "Sign in from the account page to use the dashboard.");
   byId("scan-submit").disabled = true;
   byId("asset-submit").disabled = true;
 } else {
-  loadOrganization().then(async (ok) => {
-    if (ok) await refreshAll();
+  loadMyOrganizations().then(async (ok) => {
+    if (ok && await loadOrganization()) await refreshAll();
   }).catch(() => setStatus("scan-status", "SecureLink could not be reached."));
 }

@@ -42,4 +42,4 @@ V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and 
 
 ## Production status
 
-Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing and new accounts are implemented. Ownership transfer, MFA, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing and new accounts and organization switching are implemented. Ownership transfer, MFA, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.

@@ -543,6 +543,46 @@ def test_invitation_onboards_new_user_and_requires_password_setup(client: TestCl
         assert invited_user.invitation_setup_required is False
 
 
+def test_user_can_list_all_organizations_they_belong_to(client: TestClient):
+    owner = register(client, "multi-org-owner@example.test")
+    teammate = register(client, "multi-org-teammate@example.test")
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/invitations",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"email": "multi-org-teammate@example.test", "role": "viewer"},
+    )
+    assert response.status_code == 202
+
+    with client.app.state.test_session_factory() as session:
+        action = session.scalar(
+            select(EmailActionToken)
+            .join(User, User.id == EmailActionToken.user_id)
+            .where(
+                EmailActionToken.purpose == "invite_member",
+                User.email_normalized == "multi-org-teammate@example.test",
+                EmailActionToken.organization_id == owner["organization_id"],
+            )
+        )
+        assert action is not None and action.delivery_ciphertext is not None
+        invitation_token = emailer.decrypt_action_token(action.delivery_ciphertext)
+    accepted = client.post("/auth/invitations/accept", json={"token": invitation_token})
+    assert accepted.status_code == 200
+
+    organizations_response = client.get(
+        "/auth/organizations",
+        headers={"Authorization": f"Bearer {teammate['access_token']}"},
+    )
+    assert organizations_response.status_code == 200
+    assert organizations_response.headers["cache-control"] == "no-store"
+    memberships = organizations_response.json()
+    assert {item["id"] for item in memberships} == {
+        owner["organization_id"],
+        teammate["organization_id"],
+    }
+    assert {item["role"] for item in memberships} == {"owner", "viewer"}
+    assert client.get("/auth/organizations").status_code == 401
+
+
 def test_admin_cannot_invite_owner_or_admin(client: TestClient):
     owner = register(client, "invite-org-owner@example.test")
     admin = register(client, "invite-org-admin@example.test")

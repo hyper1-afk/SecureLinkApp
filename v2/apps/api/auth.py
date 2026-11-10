@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pwdlib import PasswordHash
 from pydantic import BaseModel, Field
@@ -799,6 +799,22 @@ class OrganizationResponse(BaseModel):
     id: str
     name: str
     role: str
+
+
+@router.get("/auth/organizations", response_model=list[OrganizationResponse])
+def list_my_organizations(
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+    response: Response,
+) -> list[OrganizationResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    rows = session.execute(
+        select(Organization.id, Organization.name, Membership.role)
+        .join(Membership, Membership.organization_id == Organization.id)
+        .where(Membership.user_id == principal.user_id)
+        .order_by(Organization.name, Organization.id)
+    ).all()
+    return [OrganizationResponse(id=org_id, name=name, role=role) for org_id, name, role in rows]
 
 
 @router.get("/organizations/{organization_id}", response_model=OrganizationResponse)

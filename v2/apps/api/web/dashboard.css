@@ -14,6 +14,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .shell { width: min(100%, 64rem); margin: 0 auto; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
 .topbar nav { display: flex; align-items: center; gap: 1rem; }
+.org-switcher { display: flex; align-items: center; gap: .45rem; }
+.org-switcher label { margin: 0; white-space: nowrap; }
+.org-switcher select { width: auto; max-width: 14rem; }
 .brand { margin: 0; color: #1355c7; font-weight: 750; letter-spacing: .04em; }
 h1 { margin: .2rem 0; font-size: 1.7rem; }
 h2 { margin: 0 0 .5rem; }
