@@ -40,6 +40,15 @@ def test_api_health_and_app_alerts_are_configured() -> None:
     assert api["health_check"]["http_path"] == "/health/ready"
     assert api["liveness_health_check"]["http_path"] == "/health/live"
     assert any(alert["rule"] == "DEPLOYMENT_FAILED" for alert in spec["alerts"])
+    for component in [api, spec["workers"][0]]:
+        alerts = {alert["rule"]: alert for alert in component["alerts"]}
+        assert {"CPU_UTILIZATION", "MEM_UTILIZATION", "RESTART_COUNT"} <= alerts.keys()
+        assert alerts["CPU_UTILIZATION"]["value"] == 80
+        assert alerts["MEM_UTILIZATION"]["value"] == 85
+        assert all(
+            alerts[rule]["window"] == "FIVE_MINUTES"
+            for rule in ("CPU_UTILIZATION", "MEM_UTILIZATION", "RESTART_COUNT")
+        )
 
 
 def test_runtime_settings_are_defined_on_app_and_worker_components() -> None:
