@@ -8,6 +8,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 - Email verification is required before login. A same-origin account page supports registration, sign-in, verification, resend, and password recovery.
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
+- Optional TOTP multi-factor authentication uses separately encrypted secrets, 24-character one-time recovery codes stored only as hashes, rate-limited enrollment and disable actions, and session revocation when disabled. Web and extension OAuth sign-in both accept MFA codes.
 - Password reset and logout increment a token version and invalidate existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
 - Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
@@ -42,4 +43,4 @@ V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and 
 
 ## Production status
 
-Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing and new accounts and organization switching are implemented. Ownership transfer, MFA, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and broader investigation workflows are not. Invitations to existing and new accounts, organization switching, and optional account MFA are implemented. Ownership transfer, a documented and enforced MFA policy for owners/admins, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
