@@ -63,11 +63,11 @@ Add organization-scoped assets, ownership verification, member permissions, audi
 
 ### 4. Detection, investigation, and response playbooks
 
-Build finding lifecycle, deduplication, severity/confidence, evidence-grounded investigation, notification preferences, quiet hours, email digests, and high-priority alert routing. Start with phishing/link threats and authorized domain exposure. Add integrations and further detection sources only when they improve case outcomes. Keep evidence immutable and give customers controls over retention.
+High/critical deterministic URL indicators now open audited cases and queue priority email to verified, active owners/admins through a retrying outbox. Continue with finding deduplication, confidence scoring, quiet hours, email digests, evidence-grounded investigation, approval workflows, and low-risk response playbooks. Start with phishing/link threats and authorized domain exposure. Add integrations and further detection sources only when they improve case outcomes. Keep evidence immutable and give customers controls over retention.
 
 ### 5. Complete the connected SOC console and sustainable SaaS operations
 
-The initial dashboard now connects passive link checks, domain verification, scan history, and case review/status updates. High/critical URL indicators open audited cases automatically, but do not yet trigger email alerts. Continue with richer case details, approvals, notification preferences, high-priority alert delivery, and billing status. Add subscription checkout, verified webhooks, entitlements, metering, cancellation/export, support tooling, billing recovery, and abuse controls. Test billing in provider sandbox before enabling charges.
+The dashboard connects passive link checks, domain verification, scan history, case review/status updates, and per-member high-priority email preferences. High/critical indicators queue alerts only for verified, active owners/admins. Continue with richer case details, alert delivery monitoring, approvals, quiet hours, digests, and billing status. Add subscription checkout, verified webhooks, entitlements, metering, cancellation/export, support tooling, billing recovery, and abuse controls. Test billing in provider sandbox before enabling charges.
 
 ### 6. Additional SOC integrations and self-hosted packaging
 
@@ -79,7 +79,7 @@ Prove backup restore, alert delivery, incident response, capacity limits, securi
 
 ## Current position
 
-The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a local Compose environment, DNS ownership verification for domain assets, automatic case creation for high/critical URL indicators, an evidence-backed case lifecycle, a dashboard connecting those features, and a PKCE scan-only extension integration in the development branch. The existing extension's automatic legacy scanner remains a separate path, and the integration has not been released to the Web Store. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, high-priority email alerts, automated investigation, approval workflows, or billing. It is not production-ready.
+The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a local Compose environment, DNS ownership verification for domain assets, automatic case creation for high/critical URL indicators, a durable priority-email outbox for eligible owners/admins, an evidence-backed case lifecycle, a connected dashboard, and a PKCE scan-only extension integration in the development branch. The existing extension's automatic legacy scanner remains a separate path, and the integration has not been released to the Web Store. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated scheduled monitoring jobs, reputation-based threat detection, automated investigation, approval workflows, or billing. It is not production-ready.
 
 ## Feature portfolio: acquisition hypotheses
 

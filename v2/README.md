@@ -41,7 +41,7 @@ V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and 
 - `apps/api`: HTTP API and application composition
 - `packages/security_core`: identity and tenant data models
 - `migrations`: Alembic migrations
-- `docs`: [product direction](docs/PRODUCT-DIRECTION.md), architecture, threat model, staging runbook and extension redesign
+- `docs`: [product direction](docs/PRODUCT-DIRECTION.md), [local browser checklist](docs/LOCAL-TEST-CHECKLIST.md), architecture, threat model, staging runbook and extension redesign
 - `tests`: unit, PostgreSQL migration and API tests
 
 ## Production status
