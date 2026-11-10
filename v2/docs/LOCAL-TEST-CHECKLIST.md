@@ -26,7 +26,7 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 4. Review an HTTPS link. Confirm it produces a scan and, for a high-priority indicator, the same dashboard case and email behavior as a website scan.
 5. As an owner/admin, add an exact-host organization indicator in the dashboard. Check that a scan of that exact host shows a medium review finding, while its subdomain and the same host in a different organization do not match. Remove the indicator and confirm it no longer affects new scans. Viewers may see the list but cannot add or remove entries.
 6. For the existing extension warning flow, use a controlled link that the legacy scanner classifies high risk. Confirm the warning address contains only a random incident ID, warning details disappear after five minutes, and **Continue anyway** bypasses only that exact URL once in the same tab. A later navigation to the same link should be checked again.
-5. Disconnect from the extension, then confirm its scan request is rejected until it is connected again. The extension preview must not replace or be uploaded over the published extension.
+6. Disconnect from the extension, then confirm its scan request is rejected until it is connected again. The extension preview must not replace or be uploaded over the published extension.
 
 ## Opt-in domain DNS monitoring
 
