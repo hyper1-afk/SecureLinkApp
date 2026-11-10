@@ -411,6 +411,58 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
         assert owner_membership is not None and notifications[0].user_id == owner_membership.user_id
 
 
+def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient):
+    owner = register(client, "permissions-owner@example.test")
+    analyst = register(client, "permissions-analyst@example.test")
+    viewer = register(client, "permissions-viewer@example.test")
+    other = register(client, "permissions-other@example.test")
+    with client.app.state.test_session_factory() as session:
+        for email, role in (("permissions-analyst@example.test", "analyst"), ("permissions-viewer@example.test", "viewer")):
+            user = session.scalar(select(User).where(User.email_normalized == email))
+            session.add(Membership(
+                organization_id=owner["organization_id"], user_id=user.id, role=role,
+            ))
+        session.commit()
+
+    organization_url = f"/organizations/{owner['organization_id']}"
+    scan = client.post(
+        f"{organization_url}/scans",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"url": "https://alice:secret@example.com/login?token=redacted"},
+    )
+    assert scan.status_code == 201
+    scan_id = scan.json()["id"]
+    case = client.get(organization_url + "/cases", headers={
+        "Authorization": f"Bearer {owner['access_token']}",
+    }).json()[0]
+    case_url = organization_url + f"/cases/{case['id']}"
+    scan_url = organization_url + f"/scans/{scan_id}"
+
+    analyst_headers = {"Authorization": f"Bearer {analyst['access_token']}"}
+    viewer_headers = {"Authorization": f"Bearer {viewer['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    assert client.get(scan_url, headers=analyst_headers).status_code == 200
+    assert client.get(case_url, headers=analyst_headers).status_code == 200
+    assert client.patch(case_url + "/status", headers=analyst_headers, json={"status": "investigating"}).status_code == 200
+
+    assert client.get(scan_url, headers=viewer_headers).status_code == 200
+    assert client.get(case_url, headers=viewer_headers).status_code == 200
+    assert client.get(organization_url + "/scans", headers=viewer_headers).status_code == 200
+    assert client.get(organization_url + "/cases", headers=viewer_headers).status_code == 200
+    assert client.post(
+        f"{organization_url}/scans", headers=viewer_headers, json={"url": "https://example.com"},
+    ).status_code == 403
+    assert client.post(
+        f"{organization_url}/cases/from-scan/{scan_id}", headers=viewer_headers,
+    ).status_code == 403
+    assert client.patch(
+        case_url + "/status", headers=viewer_headers, json={"status": "resolved"},
+    ).status_code == 403
+
+    assert client.get(case_url, headers=other_headers).status_code == 404
+    assert client.get(scan_url, headers=other_headers).status_code == 404
+
+
 def test_priority_notification_worker_sends_hostname_only(client: TestClient, monkeypatch):
     owner = register(client, "alert-worker@example.test")
     headers = {"Authorization": f"Bearer {owner['access_token']}"}
