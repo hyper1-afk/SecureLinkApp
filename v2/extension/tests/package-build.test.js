@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -53,4 +53,26 @@ test("rejects insecure remote API origins and output inside source", async (cont
   assert.match(insecure.stderr, /requires HTTPS/);
   assert.notEqual(insideSource.status, 0);
   assert.match(insideSource.stderr, /cannot be inside/);
+});
+
+
+test("refuses to mix a package with files already in the output directory", async (context) => {
+  const temporaryDirectory = await mkdtemp(join(os.tmpdir(), "securelink-extension-"));
+  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+  const outputDirectory = join(temporaryDirectory, "package");
+  const sentinelPath = join(outputDirectory, "stale-file.js");
+  await mkdir(outputDirectory);
+  await writeFile(sentinelPath, "keep this file untouched");
+
+  const result = spawnSync(process.execPath, [
+    packagingScript,
+    "--api-origin",
+    "https://staging.example.test",
+    "--output",
+    outputDirectory,
+  ], { encoding: "utf8" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must be empty/);
+  assert.equal(await readFile(sentinelPath, "utf8"), "keep this file untouched");
 });

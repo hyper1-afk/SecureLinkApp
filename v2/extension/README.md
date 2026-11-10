@@ -33,7 +33,9 @@ The command writes a separate package under `v2/dist/extension`, sets its API
 origin, and grants that exact origin in the generated manifest. It never edits
 the unpacked local preview. Add the generated package's exact Chrome identity
 callback to `EXTENSION_REDIRECT_URIS`. Use HTTPS for every non-local API. Do not
-use a wildcard host permission or callback URI.
+use a wildcard host permission or callback URI. The command refuses a
+non-empty output directory; use a new directory for each build so stale files
+cannot be mixed into the package.
 
 The access token is held in the extension service worker and Chrome session
 storage, expires after 12 hours, and grants only URL scan submission. The

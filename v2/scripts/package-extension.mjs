@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,6 +51,9 @@ async function packageExtension(args = process.argv.slice(2)) {
   manifest.host_permissions = [`${api.origin}/*`];
 
   await mkdir(outputDirectory, { recursive: true });
+  if ((await readdir(outputDirectory)).length > 0) {
+    throw new Error("The output directory must be empty; choose a new package directory.");
+  }
   for (const filename of extensionFiles) {
     const source = resolve(extensionDirectory, filename);
     const destination = resolve(outputDirectory, filename);
