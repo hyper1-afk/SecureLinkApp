@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { configuredApiOrigin, requestApiOriginPermission, validateApiOrigin } from "../api-origin.js";
+import {
+  configuredApiOrigin,
+  removeApiOriginPermission,
+  requestApiOriginPermission,
+  validateApiOrigin,
+} from "../api-origin.js";
 
 test("accepts HTTPS API origins and localhost development", () => {
   assert.equal(validateApiOrigin("https://api.example.test").origin, "https://api.example.test");
@@ -47,6 +52,56 @@ test("requests permission only for the configured API origin and reports denial"
       { origins: ["https://api.example.test/*"] },
       { origins: ["http://localhost:8000/*"] },
     ]);
+  } finally {
+    if (originalChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = originalChrome;
+  }
+});
+
+
+test("removes only an optional permission for the previous API origin", async () => {
+  const originalChrome = globalThis.chrome;
+  const calls = [];
+  globalThis.chrome = {
+    permissions: {
+      contains(options, callback) {
+        calls.push(["contains", options]);
+        callback(true);
+      },
+      remove(options, callback) {
+        calls.push(["remove", options]);
+        callback(true);
+      },
+    },
+    runtime: {
+      getManifest: () => ({ host_permissions: ["https://securelinkapp.com/*"] }),
+    },
+  };
+  try {
+    assert.equal(await removeApiOriginPermission("https://staging.example.test"), true);
+    assert.deepEqual(calls, [
+      ["contains", { origins: ["https://staging.example.test/*"] }],
+      ["remove", { origins: ["https://staging.example.test/*"] }],
+    ]);
+    assert.equal(await removeApiOriginPermission("https://securelinkapp.com"), true);
+    assert.equal(calls.length, 2);
+  } finally {
+    if (originalChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = originalChrome;
+  }
+});
+
+test("does not claim success if an old optional origin cannot be revoked", async () => {
+  const originalChrome = globalThis.chrome;
+  globalThis.chrome = {
+    permissions: {
+      contains(_options, callback) { callback(true); },
+      remove(_options, callback) { callback(false); },
+    },
+    runtime: { getManifest: () => ({ host_permissions: [] }) },
+  };
+  try {
+    assert.equal(await removeApiOriginPermission("https://old-staging.example.test"), false);
   } finally {
     if (originalChrome === undefined) delete globalThis.chrome;
     else globalThis.chrome = originalChrome;

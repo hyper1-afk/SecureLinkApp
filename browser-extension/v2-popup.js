@@ -1,5 +1,5 @@
 import { validateApiOrigin } from "./v2-oauth.js";
-import { requestApiOriginPermission } from "./api-origin.js";
+import { removeApiOriginPermission, requestApiOriginPermission } from "./api-origin.js";
 
 const byId = (id) => document.getElementById(id);
 const V2_TOKEN_KEY = "v2ExtensionAccessToken";
@@ -61,6 +61,7 @@ function initializeV2Settings() {
     message.className = "settings-msg hidden";
     const value = input.value.trim().replace(/\/$/, "");
     let newOrigin = "";
+    const previousOrigin = configuredV2ApiOrigin;
     try {
       if (value) newOrigin = validateApiOrigin(value).origin;
       if (newOrigin && !(await requestApiOriginPermission(newOrigin))) {
@@ -68,9 +69,21 @@ function initializeV2Settings() {
       }
       const session = await chrome.storage.session.get([V2_TOKEN_KEY, V2_ORIGIN_KEY]);
       if (session[V2_TOKEN_KEY] && newOrigin !== session[V2_ORIGIN_KEY]) {
+        if (newOrigin && newOrigin !== previousOrigin) {
+          await removeApiOriginPermission(newOrigin);
+        }
         throw new Error("Disconnect the current V2 session before changing its API origin.");
       }
       await chrome.storage.local.set({ v2ApiBase: newOrigin });
+      if (previousOrigin && previousOrigin !== newOrigin
+          && !(await removeApiOriginPermission(previousOrigin))) {
+        await chrome.storage.local.set({ v2ApiBase: previousOrigin });
+        configuredV2ApiOrigin = previousOrigin;
+        if (newOrigin && newOrigin !== previousOrigin) {
+          await removeApiOriginPermission(newOrigin);
+        }
+        throw new Error("Could not revoke the previous API permission; the saved origin was restored.");
+      }
       configuredV2ApiOrigin = newOrigin;
       input.value = newOrigin;
       byId("v2-api-display").textContent = newOrigin

@@ -30,3 +30,25 @@ export function requestApiOriginPermission(origin) {
     });
   });
 }
+
+export function removeApiOriginPermission(origin) {
+  const pattern = `${origin}/*`;
+  const requiredOrigins = globalThis.chrome.runtime.getManifest().host_permissions || [];
+  if (requiredOrigins.includes(pattern)) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    globalThis.chrome.permissions.contains({ origins: [pattern] }, (granted) => {
+      if (globalThis.chrome.runtime.lastError) {
+        resolve(false);
+        return;
+      }
+      if (!granted) {
+        resolve(true);
+        return;
+      }
+      globalThis.chrome.permissions.remove({ origins: [pattern] }, (removed) => {
+        resolve(Boolean(removed) && !globalThis.chrome.runtime.lastError);
+      });
+    });
+  });
+}
