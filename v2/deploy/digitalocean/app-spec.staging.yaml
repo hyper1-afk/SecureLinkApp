@@ -1,0 +1,85 @@
+name: securelink-v2-staging
+region: atl
+
+# This spec is for manual, isolated staging deployments only. It does not
+# configure the existing production app or deploy automatically on branch push.
+services:
+  - name: api
+    github:
+      repo: hyper1-afk/SecureLinkApp
+      branch: securelink-v2
+      deploy_on_push: false
+    source_dir: v2
+    dockerfile_path: v2/apps/api/Dockerfile
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /health/ready
+      port: 8000
+      initial_delay_seconds: 15
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+    liveness_health_check:
+      http_path: /health/live
+      port: 8000
+      initial_delay_seconds: 15
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+    alerts:
+      - rule: RESTART_COUNT
+        disabled: false
+        operator: GREATER_THAN
+        value: 3
+        window: FIVE_MINUTES
+
+workers:
+  - name: email-worker
+    github:
+      repo: hyper1-afk/SecureLinkApp
+      branch: securelink-v2
+      deploy_on_push: false
+    source_dir: v2
+    dockerfile_path: v2/apps/api/Dockerfile
+    run_command: python -m apps.api.email_worker
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    alerts:
+      - rule: RESTART_COUNT
+        disabled: false
+        operator: GREATER_THAN
+        value: 3
+        window: FIVE_MINUTES
+
+jobs:
+  - name: database-migrations
+    kind: PRE_DEPLOY
+    github:
+      repo: hyper1-afk/SecureLinkApp
+      branch: securelink-v2
+      deploy_on_push: false
+    source_dir: v2
+    dockerfile_path: v2/apps/api/Dockerfile
+    run_command: alembic upgrade head
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+
+envs:
+  - key: APP_ENV
+    value: staging
+    scope: RUN_TIME
+    type: GENERAL
+  - key: APP_PUBLIC_URL
+    value: ${APP_URL}
+    scope: RUN_TIME
+    type: GENERAL
+  - key: SMTP_STARTTLS
+    value: "true"
+    scope: RUN_TIME
+    type: GENERAL
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+    disabled: false

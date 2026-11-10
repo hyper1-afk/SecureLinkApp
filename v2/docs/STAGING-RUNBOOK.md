@@ -2,6 +2,8 @@
 
 This is a preparation runbook. It creates no DigitalOcean resources and contains no credentials. Keep the existing production app, domain routing, databases, and secrets separate.
 
+The manual App Platform component layout is recorded in [`deploy/digitalocean/app-spec.staging.yaml`](../deploy/digitalocean/app-spec.staging.yaml). Review its [setup notes](../deploy/digitalocean/README.md) before creating any resource. It uses the `securelink-v2` branch with push deployment disabled, a single pre-deploy migration job, API readiness/liveness checks, and an email worker. The domain-monitor host remains separate because it requires enforced outbound network restrictions.
+
 ## Resource layout
 
 Create a distinct DigitalOcean App Platform app named `securelink-v2-staging` from branch `securelink-v2`, with a staging-only hostname. Keep the existing `.do/app.yaml` production app on `main` unchanged. Run the API and email worker in App Platform. Run the domain monitor on a separate, private-network Droplet (or another runtime with enforceable outbound destination rules), because App Platform has no documented destination-based egress firewall for its components. Put the App Platform app, monitor Droplet, Managed PostgreSQL, and Managed Valkey in the same region/VPC where supported. Do not bind staging to the legacy production database or production mail account.
