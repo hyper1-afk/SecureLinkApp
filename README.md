@@ -160,7 +160,6 @@ Then zip the `browser-extension/` folder and sideload or publish to the Chrome W
 | `GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
 | `VIRUSTOTAL_API_KEY` | — | VirusTotal API key (enhanced scanning) |
-| `GOOGLE_SAFE_BROWSING_API_KEY` | — | Google Safe Browsing API key |
 | `SMTP_HOST` | — | SMTP server hostname |
 | `SMTP_PORT` | — | SMTP port (587 for STARTTLS, 465 for SSL) |
 | `SMTP_USERNAME` | — | SMTP username |
@@ -172,7 +171,7 @@ Then zip the `browser-extension/` folder and sideload or publish to the Chrome W
 ### Which API keys do you actually need?
 
 - **Bare minimum (no external APIs):** The scanner runs on heuristics, SSL checks, DNS, and WHOIS lookups with zero external API keys. Most threats are caught without them.
-- **Recommended:** `VIRUSTOTAL_API_KEY` (free tier: 4 lookups/min) significantly improves detection.
+- **Optional URL reputation checks:** `VIRUSTOTAL_API_KEY` enables the configured VirusTotal integration. Review that provider's current terms and plan limits before commercial use.
 - **For breach checking:** Email, domain, and paste lookups are disabled. Password exposure checks use the free Pwned Passwords k-Anonymity endpoint.
 - **For paid user tiers:** Stripe keys. Leave blank to run free-only mode.
 - **For social login:** Google OAuth keys.

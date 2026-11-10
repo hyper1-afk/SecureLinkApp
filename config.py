@@ -43,9 +43,6 @@ class Config:
     # VirusTotal API (optional - for enhanced scanning)
     VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY', '')
     
-    # Google Safe Browsing API (optional)
-    GOOGLE_SAFE_BROWSING_API_KEY = os.getenv('GOOGLE_SAFE_BROWSING_API_KEY', '')
-    
     # Notification Settings
     ENABLE_DESKTOP_NOTIFICATIONS = os.getenv('ENABLE_DESKTOP_NOTIFICATIONS', 'False').lower() == 'true'
     ENABLE_EMAIL_NOTIFICATIONS = os.getenv('ENABLE_EMAIL_NOTIFICATIONS', 'True').lower() == 'true'

@@ -181,13 +181,6 @@ class LinkVerifier:
             risk_scores.append(vt_result['score'])
             threats.extend(vt_result['threats'])
         
-        # 8. Check against Google Safe Browsing (if API key available)
-        if self.config.GOOGLE_SAFE_BROWSING_API_KEY:
-            gsb_result = self._check_google_safe_browsing(url)
-            details['google_safe_browsing'] = gsb_result['details']
-            risk_scores.append(gsb_result['score'])
-            threats.extend(gsb_result['threats'])
-        
         # Calculate final risk score
         final_score = sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
         
@@ -574,59 +567,6 @@ class LinkVerifier:
                     score = min(malicious / 10, 1.0)
                 elif suspicious > 0:
                     score = min(suspicious / 20, 0.5)
-            else:
-                details['scan_available'] = False
-                
-        except Exception as e:
-            details['scan_available'] = False
-            details['error'] = str(e)[:50]
-        
-        return {
-            'score': score,
-            'threats': threats,
-            'details': details
-        }
-    
-    def _check_google_safe_browsing(self, url: str) -> Dict:
-        """Check URL against Google Safe Browsing API"""
-        threats = []
-        details = {}
-        score = 0.0
-        
-        try:
-            api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={self.config.GOOGLE_SAFE_BROWSING_API_KEY}"
-            
-            payload = {
-                "client": {
-                    "clientId": "ai-link-verifier",
-                    "clientVersion": "1.0.0"
-                },
-                "threatInfo": {
-                    "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-                    "platformTypes": ["ANY_PLATFORM"],
-                    "threatEntryTypes": ["URL"],
-                    "threatEntries": [{"url": url}]
-                }
-            }
-            
-            response = self.session.post(
-                api_url,
-                json=payload,
-                timeout=self.config.REQUEST_TIMEOUT
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                matches = data.get('matches', [])
-                
-                details['threats_found'] = len(matches)
-                details['scan_available'] = True
-                
-                if matches:
-                    threat_types = [m.get('threatType') for m in matches]
-                    threats.append(f"Google Safe Browsing: {', '.join(threat_types)}")
-                    score = 0.9
-                    details['threat_types'] = threat_types
             else:
                 details['scan_available'] = False
                 
