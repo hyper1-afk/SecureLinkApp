@@ -192,6 +192,53 @@ def test_totp_matches_rfc_6238_sha1_vector():
     assert mfa.totp_code("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", timestamp=59) == "287082"
 
 
+def test_owner_transfer_requires_mfa_and_targets_existing_admin(client: TestClient):
+    owner = register(client, "transfer-owner@example.test")
+    successor = register(client, "transfer-successor@example.test")
+    with client.app.state.test_session_factory() as session:
+        successor_user = session.scalar(
+            select(User).where(User.email_normalized == "transfer-successor@example.test")
+        )
+        successor_membership = Membership(
+            organization_id=owner["organization_id"], user_id=successor_user.id, role="admin"
+        )
+        session.add(successor_membership)
+        session.commit()
+        successor_membership_id = successor_membership.id
+
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    transfer_url = f"/organizations/{owner['organization_id']}/owner-transfer"
+    no_mfa = client.post(transfer_url, headers=owner_headers, json={
+        "target_membership_id": successor_membership_id,
+        "password": "a-long-test-password",
+        "mfa_code": "123456",
+    })
+    assert no_mfa.status_code == 403
+
+    enrollment = client.post("/auth/mfa/enrollment", headers=owner_headers)
+    secret = enrollment.json()["secret"]
+    confirmed = client.post(
+        "/auth/mfa/confirm", headers=owner_headers, json={"code": mfa.totp_code(secret)}
+    )
+    assert confirmed.status_code == 200
+    transferred = client.post(transfer_url, headers=owner_headers, json={
+        "target_membership_id": successor_membership_id,
+        "password": "a-long-test-password",
+        "mfa_code": mfa.totp_code(secret),
+    })
+    assert transferred.status_code == 200
+    assert transferred.json()["role"] == "owner"
+    with client.app.state.test_session_factory() as session:
+        roles = session.scalars(
+            select(Membership.role).where(Membership.organization_id == owner["organization_id"])
+        ).all()
+        event = session.scalar(
+            select(AuditEvent).where(AuditEvent.action == "membership.ownership_transferred")
+        )
+    assert roles.count("owner") == 1
+    assert event is not None and event.target_id == successor_membership_id
+
+
 def test_user_cannot_read_another_organizations_record(client: TestClient):
     first = register(client, "first@example.test")
     second = register(client, "second@example.test")

@@ -684,6 +684,69 @@ class MembershipMutationResponse(BaseModel):
     role: str
 
 
+class OwnerTransferRequest(BaseModel):
+    target_membership_id: str
+    password: str = Field(min_length=1, max_length=128)
+    mfa_code: str = Field(min_length=6, max_length=32)
+
+
+@router.post(
+    "/organizations/{organization_id}/owner-transfer",
+    response_model=MembershipMutationResponse,
+    dependencies=[Depends(rate_limit("owner_transfer", 5, 3600))],
+)
+def transfer_organization_ownership(
+    organization_id: str,
+    payload: OwnerTransferRequest,
+    actor: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MembershipMutationResponse:
+    if actor.role != "owner":
+        raise HTTPException(status_code=403, detail="Only the current owner can transfer ownership")
+    organization = session.get(Organization, organization_id, with_for_update=True)
+    current_membership = session.scalar(
+        select(Membership)
+        .where(Membership.id == actor.id, Membership.organization_id == organization_id)
+        .with_for_update()
+    )
+    user = session.get(User, actor.user_id, with_for_update=True)
+    if organization is None or current_membership is None or user is None or not user.is_active:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    if not password_hash.verify(payload.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Ownership transfer could not be authorized")
+    if not user.mfa_enabled:
+        raise HTTPException(status_code=403, detail="Enable MFA before transferring organization ownership")
+    if not _valid_mfa_code(session, user, payload.mfa_code):
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Ownership transfer could not be authorized")
+
+    target = session.scalar(
+        select(Membership)
+        .where(
+            Membership.id == payload.target_membership_id,
+            Membership.organization_id == organization_id,
+            Membership.role == "admin",
+        )
+        .with_for_update()
+    )
+    if target is None or target.id == current_membership.id:
+        raise HTTPException(status_code=404, detail="An existing organization admin is required")
+
+    current_membership.role = "admin"
+    target.role = "owner"
+    session.add(AuditEvent(
+        organization_id=organization_id,
+        actor_user_id=user.id,
+        actor_type="user",
+        action="membership.ownership_transferred",
+        target_type="membership",
+        target_id=target.id,
+        details=json.dumps({"previous_owner_membership_id": current_membership.id}, separators=(",", ":")),
+    ))
+    session.commit()
+    return MembershipMutationResponse(membership_id=target.id, user_id=target.user_id, role=target.role)
+
+
 def _target_membership(
     session: Session,
     organization_id: str,
