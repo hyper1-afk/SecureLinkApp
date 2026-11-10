@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -46,6 +46,13 @@ app.include_router(threat_intel_router)
 app.include_router(cases_router)
 app.include_router(extension_router)
 app.mount("/assets", StaticFiles(directory=WEB_DIR), name="account-assets")
+
+
+@app.middleware("http")
+async def prevent_response_caching(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
 
 
 def _account_page(filename: str) -> FileResponse:

@@ -173,6 +173,7 @@ def test_scans_are_tenant_scoped_and_never_store_raw_url(client: TestClient):
         json={"url": raw_url},
     )
     assert response.status_code == 201
+    assert response.headers["cache-control"] == "no-store"
     scan = response.json()
     assert scan["display_url"] == "https://example.com/[path and query omitted]"
     assert "topsecret" not in response.text
