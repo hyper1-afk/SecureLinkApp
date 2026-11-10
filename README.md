@@ -17,8 +17,7 @@ SecureLink is a proprietary security platform for SaaS and separately licensed s
 | Browser extension (auto-scan) | ✅ | ✅ | ✅ |
 | Domain health check (SSL/SPF/DMARC) | ✅ | ✅ | ✅ |
 | Security news feed | ✅ | ✅ | ✅ |
-| Email breach lookup | ✅ limited | ✅ full | ✅ full |
-| Dark web monitoring | — | ✅ | ✅ |
+| Password exposure check (k-Anonymity) | — | ✅ | ✅ |
 | Safe link shortener | — | ✅ | ✅ |
 | Health check PDF export | — | ✅ | ✅ |
 | Domain score drop alerts | — | ✅ | ✅ |
@@ -228,8 +227,8 @@ All endpoints accept and return JSON. Authenticated endpoints require `Authoriza
 | `/api/extension/status` | GET | Optional | Extension session status |
 | `/api/stats` | GET | Optional | Scan statistics (per-user when authed) |
 | `/api/health-check` | POST | No | Domain health check |
-| `/api/breach/email` | POST | Pro | Full breach lookup |
-| `/api/public/breach-check` | POST | No | Limited breach check (count only) |
+| `/api/breach/email` | POST | Pro | Unavailable; no paid breach-account API is used |
+| `/api/public/breach-check` | POST | No | Unavailable; no paid breach-account API is used |
 | `/api/reports/health-check-pdf` | POST | Pro | Export health check PDF |
 | `/api/health-check/watch` | POST/DELETE | Pro | Watch domain for score drops |
 | `/api/health-check/watches` | GET | Pro | List watched domains |

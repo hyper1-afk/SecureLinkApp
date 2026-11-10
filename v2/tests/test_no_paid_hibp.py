@@ -30,3 +30,24 @@ def test_only_password_range_api_is_configured():
     monitor = (REPO_ROOT / "dark_web_monitor.py").read_text(encoding="utf-8")
     assert "https://api.pwnedpasswords.com" in monitor
     assert "/range/{prefix}" in monitor
+
+
+def test_breach_checker_does_not_collect_email_for_disabled_lookup():
+    page = (REPO_ROOT / "templates" / "breach_checker.html").read_text(encoding="utf-8").lower()
+    assert 'id="emailinput"' not in page
+    assert "function checkemail" not in page
+    assert "/api/breach/email" not in page
+    assert 'id="passwordinput"' in page
+
+
+def test_workspace_does_not_offer_disabled_email_breach_lookup():
+    page = (REPO_ROOT / "templates" / "workspace.html").read_text(encoding="utf-8").lower()
+    assert "check against 700+ breach databases" not in page
+    assert "async function breachcheckapi" not in page
+    assert "'/api/public/breach-check'" not in page
+
+
+def test_password_checker_discloses_securelink_backend_transmission():
+    page = (REPO_ROOT / "templates" / "breach_checker.html").read_text(encoding="utf-8").lower()
+    assert "password is sent to securelink server" in page
+    assert "we never send your actual password" not in page

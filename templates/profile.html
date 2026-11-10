@@ -890,8 +890,8 @@
                 </div>
                 <div class="dash-card-content">
                     <div class="dash-card-value" id="dashDarkWebAlerts">-</div>
-                    <div class="dash-card-label">Breach Alerts</div>
-                    <div class="dash-card-sub" id="dashDarkWebStatus">Not configured</div>
+                    <div class="dash-card-label">Saved Breach Alerts</div>
+                    <div class="dash-card-sub" id="dashDarkWebStatus">Monitoring unavailable</div>
                 </div>
             </div>
 
@@ -1053,7 +1053,7 @@
                                             <li><i class="bi bi-check-circle-fill"></i>Domain health check (3/day)</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Browser extension</li>
                                             <li><i class="bi bi-check-circle-fill"></i>7-day history</li>
-                                            <li><i class="bi bi-x-circle-fill"></i>Dark web monitoring</li>
+                                            <li><i class="bi bi-x-circle-fill"></i>Password exposure checks</li>
                                             <li><i class="bi bi-x-circle-fill"></i>API access</li>
                                         </ul>
                                         
@@ -1072,7 +1072,7 @@
                                         
                                         <ul class="plan-features">
                                             <li><i class="bi bi-check-circle-fill"></i>Unlimited health checks</li>
-                                            <li><i class="bi bi-check-circle-fill"></i><strong>Dark web monitoring</strong> (5 assets)</li>
+                                            <li><i class="bi bi-check-circle-fill"></i>Password exposure check (k-Anonymity)</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Weekly PDF reports</li>
                                             <li><i class="bi bi-check-circle-fill"></i>API access &amp; export</li>
                                             <li><i class="bi bi-check-circle-fill"></i>Security news feed</li>
@@ -1437,18 +1437,8 @@
         }
 
         function updateDashDarkWeb() {
-            const tier = currentUser.subscription_tier || 'free';
-            if (tier === 'free') {
-                document.getElementById('dashDarkWebAlerts').textContent = '-';
-                document.getElementById('dashDarkWebStatus').textContent = 'Requires Pro or higher';
-            } else if (currentUser.dark_web_monitoring_enabled) {
-                document.getElementById('dashDarkWebAlerts').textContent = '0';
-                document.getElementById('dashDarkWebStatus').textContent = 'Monitoring active';
-                document.getElementById('dashDarkWebStatus').style.color = '#10b981';
-            } else {
-                document.getElementById('dashDarkWebAlerts').textContent = '-';
-                document.getElementById('dashDarkWebStatus').textContent = 'Not configured';
-            }
+            document.getElementById('dashDarkWebAlerts').textContent = '-';
+            document.getElementById('dashDarkWebStatus').textContent = 'Monitoring unavailable';
         }
         
         function checkPendingUpgrade() {
@@ -1937,7 +1927,7 @@
             let message = `Are you sure you want to downgrade to ${planName}?`;
             message += '\n\nWarning: You may lose access to some features.';
             if (plan === 'free') {
-                message += '\n• Dark web monitoring will be disabled\n• API access will be removed';
+                message += '\n• API access will be removed';
             } else if (plan === 'pro') {
                 message += '\n• Organization and team features will be disabled\n• Attack surface monitoring will be disabled';
             } else if (plan === 'team') {
@@ -2287,13 +2277,13 @@
                     <div class="sl-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:36px;height:36px;display:block;border-radius:9px;"></div>
                     <span class="sl-brand-text">SecureLink</span>
                 </a>
-                <p>AI-powered cybersecurity platform for link scanning, data breach alerts, and attack surface analysis.</p>
+                <p>Security tools for link scanning, password exposure checks, and attack surface review.</p>
             </div>
             <div class="sl-footer-col">
                 <h4>Product</h4>
                 <a href="/features">Features</a>
                 <a href="/pricing">Pricing</a>
-                <a href="/dark-web-monitor">Data Breach Alerts</a>
+                <a href="/dark-web-monitor">Saved Breach Alert History</a>
                 <a href="/extension">Browser Extension</a>
             </div>
             <div class="sl-footer-col">

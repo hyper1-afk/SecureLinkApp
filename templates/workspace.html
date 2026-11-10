@@ -720,18 +720,11 @@
                             <p>Analyze HTTP response headers for gaps</p>
                         </div>
                     </div>
-                    <div class="quick-card" onclick="selectTool('breach-check')">
-                        <div class="quick-card-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="bi bi-envelope-exclamation"></i></div>
-                        <div>
-                            <h4>Email Breach Check</h4>
-                            <p>Check against 700+ breach databases</p>
-                        </div>
-                    </div>
                     <div class="quick-card" onclick="selectTool('password-check')">
                         <div class="quick-card-icon" style="background:rgba(245,158,11,.12);color:var(--amber)"><i class="bi bi-key"></i></div>
                         <div>
                             <h4>Password Checker</h4>
-                            <p>k-Anonymity check — never sends your password</p>
+                            <p>SecureLink server receives the password; the lookup provider receives only a partial hash</p>
                         </div>
                     </div>
                 </div>
@@ -904,25 +897,16 @@ const TOOLS = {
         status: 'soon'
     },
     // BREACH
-    'breach-check': {
-        name: 'Email Breach Check', cat: 'Breach & OSINT', icon: 'bi-envelope-exclamation',
-        color: '#ef4444', bg: 'rgba(239,68,68,.12)',
-        desc: 'Check if an email address has appeared in any of 700+ known data breaches.',
-        status: 'live', inputType: 'email', inputLabel: 'EMAIL ADDRESS',
-        placeholder: 'user@example.com',
-        run: (t) => breachCheckApi(t),
-        render: renderBreachResults
-    },
     'breach-alerts': {
-        name: 'Data Breach Alerts', cat: 'Breach & OSINT', icon: 'bi-bell',
+        name: 'Saved Breach Alert History', cat: 'History', icon: 'bi-clock-history',
         color: '#f59e0b', bg: 'rgba(245,158,11,.12)',
-        desc: 'Continuously monitor email addresses and domains for new breach appearances.',
+        desc: 'Review alerts saved before email and domain monitoring was discontinued.',
         status: 'live', external: '/dark-web-monitor'
     },
     'password-check': {
         name: 'Password Checker', cat: 'Breach & OSINT', icon: 'bi-key',
         color: '#f59e0b', bg: 'rgba(245,158,11,.12)',
-        desc: 'Check if a password has been exposed in breaches using k-anonymity (password never leaves your browser).',
+        desc: 'Check a password using k-anonymity. SecureLink server receives it for hashing; the lookup provider receives only a partial hash.',
         status: 'live', inputType: 'password', inputLabel: 'PASSWORD TO CHECK',
         placeholder: '••••••••',
         run: (t) => passwordCheckApi(t),
@@ -947,7 +931,7 @@ const TOOLS = {
 const CATEGORIES = [
     { name: 'Recon',                 icon: 'bi-binoculars',          tools: ['port-scanner','whois','subdomain-finder','dns-lookup','tech-detection','google-dorking'] },
     { name: 'Vulnerability Scanning',icon: 'bi-shield-exclamation',  tools: ['domain-health','url-scanner','ssl-audit','header-audit','wordpress-scanner','web-vuln-scanner'] },
-    { name: 'Breach & OSINT',        icon: 'bi-database-exclamation',tools: ['breach-check','breach-alerts','password-check'] },
+    { name: 'History & Passwords',   icon: 'bi-database-exclamation',tools: ['breach-alerts','password-check'] },
     { name: 'Attack Surface',        icon: 'bi-radar',               tools: ['attack-surface'] },
     { name: 'Reports',               icon: 'bi-file-earmark-text',   tools: ['weekly-reports'] },
 ];
@@ -1163,16 +1147,6 @@ async function urlScanApi(url) {
     return res.json();
 }
 
-async function breachCheckApi(email) {
-    const res = await fetch('/api/public/breach-check', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ email })
-    });
-    if (!res.ok && res.status !== 429) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-}
-
 async function passwordCheckApi(password) {
     const res = await fetch('/api/dark-web/password-check', {
         method: 'POST',
@@ -1383,20 +1357,6 @@ function renderUrlResults(data) {
     </div>`;
 }
 
-function renderBreachResults(data) {
-    if (data.error && !data.limit_reached) return `<div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i>${escHtml(data.error)}</div>`;
-    const count = data.breach_count || 0;
-    const color = count === 0 ? 'var(--green)' : (count < 3 ? 'var(--amber)' : 'var(--red)');
-    return `<div class="results-card">
-        <div class="results-body" style="text-align:center;padding:28px">
-            <div class="breach-count" style="color:${color}">${count}</div>
-            <div class="breach-meta">${count === 0 ? 'No breaches found — great news!' : `breach${count !== 1 ? 'es' : ''} found in known data leaks`}</div>
-            ${data.checks_remaining != null ? `<div style="margin-top:16px;font-size:12px;color:var(--dim)">${data.checks_remaining} checks remaining today</div>` : ''}
-            ${count > 0 ? `<div style="margin-top:16px"><a href="/dark-web-monitor" style="color:var(--blue);font-size:13px">Set up continuous monitoring →</a></div>` : ''}
-        </div>
-    </div>`;
-}
-
 function renderPasswordResults(data) {
     if (data.error) return `<div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i>${escHtml(data.error)}</div>`;
     const seen  = data.times_seen || data.count || 0;
@@ -1406,7 +1366,7 @@ function renderPasswordResults(data) {
         <div class="results-body" style="text-align:center;padding:28px">
             <div class="pwned-count" style="color:${color}">${pwned ? `Seen ${seen.toLocaleString()}×` : 'Not found'}</div>
             <div class="breach-meta" style="margin-top:6px">${pwned ? 'This password has been exposed in data breaches. Change it immediately.' : 'This password has not appeared in any known breach database.'}</div>
-            <div style="margin-top:12px;font-size:11px;color:var(--dim)">Checked via k-Anonymity — your password was never transmitted.</div>
+            <div style="margin-top:12px;font-size:11px;color:var(--dim)">SecureLink server received the password for hashing; the lookup provider received only the first five characters of its SHA-1 hash.</div>
         </div>
     </div>`;
 }

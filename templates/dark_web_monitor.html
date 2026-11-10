@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark">
     <meta name="darkreader-lock">
-    <title>Data Breach Alerts - SecureLink</title>
+    <title>Saved Breach Alert History - SecureLink</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -331,7 +331,7 @@
             <div class="sl-nav-links">
                 <a href="/home" class="sl-nav-link">Home</a>
                 <a href="/features" class="sl-nav-link">Features</a>
-                <a href="/dark-web-monitor" class="sl-nav-link active">Dark Web</a>
+                <a href="/dark-web-monitor" class="sl-nav-link active">Saved Alert History</a>
                 <a href="/profile" class="sl-nav-link">Profile</a>
             </div>
         </div>
@@ -342,13 +342,11 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-8">
-                    <h1><i class="bi bi-shield-exclamation me-2" style="color: var(--accent-color);"></i>Data Breach Alerts</h1>
-                    <p class="text-secondary mb-0">Email, domain, and paste breach monitoring is currently unavailable.</p>
+                    <h1><i class="bi bi-clock-history me-2" style="color: var(--accent-color);"></i>Saved Breach Alert History</h1>
+                    <p class="text-secondary mb-0">Review alerts and assets saved before email and domain monitoring was discontinued.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                    <button class="btn btn-primary px-4" id="scanAllBtn" disabled aria-disabled="true" title="Email and domain breach lookups are unavailable">
-                        <i class="bi bi-radar me-2"></i>Scan All Assets
-                    </button>
+                    <span class="badge text-bg-secondary">New monitoring unavailable</span>
                 </div>
             </div>
         </div>
@@ -358,13 +356,12 @@
     <div id="mainContent" class="container py-4" style="display: none;">
 
         <div class="alert alert-info" role="status">
-            SecureLink does not make paid breach-database API requests. Saved assets and past alerts remain visible, but new email/domain scans and paste monitoring are unavailable. Password k-Anonymity checks remain available on the password checker page.
+            Saved assets and past alerts remain available for review. SecureLink no longer runs email, domain, or paste monitoring. Password exposure checks are a separate feature on the password checker page.
         </div>
 
         <!-- Free tier banner (shown for free users only) -->
         <div id="freeTierBanner" class="alert mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" style="display: none !important; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35); border-radius: 12px; color: var(--text-primary);">
-            <div><i class="bi bi-shield-check me-2" style="color: var(--accent-color);"></i><strong>Free plan</strong> — monitoring 1 email asset. Your registered email was added automatically.</div>
-            <a href="/pricing" class="btn btn-sm" style="background: linear-gradient(135deg,var(--primary-color),var(--accent-color)); border: none; color: white; white-space: nowrap;">Upgrade for more assets</a>
+            <div><i class="bi bi-info-circle me-2" style="color: var(--accent-color);"></i><strong>Historical records only.</strong> New email and domain monitoring is unavailable.</div>
         </div>
 
         <!-- Stats Row -->
@@ -372,25 +369,25 @@
             <div class="col-6 col-md-3">
                 <div class="stat-card">
                     <div class="stat-number stat-info" id="statAssets">0</div>
-                    <div class="stat-label">Monitored Assets</div>
+                    <div class="stat-label">Saved Assets</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
                     <div class="stat-number stat-danger" id="statBreaches">0</div>
-                    <div class="stat-label">Breaches Found</div>
+                    <div class="stat-label">Recorded Breaches</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
                     <div class="stat-number stat-warning" id="statExposed">0</div>
-                    <div class="stat-label">Exposed Records</div>
+                    <div class="stat-label">Previously Reported Records</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
                     <div class="stat-number" id="statAlerts" style="color: var(--accent-color);">0</div>
-                    <div class="stat-label">Unread Alerts</div>
+                    <div class="stat-label">Unread Saved Alerts</div>
                 </div>
             </div>
         </div>
@@ -401,10 +398,7 @@
                 <!-- Monitored Assets -->
                 <div class="section-card">
                     <div class="section-header">
-                        <h3><i class="bi bi-eye me-2"></i>Monitored Assets</h3>
-                        <button class="btn btn-sm btn-outline-primary" disabled aria-disabled="true" title="Asset scans are unavailable">
-                            <i class="bi bi-plus-lg me-1"></i>Add
-                        </button>
+                        <h3><i class="bi bi-archive me-2"></i>Saved Assets</h3>
                     </div>
 
                     <!-- Add Asset Form -->
@@ -437,7 +431,7 @@
                     <div id="assetList">
                         <div class="empty-state">
                             <i class="bi bi-shield-plus d-block"></i>
-                            <p>No assets monitored yet.<br>Add an email or domain to start.</p>
+                            <p>No saved assets to display.</p>
                         </div>
                     </div>
 
@@ -446,16 +440,10 @@
 
                 <!-- Quick Scan -->
                 <div class="quick-scan-card">
-                    <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
-                    <h3 class="mt-2">Quick Breach Check</h3>
-                    <p>Email breach lookups are unavailable because SecureLink does not make paid breach API requests.</p>
-                    <div class="input-group">
-                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Email lookups unavailable" id="quickScanEmail" disabled>
-                        <button class="btn btn-primary" id="quickScanBtn" disabled aria-disabled="true">
-                            <i class="bi bi-search me-1"></i>Check
-                        </button>
-                    </div>
-                    <div id="quickScanResult" class="quick-result" style="display: none;"></div>
+                    <i class="bi bi-key" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <h3 class="mt-2">Check password exposure</h3>
+                    <p>Use the separate password checker for a partial-hash lookup.</p>
+                    <a class="btn btn-outline-primary" href="/breach-checker">Open Password Exposure Checker</a>
                 </div>
             </div>
 
@@ -478,7 +466,7 @@
                     <div id="alertList">
                         <div class="empty-state">
                             <i class="bi bi-bell-slash d-block"></i>
-                            <p>No alerts yet.<br>Scan your assets to check for exposures.</p>
+                            <p>No saved alerts to display.</p>
                         </div>
                     </div>
                 </div>
@@ -491,30 +479,22 @@
         <div class="section-card">
             <div class="pro-gate">
                 <div class="lock-icon"><i class="bi bi-lock-fill"></i></div>
-                <h2 class="mb-3">Data Breach Alerts</h2>
+                <h2 class="mb-3">Saved Breach Alert History</h2>
                 <p class="text-secondary mx-auto" style="max-width: 500px;">
                     Email and domain breach monitoring is currently unavailable. Existing alerts remain visible in your account.
                 </p>
-                <a href="/pricing" class="btn btn-lg px-5 mt-3" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border: none; color: white;">
-                    <i class="bi bi-rocket-takeoff me-2"></i>Upgrade to Pro — $14.99/mo
-                </a>
+                <p class="text-secondary">Saved history is available to signed-in account holders.</p>
             </div>
         </div>
 
-        <!-- Quick scan still available for free users -->
+        <!-- Password exposure checking is available separately -->
         <div class="row justify-content-center mt-4">
             <div class="col-lg-6">
                 <div class="quick-scan-card">
                     <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
-                    <h3 class="mt-2">Email Breach Check</h3>
-                    <p>Email breach lookups are unavailable because SecureLink does not make paid breach API requests.</p>
-                    <div class="input-group">
-                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Email lookups unavailable" id="quickScanEmailFree" disabled>
-                        <button class="btn btn-primary" id="quickScanBtnFree" disabled aria-disabled="true">
-                            <i class="bi bi-search me-1"></i>Check
-                        </button>
-                    </div>
-                    <div id="quickScanResultFree" class="quick-result" style="display: none;"></div>
+                    <h3 class="mt-2">Historical alerts are account-specific</h3>
+                    <p>Sign in to view previously saved alerts and assets.</p>
+                    <a class="btn btn-outline-primary" href="/breach-checker">Open Password Exposure Checker</a>
                 </div>
             </div>
         </div>
@@ -528,13 +508,13 @@
                     <div class="sl-brand-icon"><img src="/static/icons/icon128.png" alt="SecureLink" style="width:36px;height:36px;display:block;border-radius:9px;"></div>
                     <span class="sl-brand-text">SecureLink</span>
                 </a>
-                <p>AI-powered cybersecurity platform for link scanning, data breach alerts, and attack surface analysis.</p>
+                <p>Security tools for link scanning, password exposure checks, and attack surface review.</p>
             </div>
             <div class="sl-footer-col">
                 <h4>Product</h4>
                 <a href="/features">Features</a>
                 <a href="/pricing">Pricing</a>
-                <a href="/dark-web-monitor">Data Breach Alerts</a>
+                <a href="/dark-web-monitor">Saved Breach Alert History</a>
                 <a href="/extension">Browser Extension</a>
             </div>
             <div class="sl-footer-col">
@@ -657,16 +637,13 @@
                                 <div class="asset-details">
                                     <h5>${escapeHtml(a.label)}</h5>
                                     <div class="asset-meta">
-                                        ${a.asset_type.charAt(0).toUpperCase() + a.asset_type.slice(1)} &bull; Last scan: ${lastScan}
+                                    ${a.asset_type.charAt(0).toUpperCase() + a.asset_type.slice(1)} &bull; Last recorded scan: ${lastScan}
                                     </div>
                                 </div>
                             </div>
                             <div class="asset-stats">
                                 <span class="asset-badge ${riskClass}">${(a.risk_level || 'unknown').toUpperCase()}</span>
                                 ${a.breach_count > 0 ? `<span class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i>${a.breach_count} breaches</span>` : ''}
-                                <button class="btn btn-sm btn-outline-primary" onclick="scanAsset(${a.id})" title="Scan now">
-                                    <i class="bi bi-radar"></i>
-                                </button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="removeAsset(${a.id})" title="Remove">
                                     <i class="bi bi-trash3"></i>
                                 </button>
@@ -893,104 +870,6 @@
             await fetch(`${API_BASE}/api/dark-web/alerts/${alertId}/resolve`, { method: 'POST', headers: getAuthHeaders() });
             loadAlerts();
             showToast('Alert marked as resolved', 'success');
-        }
-
-        // ============== Quick Scan ==============
-        async function quickScan() {
-            const email = document.getElementById('quickScanEmail').value.trim();
-            if (!email) return;
-            await doQuickScan(email, 'quickScanBtn', 'quickScanResult');
-        }
-
-        async function quickScanFree() {
-            const email = document.getElementById('quickScanEmailFree').value.trim();
-            if (!email) return;
-            await doQuickScan(email, 'quickScanBtnFree', 'quickScanResultFree');
-        }
-
-        async function doQuickScan(email, btnId, resultId) {
-            const btn = document.getElementById(btnId);
-            const resultDiv = document.getElementById(resultId);
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning...';
-            resultDiv.style.display = 'none';
-
-            try {
-                const res = await fetch(`${API_BASE}/api/dark-web/scan-quick`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
-
-                if (data.error) {
-                    resultDiv.innerHTML = `<div class="alert alert-danger py-2">${escapeHtml(data.error)}</div>`;
-                } else {
-                    const summary = data.summary || {};
-                    const breaches = data.breaches || [];
-                    const riskClass = `risk-${data.risk_level || 'safe'}`;
-
-                    let html = `
-                        <div class="section-card mt-3 p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0">Results for ${escapeHtml(email)}</h5>
-                                <span class="asset-badge ${riskClass}">${(data.risk_level || 'safe').toUpperCase()}</span>
-                            </div>
-                            <div class="row g-2 mb-3">
-                                <div class="col-4 text-center">
-                                    <div style="font-size:1.5rem;font-weight:700;" class="${summary.total_breaches > 0 ? 'text-danger' : 'text-success'}">${summary.total_breaches || 0}</div>
-                                    <div class="small text-secondary">Breaches</div>
-                                </div>
-                                <div class="col-4 text-center">
-                                    <div style="font-size:1.5rem;font-weight:700;" class="text-warning">${summary.total_pastes || 0}</div>
-                                    <div class="small text-secondary">Pastes</div>
-                                </div>
-                                <div class="col-4 text-center">
-                                    <div style="font-size:1.5rem;font-weight:700;">${formatNumber(summary.total_records_exposed || 0)}</div>
-                                    <div class="small text-secondary">Records</div>
-                                </div>
-                            </div>`;
-
-                    if (summary.exposed_data_types && summary.exposed_data_types.length > 0) {
-                        html += '<div class="mb-3"><strong class="small">Exposed Data Types:</strong><div class="data-types mt-1">';
-                        const dangerTypes = ['Passwords', 'Credit cards', 'Social security numbers'];
-                        summary.exposed_data_types.forEach(dt => {
-                            html += `<span class="data-type-tag ${dangerTypes.includes(dt) ? 'danger' : ''}">${escapeHtml(dt)}</span>`;
-                        });
-                        html += '</div></div>';
-                    }
-
-                    if (breaches.length > 0) {
-                        html += '<div class="mt-2"><strong class="small">Breaches:</strong>';
-                        breaches.slice(0, 5).forEach(b => {
-                            html += `<div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
-                                <span class="small">${escapeHtml(b.title || b.name)}</span>
-                                <span class="text-secondary small">${b.breach_date ? new Date(b.breach_date).toLocaleDateString('en-US', {year:'numeric',month:'short'}) : ''}</span>
-                            </div>`;
-                        });
-                        if (breaches.length > 5) html += `<p class="text-secondary small mt-2">...and ${breaches.length - 5} more</p>`;
-                        html += '</div>';
-                    }
-
-                    if (!isPro && summary.total_breaches > 0) {
-                        html += `<div class="text-center mt-3 pt-3 border-top border-secondary">
-                            <a href="/pricing" class="btn btn-sm btn-primary">
-                                <i class="bi bi-rocket-takeoff me-1"></i>Upgrade to Pro to monitor more assets
-                            </a>
-                        </div>`;
-                    }
-
-                    html += '</div>';
-                    resultDiv.innerHTML = html;
-                }
-                resultDiv.style.display = 'block';
-            } catch (e) {
-                resultDiv.innerHTML = `<div class="alert alert-danger py-2 mt-3">Scan failed: ${e.message}</div>`;
-                resultDiv.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-search me-1"></i>Check';
-            }
         }
 
         // ============== Utilities ==============
