@@ -194,7 +194,7 @@ def test_totp_matches_rfc_6238_sha1_vector():
 
 def test_owner_transfer_requires_mfa_and_targets_existing_admin(client: TestClient):
     owner = register(client, "transfer-owner@example.test")
-    successor = register(client, "transfer-successor@example.test")
+    register(client, "transfer-successor@example.test")
     with client.app.state.test_session_factory() as session:
         successor_user = session.scalar(
             select(User).where(User.email_normalized == "transfer-successor@example.test")
