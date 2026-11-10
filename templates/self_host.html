@@ -523,7 +523,7 @@
                 <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.6;">
                     Deploying SecureLink on your own server is completely free. The core platform — URL scanning, domain health checks, user accounts, and the browser extension — costs nothing to run.
                     <br><br>
-                    Premium features (Data Breach Alerts, Attack Surface Monitoring, AI Remediation, Priority Support) require an active <strong style="color: #a78bfa;">Pro</strong> or <strong style="color: #a78bfa;">Enterprise</strong> license. Users on your self-hosted instance log in with their securelinkapp.com account, and their plan tier unlocks the features they've paid for — just like the cloud version.
+                    Premium features (password exposure checks, Attack Surface Monitoring, AI Remediation, Priority Support) require an active <strong style="color: #a78bfa;">Pro</strong> or <strong style="color: #a78bfa;">Enterprise</strong> license. Email and domain breach monitoring is unavailable. Users on your self-hosted instance log in with their securelinkapp.com account, and their plan tier unlocks the features they've paid for — just like the cloud version.
                 </p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <a href="/pricing" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; background: linear-gradient(135deg, #8b5cf6, #0ea5e9); border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: 600; text-decoration: none;">
@@ -818,10 +818,10 @@ sudo nginx -t && sudo systemctl reload nginx</pre>
                                 <td>Free</td>
                             </tr>
                             <tr>
-                                <td>Have I Been Pwned</td>
-                                <td class="env-key">HIBP_API_KEY</td>
-                                <td>Email breach lookup with full breach details</td>
-                                <td>~$4/month</td>
+                                <td>Email/domain breach lookups</td>
+                                <td>Not required</td>
+                                <td>Disabled; no paid breach API key is required</td>
+                                <td>$0</td>
                             </tr>
                             <tr>
                                 <td>NewsAPI</td>

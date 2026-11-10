@@ -111,9 +111,6 @@ class Config:
     # NewsAPI for Security News Feed
     NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')
     
-    # Have I Been Pwned API Key (for Dark Web Monitoring)
-    HIBP_API_KEY = os.getenv('HIBP_API_KEY', '')
-    
     # Admin Emergency Secret Key (used for password resets and admin operations)
     # MUST be set in production — never use a default value
     ADMIN_SECRET_KEY = os.getenv('ADMIN_SECRET_KEY', '')

@@ -2012,10 +2012,10 @@
                                 <div class="alert alert-success">
                                     <div class="d-flex align-items-center">
                                         <div class="spinner-grow spinner-grow-sm text-success me-2" role="status"></div>
-                                        <span><strong>Data Breach Alerts Active</strong></span>
+                                    <span><strong>Email breach monitoring unavailable</strong></span>
                                     </div>
-                                    <p class="mb-2 mt-2"><span id="connectedAccountsText">Data breach alerts are active</span> and scanning for exposed credentials and data breaches.</p>
-                                    <a href="/dark-web-monitor" class="alert-link">Manage alerts on the Data Breach Alerts page</a>
+                                    <p class="mb-2 mt-2">SecureLink does not make paid breach-database requests. Saved alerts remain visible, but new email/domain scans are unavailable.</p>
+                                    <a href="/dark-web-monitor" class="alert-link">View saved alerts</a>
                                 </div>
                                 <div id="connectedAccountsList" class="d-flex flex-wrap gap-2 mb-3">
                                     <!-- Filled by JS -->
@@ -2025,15 +2025,14 @@
                             <!-- No Accounts Warning -->
                             <div id="noEmailAccountsWarning" class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>Data breach alerts not configured.</strong><br>
-                                <a href="/dark-web-monitor" class="alert-link">Go to Data Breach Alerts</a> to set up monitoring for your email addresses and credentials.
+                                <strong>Email breach monitoring is unavailable.</strong><br>
+                                SecureLink does not make paid breach-database requests.
                             </div>
                             
                             <!-- Free tier dark web note -->
                             <div id="proRequiredWarning" class="alert alert-info" style="display: none;">
                                 <i class="bi bi-shield-check me-2"></i>
-                                Your registered email is being monitored on the free plan (1 asset).
-                                <a href="/pricing" class="alert-link">Upgrade to Pro</a> to monitor up to 5 assets with full breach alerts.
+                                Email and domain breach scans are currently unavailable. Existing saved assets remain in your account.
                             </div>
                             
                             <h6 class="mt-4 mb-3">Recent Breach Alerts</h6>
@@ -2890,14 +2889,13 @@
                 const validateData = await validateResponse.json();
                 
                 const swDarkWeb = document.getElementById('swDarkWebStatus');
-                const isFree = validateData.valid && validateData.user.subscription_tier === 'free';
                 if (validateData.valid) {
-                    status.innerHTML = '<span class="status-dot connected"></span><span><i class="bi bi-shield-check me-1"></i>Breach Alerts: Active</span>';
+                    status.innerHTML = '<span class="status-dot disconnected"></span><span>Email breach monitoring unavailable</span>';
                     if (accountsInfo) accountsInfo.style.display = 'block';
                     if (noAccountsWarning) noAccountsWarning.style.display = 'none';
-                    if (proRequiredWarning) proRequiredWarning.style.display = isFree ? 'block' : 'none';
-                    if (connectedAccountsText) connectedAccountsText.textContent = isFree ? 'Monitoring 1 email (free plan)' : 'Data breach alerts are active';
-                    if (swDarkWeb) swDarkWeb.textContent = 'Active';
+                    if (proRequiredWarning) proRequiredWarning.style.display = 'none';
+                    if (connectedAccountsText) connectedAccountsText.textContent = 'Saved email assets are not currently scanned';
+                    if (swDarkWeb) swDarkWeb.textContent = 'Unavailable';
                 } else {
                     status.innerHTML = '<span class="status-dot disconnected"></span><span>Breach Alerts: Not configured</span>';
                     if (accountsInfo) accountsInfo.style.display = 'none';

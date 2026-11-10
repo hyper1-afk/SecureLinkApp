@@ -1,25 +1,20 @@
 """
 Dark Web Monitor - Monitors dark web breach databases for exposed credentials and personal data.
 
-Uses Have I Been Pwned (HIBP) API as primary source, with pluggable architecture for
-additional intelligence sources. Monitors emails, usernames, phone numbers, and domains.
+Paid email, paste, and domain breach lookups are disabled. Password checks use only the
+free Pwned Passwords k-anonymity range endpoint.
 
 Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
-import os
 import re
 import hashlib
 import logging
-import threading
-import time
 import requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-
-from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -114,178 +109,28 @@ class DarkWebMonitor:
     """
     Dark Web Monitoring Service.
 
-    Checks email addresses, domains, and other assets against:
-    - Have I Been Pwned (HIBP) breach database
-    - HIBP paste monitoring
-    - Password hash checking (k-Anonymity model)
-
-    Architecture supports adding additional sources (Intelligence X, LeakCheck, etc.)
+    Email, paste, and domain breach lookups are disabled to avoid paid API calls.
+    Password hash-prefix checking uses the separate free k-anonymity endpoint.
     """
 
-    HIBP_API_BASE = "https://haveibeenpwned.com/api/v3"
-    HIBP_PASSWORD_API = "https://api.pwnedpasswords.com"
-    USER_AGENT = "SecureLink-DarkWebMonitor/1.0"
+    PWNED_PASSWORDS_API = "https://api.pwnedpasswords.com"
+    USER_AGENT = "SecureLink-PasswordCheck/1.0"
 
-    # Rate limiting: Core 1 plan allows 10 RPM → 1 request per 6 seconds
-    RATE_LIMIT_DELAY = 6.5  # seconds between requests (Core 1 safe)
-
-    def __init__(self, config: Config = None):
-        self.config = config or Config()
-        self.hibp_api_key = getattr(self.config, 'HIBP_API_KEY', '') or os.getenv('HIBP_API_KEY', '')
-        self._last_request_time = 0
-        self._lock = threading.Lock()
-
-    def _rate_limit(self):
-        """Enforce rate limiting between API calls"""
-        with self._lock:
-            now = time.time()
-            elapsed = now - self._last_request_time
-            if elapsed < self.RATE_LIMIT_DELAY:
-                time.sleep(self.RATE_LIMIT_DELAY - elapsed)
-            self._last_request_time = time.time()
-
-    def _hibp_get(self, url: str, **kwargs) -> requests.Response:
-        """GET with automatic one-retry on 429 using Retry-After header (max 30s wait)."""
-        response = requests.get(url, headers=self._get_headers(), **kwargs)
-        if response.status_code == 429:
-            retry_after = min(int(response.headers.get('Retry-After', '6')), 30)
-            logger.warning(f"HIBP rate limited; retrying in {retry_after}s")
-            time.sleep(retry_after)
-            with self._lock:
-                self._last_request_time = time.time()
-            response = requests.get(url, headers=self._get_headers(), **kwargs)
-        return response
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get request headers for HIBP API"""
-        headers = {
-            'User-Agent': self.USER_AGENT,
-            'Accept': 'application/json'
-        }
-        if self.hibp_api_key:
-            headers['hibp-api-key'] = self.hibp_api_key
-        return headers
+    def __init__(self, config=None):
+        del config  # Kept for compatibility with existing app initialization.
+        self.paid_email_lookups_enabled = False
 
     # ========================
     # Breach Checking
     # ========================
 
     def check_email_breaches(self, email: str, include_unverified: bool = True) -> Tuple[List[BreachRecord], Optional[str]]:
-        """
-        Check if an email has appeared in known data breaches.
-
-        Args:
-            email: Email address to check
-            include_unverified: Include unverified breaches
-
-        Returns:
-            Tuple of (list of BreachRecords, error message or None)
-        """
-        self._rate_limit()
-
-        try:
-            params = {
-                'truncateResponse': 'false',
-                'includeUnverified': str(include_unverified).lower()
-            }
-
-            response = self._hibp_get(
-                f"{self.HIBP_API_BASE}/breachedaccount/{requests.utils.quote(email)}",
-                params=params,
-                timeout=15,
-            )
-
-            if response.status_code == 200:
-                breaches = []
-                for b in response.json():
-                    breaches.append(BreachRecord(
-                        name=b.get('Name', ''),
-                        title=b.get('Title', ''),
-                        domain=b.get('Domain', ''),
-                        breach_date=self._parse_date(b.get('BreachDate')),
-                        added_date=self._parse_datetime(b.get('AddedDate')),
-                        modified_date=self._parse_datetime(b.get('ModifiedDate')),
-                        pwn_count=b.get('PwnCount', 0),
-                        description=b.get('Description', ''),
-                        logo_path=b.get('LogoPath'),
-                        data_classes=b.get('DataClasses', []),
-                        is_verified=b.get('IsVerified', False),
-                        is_fabricated=b.get('IsFabricated', False),
-                        is_sensitive=b.get('IsSensitive', False),
-                        is_retired=b.get('IsRetired', False),
-                        is_spam_list=b.get('IsSpamList', False)
-                    ))
-                return breaches, None
-
-            elif response.status_code == 404:
-                # No breaches found - good news!
-                return [], None
-
-            elif response.status_code == 401:
-                return [], "API key required for email breach lookups"
-
-            elif response.status_code == 429:
-                return [], "HIBP rate limit reached. Please try again in a few seconds."
-
-            elif response.status_code == 403:
-                return [], "API key invalid or insufficient permissions"
-
-            else:
-                return [], f"HIBP API error: {response.status_code}"
-
-        except requests.exceptions.Timeout:
-            return [], "Request timed out"
-        except requests.exceptions.ConnectionError:
-            return [], "Could not connect to breach database"
-        except Exception as e:
-            logger.error(f"Error checking breaches for {email}: {e}")
-            return [], str(e)
+        del email, include_unverified
+        return [], "Email breach lookups are unavailable; SecureLink does not make paid breach-account API requests."
 
     def check_email_pastes(self, email: str) -> Tuple[List[PasteRecord], Optional[str]]:
-        """
-        Check if an email has appeared in paste sites (Pastebin, etc.).
-
-        Args:
-            email: Email address to check
-
-        Returns:
-            Tuple of (list of PasteRecords, error message or None)
-        """
-        self._rate_limit()
-
-        try:
-            response = self._hibp_get(
-                f"{self.HIBP_API_BASE}/pasteaccount/{requests.utils.quote(email)}",
-                timeout=15,
-            )
-
-            if response.status_code == 200:
-                pastes = []
-                for p in response.json():
-                    pastes.append(PasteRecord(
-                        source=p.get('Source', 'Unknown'),
-                        paste_id=p.get('Id', ''),
-                        title=p.get('Title'),
-                        date=self._parse_datetime(p.get('Date')),
-                        email_count=p.get('EmailCount', 0)
-                    ))
-                return pastes, None
-
-            elif response.status_code == 404:
-                return [], None
-
-            elif response.status_code == 401:
-                return [], "API key required for paste lookups"
-
-            elif response.status_code == 429:
-                return [], "HIBP rate limit reached. Please try again in a few seconds."
-
-            else:
-                return [], f"HIBP paste API error: {response.status_code}"
-
-        except Exception as e:
-            logger.error(f"Error checking pastes for {email}: {e}")
-            return [], str(e)
+        del email
+        return [], "Paste monitoring is unavailable; SecureLink does not make paid paste-search API requests."
 
     def check_password_pwned(self, password: str) -> Tuple[int, Optional[str]]:
         """
@@ -304,7 +149,7 @@ class DarkWebMonitor:
             suffix = sha1[5:]
 
             response = requests.get(
-                f"{self.HIBP_PASSWORD_API}/range/{prefix}",
+                f"{self.PWNED_PASSWORDS_API}/range/{prefix}",
                 headers={'User-Agent': self.USER_AGENT},
                 timeout=10
             )
@@ -323,56 +168,8 @@ class DarkWebMonitor:
             return 0, str(e)
 
     def check_domain_breaches(self, domain: str) -> Tuple[List[BreachRecord], Optional[str]]:
-        """
-        Check all breaches associated with a domain.
-
-        Args:
-            domain: Domain to check (e.g., 'example.com')
-
-        Returns:
-            Tuple of (list of BreachRecords, error message or None)
-        """
-        self._rate_limit()
-
-        try:
-            response = requests.get(
-                f"{self.HIBP_API_BASE}/breaches",
-                headers=self._get_headers(),
-                params={'domain': domain},
-                timeout=15
-            )
-
-            if response.status_code == 200:
-                breaches = []
-                for b in response.json():
-                    breaches.append(BreachRecord(
-                        name=b.get('Name', ''),
-                        title=b.get('Title', ''),
-                        domain=b.get('Domain', ''),
-                        breach_date=self._parse_date(b.get('BreachDate')),
-                        added_date=self._parse_datetime(b.get('AddedDate')),
-                        modified_date=self._parse_datetime(b.get('ModifiedDate')),
-                        pwn_count=b.get('PwnCount', 0),
-                        description=b.get('Description', ''),
-                        logo_path=b.get('LogoPath'),
-                        data_classes=b.get('DataClasses', []),
-                        is_verified=b.get('IsVerified', False),
-                        is_fabricated=b.get('IsFabricated', False),
-                        is_sensitive=b.get('IsSensitive', False),
-                        is_retired=b.get('IsRetired', False),
-                        is_spam_list=b.get('IsSpamList', False)
-                    ))
-                return breaches, None
-
-            elif response.status_code == 404:
-                return [], None
-
-            else:
-                return [], f"Domain breach API error: {response.status_code}"
-
-        except Exception as e:
-            logger.error(f"Error checking domain breaches for {domain}: {e}")
-            return [], str(e)
+        del domain
+        return [], "Domain breach lookups are unavailable; SecureLink does not make paid domain-search API requests."
 
     # ========================
     # Full Scan (aggregated)
@@ -395,7 +192,7 @@ class DarkWebMonitor:
             'breaches': [],
             'pastes': [],
             'summary': {},
-            'risk_level': 'safe',
+            'risk_level': 'unknown',
             'errors': []
         }
 
@@ -427,7 +224,11 @@ class DarkWebMonitor:
         total_records = sum(b.pwn_count for b in breaches)
 
         # Risk assessment
-        risk_level = self._assess_risk(breaches, results['pastes'])
+        risk_level = (
+            self._assess_risk(breaches, results['pastes'])
+            if not results['errors']
+            else 'unknown'
+        )
 
         results['summary'] = {
             'total_breaches': total_breaches,
@@ -554,7 +355,7 @@ class DarkWebMonitor:
 _monitor_instance = None
 
 
-def get_dark_web_monitor(config: Config = None) -> DarkWebMonitor:
+def get_dark_web_monitor(config=None) -> DarkWebMonitor:
     """Get or create the dark web monitor singleton"""
     global _monitor_instance
     if _monitor_instance is None:

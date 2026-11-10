@@ -429,11 +429,8 @@
                 <ul class="features-list">
                     <li><i class="bi bi-check-circle-fill"></i><span>Unlimited URL scans &amp; domain health checks</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>SSL, SPF, DMARC &amp; header audit</span></li>
-                    <li><i class="bi bi-check-circle-fill"></i><span>Data breach alerts for 1 email</span></li>
-                    <li><i class="bi bi-check-circle-fill"></i><span>Auto breach scan on signup</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Browser extension</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>7-day scan history</span></li>
-                    <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Multi-asset data breach alerts</span></li>
                     <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>API access</span></li>
                     <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Organization features</span></li>
                 </ul>
@@ -453,7 +450,7 @@
                     <li><i class="bi bi-check-circle-fill"></i><span>Everything in Free</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span><span class="highlight">Unlimited</span> domain health checks</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Full scan &amp; check history</span></li>
-                    <li><i class="bi bi-check-circle-fill"></i><span>Dark web monitoring &amp; alerts <em style="color:var(--text-secondary);font-size:0.85em;">(5 assets)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Password exposure check (k-Anonymity)</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Weekly security reports (PDF)</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>API access &amp; export</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Security news feed</span></li>
@@ -478,7 +475,7 @@
                     <li><i class="bi bi-check-circle-fill"></i><span>Up to <strong>10 team members</strong></span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Compliance Center <em style="color:var(--text-secondary);font-size:0.85em;">(SOC 2, ISO 27001, GDPR)</em></span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Webhook alerts <em style="color:var(--text-secondary);font-size:0.85em;">(Slack, Discord, Teams)</em></span></li>
-                    <li><i class="bi bi-check-circle-fill"></i><span>Dark web monitoring <em style="color:var(--text-secondary);font-size:0.85em;">(20 assets)</em></span></li>
+                    <li><i class="bi bi-check-circle-fill"></i><span>Password exposure check (k-Anonymity)</span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Attack surface monitoring <em style="color:var(--text-secondary);font-size:0.85em;">(5 domains)</em></span></li>
                     <li><i class="bi bi-check-circle-fill"></i><span>Daily security reports (PDF)</span></li>
                     <li class="text-muted"><i class="bi bi-x-circle-fill"></i><span>Network gateway</span></li>
@@ -570,11 +567,11 @@
                     <td>Full</td>
                 </tr>
                 <tr>
-                    <td>Data Breach Alerts</td>
+                    <td>Password Exposure Check</td>
                     <td><span class="dash">—</span></td>
-                    <td>5 assets</td>
-                    <td>20 assets</td>
-                    <td>Unlimited</td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
+                    <td><i class="bi bi-check-lg check"></i></td>
                 </tr>
                 <tr>
                     <td>Weekly PDF Reports</td>
@@ -715,17 +712,17 @@
                 <i class="bi bi-chevron-down"></i>
             </div>
             <div class="faq-answer">
-                Signed-in Free users get unlimited domain health checks and scans, plus 1 monitored email for ongoing data breach alerts. Anonymous (not signed in) users are limited to 10 health checks per day on the website and 15 URL scans per day via the browser extension. Creating a free account removes these limits entirely.
+                Signed-in Free users get unlimited domain health checks and URL scans. Anonymous users have daily limits on website and browser extension scans. Creating a free account removes these limits.
             </div>
         </div>
 
         <div class="faq-item">
             <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-                <span>What does "Data Breach Alerts" include?</span>
+                <span>What does password exposure checking include?</span>
                 <i class="bi bi-chevron-down"></i>
             </div>
             <div class="faq-answer">
-                Pro and Enterprise plans include ongoing monitoring of up to 5 assets (email addresses or domains) for new breach appearances. You'll receive an email alert whenever a new breach is detected.
+                Email, domain, and paste breach monitoring is currently unavailable. Pro and higher plans include password exposure checks using k-Anonymity; the password itself is never sent.
             </div>
         </div>
         
@@ -805,7 +802,7 @@
                 const bannerText = document.getElementById('upgradeBannerText');
                 
                 const featureNames = {
-                    'breach-checker': 'Password & Email Breach Checker',
+                    'breach-checker': 'Password Exposure Check',
                     'shortener': 'Safe Link Shortener',
                     'organization': 'Organization Dashboard'
                 };

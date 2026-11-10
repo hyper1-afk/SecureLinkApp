@@ -114,53 +114,11 @@ def check_password_breach(password: str) -> Dict:
 
 
 def check_email_breach(email: str) -> Dict:
-    """Check if an email has been in known data breaches"""
-    try:
-        import requests
-        api_key = os.environ.get('HIBP_API_KEY')
-
-        # If no API key, return a simulated response for demo
-        if not api_key:
-            # For demo purposes, return a simulated response
-            return {
-                'breached': False,
-                'breaches': [],
-                'message': 'Email breach checking requires an API key. Visit haveibeenpwned.com to check manually.',
-                'demo_mode': True
-            }
-
-        response = requests.get(
-            f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}",
-            headers={
-                "hibp-api-key": api_key,
-                "User-Agent": "SecureLink-BreachChecker"
-            },
-            params={"truncateResponse": "false"}
-        )
-
-        if response.status_code == 404:
-            return {
-                'breached': False,
-                'breaches': [],
-                'message': 'Good news! This email has not been found in known data breaches.'
-            }
-        elif response.status_code == 200:
-            breaches = response.json()
-            return {
-                'breached': True,
-                'breaches': [{
-                    'name': b.get('Name'),
-                    'domain': b.get('Domain'),
-                    'date': b.get('BreachDate'),
-                    'data_types': b.get('DataClasses', [])
-                } for b in breaches],
-                'message': f'This email was found in {len(breaches)} data breach(es)!'
-            }
-        else:
-            return {'error': 'Unable to check breach database'}
-    except Exception as e:
-        logger.error(f"Breach check error: {e}")
-        return {'error': str(e)}
+    """Return unavailable without making a paid breach-account API request."""
+    del email
+    return {
+        'error': 'Email breach lookup is unavailable; SecureLink does not make paid breach-account API requests.'
+    }
 
 
 # ============== Webhook Notifications ==============

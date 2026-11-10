@@ -343,10 +343,10 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     <h1><i class="bi bi-shield-exclamation me-2" style="color: var(--accent-color);"></i>Data Breach Alerts</h1>
-                    <p class="text-secondary mb-0">Monitor your emails, domains, and credentials across dark web databases, breach records, and paste sites.</p>
+                    <p class="text-secondary mb-0">Email, domain, and paste breach monitoring is currently unavailable.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                    <button class="btn btn-primary px-4" onclick="scanAllAssets()" id="scanAllBtn" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border: none;">
+                    <button class="btn btn-primary px-4" id="scanAllBtn" disabled aria-disabled="true" title="Email and domain breach lookups are unavailable">
                         <i class="bi bi-radar me-2"></i>Scan All Assets
                     </button>
                 </div>
@@ -356,6 +356,10 @@
 
     <!-- Main Content (all authenticated users) -->
     <div id="mainContent" class="container py-4" style="display: none;">
+
+        <div class="alert alert-info" role="status">
+            SecureLink does not make paid breach-database API requests. Saved assets and past alerts remain visible, but new email/domain scans and paste monitoring are unavailable. Password k-Anonymity checks remain available on the password checker page.
+        </div>
 
         <!-- Free tier banner (shown for free users only) -->
         <div id="freeTierBanner" class="alert mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2" style="display: none !important; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35); border-radius: 12px; color: var(--text-primary);">
@@ -398,7 +402,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <h3><i class="bi bi-eye me-2"></i>Monitored Assets</h3>
-                        <button class="btn btn-sm btn-outline-primary" onclick="toggleAddForm()">
+                        <button class="btn btn-sm btn-outline-primary" disabled aria-disabled="true" title="Asset scans are unavailable">
                             <i class="bi bi-plus-lg me-1"></i>Add
                         </button>
                     </div>
@@ -444,10 +448,10 @@
                 <div class="quick-scan-card">
                     <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
                     <h3 class="mt-2">Quick Breach Check</h3>
-                    <p>Check any email address against breach databases — no account needed.</p>
+                    <p>Email breach lookups are unavailable because SecureLink does not make paid breach API requests.</p>
                     <div class="input-group">
-                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Enter email to check..." id="quickScanEmail">
-                        <button class="btn btn-primary" onclick="quickScan()" id="quickScanBtn">
+                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Email lookups unavailable" id="quickScanEmail" disabled>
+                        <button class="btn btn-primary" id="quickScanBtn" disabled aria-disabled="true">
                             <i class="bi bi-search me-1"></i>Check
                         </button>
                     </div>
@@ -489,7 +493,7 @@
                 <div class="lock-icon"><i class="bi bi-lock-fill"></i></div>
                 <h2 class="mb-3">Data Breach Alerts</h2>
                 <p class="text-secondary mx-auto" style="max-width: 500px;">
-                    Continuously monitor your emails and domains across dark web databases, breach records, and paste sites. Get alerted instantly when your data appears in new breaches.
+                    Email and domain breach monitoring is currently unavailable. Existing alerts remain visible in your account.
                 </p>
                 <a href="/pricing" class="btn btn-lg px-5 mt-3" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border: none; color: white;">
                     <i class="bi bi-rocket-takeoff me-2"></i>Upgrade to Pro — $14.99/mo
@@ -502,11 +506,11 @@
             <div class="col-lg-6">
                 <div class="quick-scan-card">
                     <i class="bi bi-search" style="font-size: 2rem; color: var(--primary-color);"></i>
-                    <h3 class="mt-2">Free Quick Breach Check</h3>
-                    <p>Check any email against breach databases — available to all users.</p>
+                    <h3 class="mt-2">Email Breach Check</h3>
+                    <p>Email breach lookups are unavailable because SecureLink does not make paid breach API requests.</p>
                     <div class="input-group">
-                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Enter email to check..." id="quickScanEmailFree">
-                        <button class="btn btn-primary" onclick="quickScanFree()" id="quickScanBtnFree">
+                        <input type="email" class="form-control bg-dark text-light border-secondary" placeholder="Email lookups unavailable" id="quickScanEmailFree" disabled>
+                        <button class="btn btn-primary" id="quickScanBtnFree" disabled aria-disabled="true">
                             <i class="bi bi-search me-1"></i>Check
                         </button>
                     </div>

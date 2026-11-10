@@ -592,7 +592,7 @@ def verify_email():
         )
 
         # Run an initial breach scan immediately so results are ready on first login
-        if asset_result.get('success') and getattr(dark_web_monitor, 'hibp_api_key', None):
+        if asset_result.get('success') and dark_web_monitor.paid_email_lookups_enabled:
             try:
                 scan_result = dark_web_monitor.full_scan(user_email)
                 auth_manager.save_scan_results(user_id, asset_result['asset']['id'], scan_result)
@@ -1514,6 +1514,8 @@ def get_dark_web_assets():
 @require_auth
 def add_dark_web_asset():
     """Add a new asset to dark web monitoring"""
+    if not dark_web_monitor.paid_email_lookups_enabled:
+        return jsonify({'success': False, 'error': 'New email and domain monitoring is unavailable because SecureLink does not make paid breach API requests.'}), 503
     data = request.get_json()
     asset_type = data.get('asset_type', '').strip()
     asset_value = data.get('asset_value', '').strip()
@@ -1555,6 +1557,8 @@ def delete_dark_web_asset(asset_id):
 @require_auth
 def scan_dark_web():
     """Run a dark web scan for a specific asset or all assets"""
+    if not dark_web_monitor.paid_email_lookups_enabled:
+        return jsonify({'error': 'Email and domain breach monitoring is unavailable because SecureLink does not make paid breach API requests.'}), 503
     data = request.get_json() or {}
     user_id = request.current_user['id']
     asset_id = data.get('asset_id')
@@ -1585,7 +1589,7 @@ def scan_dark_web():
                 scan_result = {
                     'breaches': [b.to_dict() for b in breaches],
                     'pastes': [],
-                    'risk_level': 'safe' if not breaches else 'medium',
+                    'risk_level': 'unknown' if error else ('safe' if not breaches else 'medium'),
                     'errors': [error] if error else [],
                     'summary': {
                         'total_breaches': len(breaches),
@@ -1614,6 +1618,8 @@ def scan_dark_web():
 @require_auth
 def quick_dark_web_scan():
     """Quick one-off scan without saving as monitored asset (available to all users)"""
+    if not dark_web_monitor.paid_email_lookups_enabled:
+        return jsonify({'error': 'Email breach monitoring is unavailable because SecureLink does not make paid breach API requests.'}), 503
     data = request.get_json() or {}
     email = data.get('email', '').strip()
     
@@ -2035,8 +2041,8 @@ def public_breach_check():
         }), 429
 
     # Check API key before burning a user's daily check
-    if not getattr(dark_web_monitor, 'hibp_api_key', None):
-        return jsonify({'error': 'Breach database not configured. Check back soon.'}), 503
+    if not dark_web_monitor.paid_email_lookups_enabled:
+        return jsonify({'error': 'Email breach lookup is not available; no paid breach-account API requests are made.'}), 503
 
     try:
         breaches, error = dark_web_monitor.check_email_breaches(email)
