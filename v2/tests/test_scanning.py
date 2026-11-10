@@ -42,6 +42,7 @@ from packages.security_core.models import (
     ScanEvidence,
     SecurityNotificationOutbox,
     SecuritySignal,
+    ThreatFeedSnapshot,
     ThreatIndicator,
     UrlScan,
     User,
@@ -155,6 +156,84 @@ def test_passive_url_analysis_detects_sensitive_query_key_variants():
     )
     assert result.evidence["sensitive_query_present"] is True
     assert any(finding.detector_code == "sensitive_query_parameter" for finding in result.findings)
+
+
+def test_current_spamhaus_drop_match_is_audited_and_opens_review_case(client: TestClient):
+    owner = register(client, "drop-feed-match@example.test")
+    now = datetime.now(UTC)
+    payload = json.dumps({
+        "source": "Spamhaus Project DROP",
+        "source_url": "https://www.spamhaus.org/drop/",
+        "copyright": "Spamhaus Project test fixture",
+        "networks": [{"cidr": "8.8.8.0/24", "sblid": "SBL12345"}],
+    })
+    with client.app.state.test_session_factory() as session:
+        session.add(ThreatFeedSnapshot(
+            feed_id="spamhaus_drop",
+            payload=payload,
+            source_updated_at=now - timedelta(minutes=5),
+            fetched_at=now,
+            expires_at=now + timedelta(hours=1),
+            entry_count=1,
+            content_hash=hashlib.sha256(payload.encode()).hexdigest(),
+        ))
+        session.commit()
+
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"url": "https://8.8.8.8/private?token=secret"},
+    )
+    assert response.status_code == 201
+    assert "spamhaus_drop_network_match" in {
+        item["detector_code"] for item in response.json()["findings"]
+    }
+    assert "secret" not in response.text
+    with client.app.state.test_session_factory() as session:
+        evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == response.json()["id"]))
+        evidence_data = json.loads(evidence.payload)
+    assert evidence_data["threat_intelligence"]["match"] == {
+        "cidr": "8.8.8.0/24", "sblid": "SBL12345",
+    }
+    assert evidence_data["threat_intelligence"]["source"] == "Spamhaus Project DROP"
+    cases = client.get(
+        f"/organizations/{owner['organization_id']}/cases",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert cases.status_code == 200
+    assert len(cases.json()) == 1
+
+
+def test_expired_spamhaus_drop_snapshot_never_creates_a_match(client: TestClient):
+    owner = register(client, "expired-drop-feed@example.test")
+    now = datetime.now(UTC)
+    payload = json.dumps({
+        "source": "Spamhaus Project DROP",
+        "networks": [{"cidr": "8.8.8.0/24", "sblid": "SBL12345"}],
+    })
+    with client.app.state.test_session_factory() as session:
+        session.add(ThreatFeedSnapshot(
+            feed_id="spamhaus_drop",
+            payload=payload,
+            source_updated_at=now - timedelta(hours=27),
+            fetched_at=now - timedelta(hours=27),
+            expires_at=now - timedelta(hours=1),
+            entry_count=1,
+            content_hash=hashlib.sha256(payload.encode()).hexdigest(),
+        ))
+        session.commit()
+
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"url": "https://8.8.8.8/"},
+    )
+    assert response.status_code == 201
+    assert response.json()["findings"] == []
+    with client.app.state.test_session_factory() as session:
+        evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == response.json()["id"]))
+        evidence_data = json.loads(evidence.payload)
+    assert evidence_data["threat_intelligence"]["status"] == "unavailable"
 
 
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "javascript:alert(1)", "https://example.test:bad/"])
@@ -1391,3 +1470,4 @@ def test_extension_authorization_page_uses_private_headers(client: TestClient):
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "Your password is not sent to the extension" in response.text
     assert "cannot manage members" in response.text
+

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 from datetime import UTC, datetime
 from typing import Annotated
@@ -14,6 +15,7 @@ from sqlalchemy.orm import Session
 from apps.api.auth import organization_membership
 from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
+from apps.api.spamhaus_drop import FEED_ID, FEED_SOURCE_URL, find_drop_match
 from packages.security_core.models import (
     AuditEvent,
     CaseFinding,
@@ -24,6 +26,7 @@ from packages.security_core.models import (
     ScanEvidence,
     SecurityNotificationOutbox,
     SecuritySignal,
+    ThreatFeedSnapshot,
     ThreatIndicator,
     UrlScan,
     User,
@@ -38,6 +41,10 @@ from packages.security_core.url_analysis import (
 
 router = APIRouter()
 MAX_SCAN_BODY_BYTES = 9000
+
+
+def _utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 class FindingResponse(BaseModel):
@@ -168,6 +175,36 @@ async def _create_scan(
         "parser_version": PARSER_VERSION,
         "attributes": analysis.evidence,
     }
+    feed_snapshot = session.get(ThreatFeedSnapshot, FEED_ID)
+    feed_expires_at = _utc(feed_snapshot.expires_at) if feed_snapshot else None
+    feed_available = feed_snapshot is not None and feed_expires_at > observed_at
+    if feed_available:
+        evidence_payload["threat_intelligence"] = {
+            "source": "Spamhaus Project DROP",
+            "source_url": FEED_SOURCE_URL,
+            "source_updated_at": _utc(feed_snapshot.source_updated_at).isoformat(),
+            "expires_at": feed_expires_at.isoformat(),
+            "entry_count": feed_snapshot.entry_count,
+            "content_hash": feed_snapshot.content_hash,
+            "status": "current",
+        }
+        try:
+            address = ipaddress.ip_address(analysis.hostname)
+        except ValueError:
+            address = None
+        if address is not None and address.is_global:
+            match = find_drop_match(
+                str(address), feed_snapshot.payload, feed_expires_at, observed_at,
+            )
+            if match:
+                evidence_payload["threat_intelligence"]["match"] = match
+    else:
+        evidence_payload["threat_intelligence"] = {
+            "source": "Spamhaus Project DROP",
+            "source_url": FEED_SOURCE_URL,
+            "status": "unavailable",
+            "reason": "No current feed snapshot is available.",
+        }
     if source_type == "extension_scan" and client_reported_redactions is not None:
         evidence_payload["client_reported_redactions"] = client_reported_redactions
     serialized_evidence = json.dumps(evidence_payload, sort_keys=True, separators=(",", ":"))
@@ -194,6 +231,20 @@ async def _create_scan(
     session.add(evidence)
     session.flush()
     finding_drafts = list(analysis.findings)
+    threat_intelligence = evidence_payload["threat_intelligence"]
+    if isinstance(threat_intelligence, dict) and isinstance(threat_intelligence.get("match"), dict):
+        match = threat_intelligence["match"]
+        finding_drafts.append(FindingDraft(
+            "spamhaus_drop_network_match",
+            "high",
+            "IP address is listed in Spamhaus DROP",
+            (
+                f"The public IP belongs to {match['cidr']} ({match['sblid']}) in the Spamhaus Project "
+                f"DROP dataset, dated {_utc(feed_snapshot.source_updated_at).date().isoformat()}. "
+                f"This is a high-priority indicator for review, not proof about page content. "
+                f"Source: {FEED_SOURCE_URL}"
+            ),
+        ))
     if session.scalar(select(ThreatIndicator.id).where(
         ThreatIndicator.organization_id == organization_id,
         ThreatIndicator.hostname == analysis.hostname,
@@ -231,8 +282,8 @@ async def _create_scan(
         severity=signal_severity,
         title="URL hygiene scan observed",
         summary=(
-            f"Passive URL-structure analysis completed with {len(findings)} indicator(s); "
-            "this is not a safety verdict."
+            f"Passive URL analysis completed with {len(findings)} indicator(s); "
+            "available reputation data is time-bounded, and results are not a safety verdict."
         ),
         observed_at=observed_at,
         payload=serialized_evidence,
@@ -409,3 +460,4 @@ def get_url_scan(
         .order_by(Finding.created_at, Finding.detector_code)
     ).all()
     return _response(scan, findings)
+

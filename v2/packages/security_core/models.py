@@ -124,6 +124,32 @@ class ThreatIndicator(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class ThreatFeedSnapshot(Base):
+    """A globally shared, time-bounded snapshot of an approved intelligence feed."""
+
+    __tablename__ = "threat_feed_snapshots"
+    __table_args__ = (
+        CheckConstraint("feed_id <> ''", name="ck_threat_feed_snapshots_feed_id_nonempty"),
+        CheckConstraint("entry_count > 0", name="ck_threat_feed_snapshots_entry_count_positive"),
+    )
+
+    feed_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    source_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    entry_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ThreatFeedSyncState(Base):
+    __tablename__ = "threat_feed_sync_states"
+
+    feed_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(48), nullable=True)
+
+
 class DomainMonitorState(Base):
     __tablename__ = "domain_monitor_states"
     __table_args__ = (
@@ -603,3 +629,4 @@ class CaseFinding(Base):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     case_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
     finding_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+

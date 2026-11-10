@@ -18,9 +18,12 @@ users.
 5. Restart the API, open the extension, choose **Connect account**, grant the
    optional Chrome identity permission for the authorization attempt, sign in on
    the SecureLink page, choose an organization, and approve the scan-only access.
-6. Submit an HTTPS URL using **Review link**. The result is a passive structural
-   URL review; it does not query threat intelligence and does not certify a link
-   as safe. Disconnect from the popup or revoke the session from the dashboard.
+6. Submit an HTTPS URL using **Review link**. The API performs passive URL
+   analysis and, for a literal public IP address only, checks its current local
+   Spamhaus DROP snapshot. It does not fetch the page, resolve the hostname, or
+   send the submitted URL to the feed provider. Results are review indicators,
+   not a safety certification. Disconnect from the popup or revoke the session
+   from the dashboard.
 
 The preview uses `http://localhost:8000` and declares only that local API origin
 in `manifest.json`. To package for staging, run this from `v2/extension`:
@@ -41,3 +44,4 @@ The access token is held in the extension service worker and Chrome session
 storage, expires after 12 hours, and grants only URL scan submission. The
 extension never receives the account password or the web dashboard's JWT. This
 preview is not the Chrome Web Store release and should not be uploaded as one.
+

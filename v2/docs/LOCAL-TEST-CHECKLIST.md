@@ -37,8 +37,9 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 
 The worker queries only the domain's SPF and `_dmarc` TXT records. It does not connect to discovered IP addresses, fetch web pages, or use paid Have I Been Pwned APIs.
 
-The local analyzer is a passive URL-structure check. It makes no outbound URL requests and does not query Have I Been Pwned or another threat-intelligence provider, so results are indicators for review, not a malicious/safe verdict.
+The local API makes no outbound requests to submitted URLs. The separate threat-feed worker downloads the published Spamhaus DROP IP ranges no more than once a day; scans only compare literal public IP addresses against a fresh local snapshot. No submitted URL is sent to Spamhaus, and the result is a review indicator, not a malicious/safe verdict. SecureLink does not call Have I Been Pwned.
 
 ## Report a local issue
 
 Include the page or extension action, expected behavior, actual behavior, browser console or API response, and relevant Mailpit message. Redact access tokens, passwords, real customer URLs, and SMTP values before sharing logs.
+

@@ -62,6 +62,24 @@ services:
       - ALL
     restart: unless-stopped
 
+  threat-feed-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "apps.api.spamhaus_drop"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
   mailpit:
     image: axllent/mailpit:v1.33.1
     profiles:
@@ -100,3 +118,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
