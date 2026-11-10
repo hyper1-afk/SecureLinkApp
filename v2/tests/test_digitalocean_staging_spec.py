@@ -42,6 +42,22 @@ def test_api_health_and_app_alerts_are_configured() -> None:
     assert any(alert["rule"] == "DEPLOYMENT_FAILED" for alert in spec["alerts"])
 
 
+def test_runtime_settings_are_defined_on_app_and_worker_components() -> None:
+    spec = yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))
+    expected_envs = {
+        "APP_ENV": "staging",
+        "APP_PUBLIC_URL": "${APP_URL}",
+        "SMTP_STARTTLS": "true",
+    }
+
+    assert "envs" not in spec
+    for component in [spec["services"][0], spec["workers"][0]]:
+        envs = {env["key"]: env for env in component["envs"]}
+        assert {key: env["value"] for key, env in envs.items()} == expected_envs
+        assert all(env["scope"] == "RUN_TIME" for env in envs.values())
+        assert all(env["type"] == "GENERAL" for env in envs.values())
+
+
 def test_spec_contains_no_secrets_or_domain_monitor_worker() -> None:
     spec = yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))
     serialized = SPEC_PATH.read_text(encoding="utf-8").casefold()
