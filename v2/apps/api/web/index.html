@@ -37,9 +37,38 @@
         <input id="login-email" type="email" maxlength="320" autocomplete="email" required>
         <label for="login-password">Password</label>
         <input id="login-password" type="password" maxlength="128" autocomplete="current-password" required>
+        <label for="login-mfa-code">Authenticator or recovery code (if enabled)</label>
+        <input id="login-mfa-code" inputmode="numeric" maxlength="32" autocomplete="one-time-code">
         <button type="submit">Sign in</button>
       </form>
       <p id="login-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card">
+      <h2>Two-factor authentication</h2>
+      <p>Use an authenticator app that supports time-based one-time passwords. Recovery codes are shown once.</p>
+      <p id="mfa-status" role="status" aria-live="polite"></p>
+      <button id="mfa-start" type="button" hidden>Set up authenticator</button>
+      <div id="mfa-enrollment" hidden>
+        <p>Enter this key in your authenticator app:</p>
+        <code id="mfa-secret"></code>
+        <p>Then enter the six-digit code shown in the app.</p>
+        <form id="mfa-confirm-form">
+          <label for="mfa-confirm-code">Authenticator code</label>
+          <input id="mfa-confirm-code" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" required>
+          <button type="submit">Enable two-factor authentication</button>
+        </form>
+      </div>
+      <div id="mfa-recovery" hidden>
+        <p>Save these recovery codes somewhere secure. Each code works once.</p>
+        <ul id="mfa-recovery-codes"></ul>
+      </div>
+      <form id="mfa-disable-form" hidden>
+        <label for="mfa-disable-password">Current password to disable MFA</label>
+        <input id="mfa-disable-password" type="password" autocomplete="current-password" required>
+        <label for="mfa-disable-code">Authenticator or unused recovery code</label>
+        <input id="mfa-disable-code" maxlength="32" autocomplete="one-time-code" required>
+        <button type="submit">Disable two-factor authentication</button>
+      </form>
     </section>
     <section class="card">
       <h2>Invite a teammate</h2>

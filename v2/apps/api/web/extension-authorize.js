@@ -50,8 +50,13 @@ byId("sign-in-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus("sign-in-status", "Signing in…");
   try {
-    const credentials = { email: byId("email").value, password: byId("password").value };
+    const credentials = {
+      email: byId("email").value,
+      password: byId("password").value,
+      mfa_code: byId("mfa-code").value || null,
+    };
     byId("password").value = "";
+    byId("mfa-code").value = "";
     const response = await fetch("/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

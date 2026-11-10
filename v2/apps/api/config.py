@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_starttls: bool = True
     email_outbox_encryption_key: str | None = None
+    mfa_encryption_key: str | None = None
     trusted_proxy_cidrs: str = ""
     extension_redirect_uris: str = ""
 
@@ -67,6 +68,15 @@ class Settings(BaseSettings):
                 Fernet(self.email_outbox_encryption_key.encode("ascii"))
             except (ValueError, UnicodeEncodeError, TypeError):
                 problems.append("EMAIL_OUTBOX_ENCRYPTION_KEY must be a valid Fernet key")
+        if not self.mfa_encryption_key or "replace-with" in self.mfa_encryption_key:
+            problems.append("MFA_ENCRYPTION_KEY must be set to a unique secret")
+        else:
+            try:
+                Fernet(self.mfa_encryption_key.encode("ascii"))
+            except (ValueError, UnicodeEncodeError, TypeError):
+                problems.append("MFA_ENCRYPTION_KEY must be a valid Fernet key")
+            if self.mfa_encryption_key == self.email_outbox_encryption_key:
+                problems.append("MFA_ENCRYPTION_KEY must be different from EMAIL_OUTBOX_ENCRYPTION_KEY")
         if not self.smtp_starttls:
             problems.append("SMTP_STARTTLS must be enabled")
         if not all((self.smtp_host, self.smtp_from_email)):

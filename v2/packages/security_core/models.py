@@ -48,6 +48,9 @@ class User(Base):
     token_version: Mapped[int] = mapped_column(
         Integer, default=0, server_default=text("0"), nullable=False
     )
+    mfa_secret_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
+    mfa_enrollment_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     memberships: Mapped[list[Membership]] = relationship(back_populates="user")
@@ -173,6 +176,20 @@ class EmailActionToken(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class MFARecoveryCode(Base):
+    __tablename__ = "mfa_recovery_codes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "code_hash", name="uq_mfa_recovery_codes_user_hash"),
+        Index("ix_mfa_recovery_codes_user_unused", "user_id", "consumed_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class ExtensionAuthorizationCode(Base):

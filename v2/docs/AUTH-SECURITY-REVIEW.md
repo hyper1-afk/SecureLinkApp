@@ -4,7 +4,7 @@ Internal code review of the V2 foundation; this is not an external penetration t
 
 ## Implemented and exercised
 
-- Passwords use Argon2; unknown login addresses use a dummy hash check and the same public login error.
+- Passwords use Argon2; unknown login addresses use a dummy hash check and the same public login error. TOTP MFA uses separately encrypted secrets, single-use hashed recovery codes, rate-limited enrollment and disable actions, and token-version revocation when disabled. Both web and extension OAuth sign-in accept MFA codes.
 - Registration requires email verification. Action tokens are random, single-use, expire, and are stored as SHA-256 digests.
 - Password-reset increments a token version, invalidating existing access tokens.
 - Access tokens require issuer, audience, expiry, subject, token ID and current version; disabled accounts are denied.
@@ -21,8 +21,9 @@ Internal code review of the V2 foundation; this is not an external penetration t
 2. **Product workflows:** the account page supports registration, sign-in, verification and recovery. A basic authenticated dashboard supports passive URL analysis and tenant-scoped history; active scanning, reputation verdicts, and broader investigations are not implemented. Account and dashboard pages use `no-store`/`no-referrer` headers under a restrictive CSP. Account action links use URL fragments and remove them from history before exchange.
 3. **Browser auth:** the development branch adds an opt-in V2 connector to the existing extension and a separate unpacked preview. The connector requests the optional Chrome `identity` permission only after a user clicks Connect, uses PKCE state/code verification and session-scoped token storage, and submits manual reviews only. The published item has not been updated. Load the development extension package, allowlist its exact callback, and exercise connection, scan, server-side revocation, and local disconnect in Chrome before staging. Preserve existing automatic checks and pass store review before release.
 4. **Authorization breadth:** invitations to existing and new accounts and authenticated organization listing/switching are implemented and tested. Ownership transfer and a complete permission matrix need implementation and negative tests.
-5. **Session controls:** web logout revokes all of a user's current access tokens and extension sessions through a token-version increment. Users can list and revoke their own extension sessions through the dashboard. Refresh tokens are intentionally not issued.
-6. **Abuse/load testing:** distributed load, proxy hops, rate-limit boundaries, and customer NAT behavior need staging validation.
-7. **Operational recovery:** no staging deployment or restore drill has run. Validate SMTP, TLS, backup restoration, alerts, rollback, data retention and secret rotation in isolated DigitalOcean staging.
+5. **MFA policy:** MFA is available but not mandatory. Define and enforce an owner/admin requirement (including a grace period and recovery process) before production; test recovery and account support procedures.
+6. **Session controls:** web logout revokes all of a user's current access tokens and extension sessions through a token-version increment. Users can list and revoke their own extension sessions through the dashboard. Refresh tokens are intentionally not issued.
+7. **Abuse/load testing:** distributed load, proxy hops, rate-limit boundaries, and customer NAT behavior need staging validation.
+8. **Operational recovery:** no staging deployment or restore drill has run. Validate SMTP, TLS, backup restoration, alerts, rollback, data retention and secret rotation in isolated DigitalOcean staging.
 
 Do not treat passing CI as complete security review or production readiness.

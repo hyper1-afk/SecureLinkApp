@@ -8,6 +8,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
+from urllib.parse import quote
+
+from cryptography.fernet import Fernet
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -20,11 +23,21 @@ from sqlalchemy.orm import Session
 from apps.api.config import get_settings
 from apps.api.db import get_session
 from apps.api.emailer import email_delivery_configured, encrypt_action_token
+from apps.api.mfa import (
+    decrypt_secret,
+    encrypt_secret,
+    new_recovery_codes,
+    new_totp_secret,
+    recovery_code_hash,
+    recovery_code_matches,
+    verify_totp,
+)
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
     EmailActionToken,
     Membership,
+    MFARecoveryCode,
     Organization,
     User,
 )
@@ -52,6 +65,25 @@ class RegistrationRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1, max_length=128)
+    mfa_code: str | None = Field(default=None, min_length=6, max_length=32)
+
+
+class MFACodeRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=32)
+
+
+class MFADisableRequest(MFACodeRequest):
+    password: str = Field(min_length=1, max_length=128)
+
+
+class MFAEnrollmentResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+    expires_in: int = 900
+
+
+class MFAStatusResponse(BaseModel):
+    enabled: bool
 
 
 class EmailRequest(BaseModel):
@@ -100,6 +132,45 @@ def _secret_key() -> str:
 def _require_email_delivery() -> None:
     if not email_delivery_configured():
         raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+
+def _mfa_key() -> str:
+    key = get_settings().mfa_encryption_key
+    if not key or "replace-with" in key:
+        raise HTTPException(status_code=503, detail="MFA is not configured")
+    try:
+        Fernet(key.encode("ascii"))
+    except (ValueError, UnicodeEncodeError, TypeError) as exc:
+        raise HTTPException(status_code=503, detail="MFA is not configured") from exc
+    return key
+
+
+def _valid_mfa_code(session: Session, user: User, code: str | None) -> bool:
+    if not user.mfa_enabled or user.mfa_secret_ciphertext is None or not code:
+        return False
+    try:
+        secret = decrypt_secret(user.mfa_secret_ciphertext, _mfa_key())
+    except ValueError:
+        return False
+    if verify_totp(secret, code):
+        return True
+    try:
+        digest = recovery_code_hash(code)
+    except UnicodeEncodeError:
+        return False
+    recovery = session.scalar(
+        select(MFARecoveryCode)
+        .where(
+            MFARecoveryCode.user_id == user.id,
+            MFARecoveryCode.code_hash == digest,
+            MFARecoveryCode.consumed_at.is_(None),
+        )
+        .with_for_update()
+    )
+    if recovery is None or not recovery_code_matches(code, recovery.code_hash):
+        return False
+    recovery.consumed_at = datetime.now(UTC)
+    return True
 
 
 def _issue_token(user_id: str, token_version: int) -> str:
@@ -304,11 +375,14 @@ def login(
 ) -> TokenResponse:
     _secret_key()
     user = session.scalar(
-        select(User).where(User.email_normalized == payload.email.strip().casefold())
+        select(User).where(User.email_normalized == payload.email.strip().casefold()).with_for_update()
     )
     stored_hash = user.password_hash if user is not None else dummy_password_hash
     password_matches = password_hash.verify(payload.password, stored_hash)
     if user is None or not user.is_active or not user.email_verified or not password_matches:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.mfa_enabled and not _valid_mfa_code(session, user, payload.mfa_code):
+        session.rollback()
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     membership = session.scalar(
@@ -430,6 +504,121 @@ def current_principal(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return Principal(user_id=user_id)
+
+
+@router.get("/auth/mfa", response_model=MFAStatusResponse)
+def mfa_status(
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MFAStatusResponse:
+    user = session.get(User, principal.user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return MFAStatusResponse(enabled=user.mfa_enabled)
+
+
+@router.post(
+    "/auth/mfa/enrollment", response_model=MFAEnrollmentResponse,
+    dependencies=[Depends(rate_limit("mfa_enrollment", 5, 3600))],
+)
+def start_mfa_enrollment(
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MFAEnrollmentResponse:
+    key = _mfa_key()
+    user = session.get(User, principal.user_id, with_for_update=True)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    if user.mfa_enabled:
+        raise HTTPException(status_code=409, detail="MFA is already enabled")
+    secret = new_totp_secret()
+    user.mfa_secret_ciphertext = encrypt_secret(secret, key)
+    user.mfa_enrollment_expires_at = datetime.now(UTC) + timedelta(minutes=15)
+    session.commit()
+    label = quote(f"SecureLink:{user.email}")
+    return MFAEnrollmentResponse(
+        secret=secret,
+        otpauth_uri=f"otpauth://totp/{label}?secret={secret}&issuer=SecureLink&digits=6&period=30",
+    )
+
+
+@router.post("/auth/mfa/confirm", dependencies=[Depends(rate_limit("mfa_confirm", 5, 300))])
+def confirm_mfa_enrollment(
+    payload: MFACodeRequest,
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, list[str]]:
+    user = session.get(User, principal.user_id, with_for_update=True)
+    now = datetime.now(UTC)
+    enrollment_expires_at = user.mfa_enrollment_expires_at if user is not None else None
+    if enrollment_expires_at is not None and enrollment_expires_at.tzinfo is None:
+        enrollment_expires_at = enrollment_expires_at.replace(tzinfo=UTC)
+    if (
+        user is None
+        or user.mfa_enabled
+        or user.mfa_secret_ciphertext is None
+        or user.mfa_enrollment_expires_at is None
+        or enrollment_expires_at <= now
+    ):
+        raise HTTPException(status_code=400, detail="MFA enrollment is missing or expired")
+    try:
+        secret = decrypt_secret(user.mfa_secret_ciphertext, _mfa_key())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="MFA enrollment cannot be verified") from exc
+    if not verify_totp(secret, payload.code):
+        raise HTTPException(status_code=400, detail="Invalid authentication code")
+    codes = new_recovery_codes()
+    user.mfa_enabled = True
+    user.mfa_enrollment_expires_at = None
+    session.add_all(
+        MFARecoveryCode(user_id=user.id, code_hash=recovery_code_hash(code)) for code in codes
+    )
+    membership = session.scalar(
+        select(Membership).where(Membership.user_id == user.id).order_by(Membership.created_at).limit(1)
+    )
+    session.add(AuditEvent(
+        organization_id=membership.organization_id if membership else None,
+        actor_user_id=user.id, actor_type="user", action="user.mfa_enabled",
+        target_type="user", target_id=user.id, details="{}",
+    ))
+    session.commit()
+    return {"recovery_codes": codes}
+
+
+@router.post(
+    "/auth/mfa/disable", response_model=MFAStatusResponse,
+    dependencies=[Depends(rate_limit("mfa_disable", 5, 300))],
+)
+def disable_mfa(
+    payload: MFADisableRequest,
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MFAStatusResponse:
+    user = session.get(User, principal.user_id, with_for_update=True)
+    if user is None or not user.mfa_enabled or not password_hash.verify(payload.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="MFA could not be disabled")
+    if not _valid_mfa_code(session, user, payload.code):
+        session.rollback()
+        raise HTTPException(status_code=400, detail="MFA could not be disabled")
+    user.mfa_enabled = False
+    user.mfa_secret_ciphertext = None
+    user.mfa_enrollment_expires_at = None
+    user.token_version += 1
+    session.execute(
+        update(MFARecoveryCode)
+        .where(MFARecoveryCode.user_id == user.id)
+        .values(consumed_at=datetime.now(UTC))
+    )
+    membership = session.scalar(
+        select(Membership).where(Membership.user_id == user.id).order_by(Membership.created_at).limit(1)
+    )
+    session.add(AuditEvent(
+        organization_id=membership.organization_id if membership else None,
+        actor_user_id=user.id, actor_type="user", action="user.mfa_disabled",
+        target_type="user", target_id=user.id, details="{}",
+    ))
+    session.commit()
+    return MFAStatusResponse(enabled=False)
 
 
 

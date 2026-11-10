@@ -17,6 +17,7 @@ def deployment_settings(**overrides):
         "redis_url": "rediss://redis.internal:6379/0",
         "app_secret_key": "s" * 48,
         "email_outbox_encryption_key": base64.urlsafe_b64encode(b"e" * 32).decode(),
+        "mfa_encryption_key": base64.urlsafe_b64encode(b"m" * 32).decode(),
         "smtp_host": "smtp.example.test",
         "smtp_port": 587,
         "smtp_username": "staging-user",
@@ -79,6 +80,12 @@ def test_deployment_settings_accept_complete_staging_configuration():
             "DATABASE_URL must require TLS for PostgreSQL",
         ),
         ({"email_outbox_encryption_key": None}, "EMAIL_OUTBOX_ENCRYPTION_KEY must be set"),
+        ({"mfa_encryption_key": None}, "MFA_ENCRYPTION_KEY must be set"),
+        ({"mfa_encryption_key": "invalid-key"}, "MFA_ENCRYPTION_KEY must be a valid Fernet key"),
+        (
+            {"mfa_encryption_key": base64.urlsafe_b64encode(b"e" * 32).decode()},
+            "MFA_ENCRYPTION_KEY must be different from EMAIL_OUTBOX_ENCRYPTION_KEY",
+        ),
         (
             {"email_outbox_encryption_key": "not-a-fernet-key"},
             "EMAIL_OUTBOX_ENCRYPTION_KEY must be a valid Fernet key",

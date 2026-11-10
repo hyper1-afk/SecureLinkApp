@@ -7,10 +7,10 @@ from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import auth, email_worker, emailer, main, rate_limits
+from apps.api import auth, email_worker, emailer, main, mfa, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
-from packages.security_core.models import AuditEvent, Base, EmailActionToken, Membership, User
+from packages.security_core.models import AuditEvent, Base, EmailActionToken, MFARecoveryCode, Membership, User
 
 TEST_SECRET = "test-secret-key-with-at-least-32-bytes"
 
@@ -42,6 +42,7 @@ def client(monkeypatch) -> Generator[TestClient, None, None]:
         smtp_host="mail.example.test",
         smtp_from_email="no-reply@example.test",
         email_outbox_encryption_key=Fernet.generate_key().decode("ascii"),
+        mfa_encryption_key=Fernet.generate_key().decode("ascii"),
     )
     monkeypatch.setattr(auth, "get_settings", lambda: test_settings)
     monkeypatch.setattr(emailer, "get_settings", lambda: test_settings)
@@ -137,6 +138,51 @@ def test_registration_creates_owner_and_login_issues_access_token(client: TestCl
             select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "user.login")
         )
     assert login_events == 1
+
+
+def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
+    registered = register(client, "mfa@example.test")
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    enrollment = client.post("/auth/mfa/enrollment", headers=headers)
+    assert enrollment.status_code == 200
+    secret = enrollment.json()["secret"]
+    confirmation_code = mfa.totp_code(secret)
+    confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": confirmation_code})
+    assert confirmed.status_code == 200
+    recovery_codes = confirmed.json()["recovery_codes"]
+    assert len(recovery_codes) == 10
+    assert all(len(code) == 24 for code in recovery_codes)
+    with client.app.state.test_session_factory() as session:
+        stored_recovery_hashes = session.scalars(select(MFARecoveryCode.code_hash)).all()
+    assert len(stored_recovery_hashes) == 10
+    assert not any(code in stored_recovery_hashes for code in recovery_codes)
+
+    no_code = client.post("/auth/login", json={"email": "mfa@example.test", "password": "a-long-test-password"})
+    assert no_code.status_code == 401
+    login = client.post("/auth/login", json={
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+    })
+    assert login.status_code == 200
+    recovery_login = client.post("/auth/login", json={
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": recovery_codes[0],
+    })
+    assert recovery_login.status_code == 200
+    replayed_recovery = client.post("/auth/login", json={
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": recovery_codes[0],
+    })
+    assert replayed_recovery.status_code == 401
+
+    disable = client.post("/auth/mfa/disable", headers=headers, json={
+        "password": "a-long-test-password", "code": mfa.totp_code(secret),
+    })
+    assert disable.status_code == 200
+    assert disable.json()["enabled"] is False
+    assert client.get(f"/organizations/{registered['organization_id']}", headers=headers).status_code == 401
+    assert client.post("/auth/login", json={"email": "mfa@example.test", "password": "a-long-test-password"}).status_code == 200
+
+
+def test_totp_matches_rfc_6238_sha1_vector():
+    assert mfa.totp_code("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", timestamp=59) == "287082"
 
 
 def test_user_cannot_read_another_organizations_record(client: TestClient):

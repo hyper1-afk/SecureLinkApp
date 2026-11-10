@@ -27,6 +27,8 @@
         <input id="email" type="email" maxlength="320" autocomplete="username" required>
         <label for="password">Password</label>
         <input id="password" type="password" maxlength="128" autocomplete="current-password" required>
+        <label for="mfa-code">Authenticator or recovery code (if enabled)</label>
+        <input id="mfa-code" maxlength="32" autocomplete="one-time-code">
         <button type="submit">Sign in</button>
       </form>
       <p id="sign-in-status" role="status" aria-live="polite"></p>

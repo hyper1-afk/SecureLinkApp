@@ -23,6 +23,7 @@ def main() -> None:
         "APP_PUBLIC_URL": "http://localhost:8000",
         "APP_SECRET_KEY": app_secret,
         "EMAIL_OUTBOX_ENCRYPTION_KEY": encryption_key,
+        "MFA_ENCRYPTION_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii"),
         "DATABASE_URL": (
             "postgresql+psycopg://securelink:"
             f"{database_password}@postgres:5432/securelink"
