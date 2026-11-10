@@ -13,8 +13,8 @@ from packages.security_core.models import (
     Membership,
     Organization,
     SecurityNotificationOutbox,
-    User,
     UrlScan,
+    User,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,8 @@ def _as_utc(value: datetime) -> datetime:
 def process_one() -> bool:
     now = datetime.now(UTC)
     factory = get_session_factory()
-    with factory() as session:
-        with session.begin():
-            row = session.scalar(
+    with factory() as session, session.begin():
+        row = session.scalar(
                 select(SecurityNotificationOutbox).where(
                     or_(
                         (SecurityNotificationOutbox.delivery_state == "pending")
@@ -41,35 +40,35 @@ def process_one() -> bool:
                     )
                 ).order_by(SecurityNotificationOutbox.next_delivery_at,
                            SecurityNotificationOutbox.created_at).with_for_update(skip_locked=True).limit(1)
-            )
-            if row is None:
-                return False
-            if row.delivery_attempts >= MAX_ATTEMPTS:
-                row.delivery_state = "failed"
-                row.delivery_lease_until = None
-                row.last_delivery_error = "attempt_limit_reached"
-                return True
-            member = session.scalar(select(Membership).where(
+        )
+        if row is None:
+            return False
+        if row.delivery_attempts >= MAX_ATTEMPTS:
+            row.delivery_state = "failed"
+            row.delivery_lease_until = None
+            row.last_delivery_error = "attempt_limit_reached"
+            return True
+        member = session.scalar(select(Membership).where(
                 Membership.organization_id == row.organization_id,
                 Membership.user_id == row.user_id,
             ))
-            user = session.get(User, row.user_id)
-            case = session.get(IncidentCase, row.case_id)
-            organization = session.get(Organization, row.organization_id)
-            scan = session.get(UrlScan, case.scan_id) if case is not None else None
-            if (member is None or member.role not in {"owner", "admin"}
-                    or not member.priority_email_enabled or user is None
-                    or not user.is_active or not user.email_verified
-                    or case is None or case.severity not in {"critical", "high"}
-                    or organization is None or scan is None):
-                row.delivery_state = "cancelled"
-                row.delivery_lease_until = None
-                return True
-            delivery = (row.id, user.email, organization.name, case.severity, scan.hostname, case.id)
-            row.delivery_state = "sending"
-            row.delivery_attempts += 1
-            row.delivery_lease_until = now + LEASE
-            row.last_delivery_error = None
+        user = session.get(User, row.user_id)
+        case = session.get(IncidentCase, row.case_id)
+        organization = session.get(Organization, row.organization_id)
+        scan = session.get(UrlScan, case.scan_id) if case is not None else None
+        if (member is None or member.role not in {"owner", "admin"}
+                or not member.priority_email_enabled or user is None
+                or not user.is_active or not user.email_verified
+                or case is None or case.severity not in {"critical", "high"}
+                or organization is None or scan is None):
+            row.delivery_state = "cancelled"
+            row.delivery_lease_until = None
+            return True
+        delivery = (row.id, user.email, organization.name, case.severity, scan.hostname, case.id)
+        row.delivery_state = "sending"
+        row.delivery_attempts += 1
+        row.delivery_lease_until = now + LEASE
+        row.last_delivery_error = None
 
     notification_id, recipient, organization_name, severity, hostname, case_id = delivery
     try:

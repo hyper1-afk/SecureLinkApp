@@ -19,8 +19,8 @@ from packages.security_core.models import (
     Finding,
     IncidentCase,
     Membership,
-    SecurityNotificationOutbox,
     ScanEvidence,
+    SecurityNotificationOutbox,
     UrlScan,
     User,
 )
