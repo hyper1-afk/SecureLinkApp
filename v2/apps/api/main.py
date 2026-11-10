@@ -58,6 +58,8 @@ async def prevent_response_caching(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if get_settings().app_public_url.startswith("https://"):
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     return response
 
 

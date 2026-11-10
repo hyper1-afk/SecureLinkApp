@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
@@ -17,6 +19,28 @@ def test_account_pages_have_sensitive_page_headers_and_assets():
     assert client.get("/assets/verify-email.js").status_code == 200
     assert client.get("/assets/reset-password.js").status_code == 200
     assert client.get("/assets/accept-invitation.js").status_code == 200
+
+
+def test_hsts_is_sent_only_when_the_configured_public_origin_uses_https(monkeypatch):
+    client = TestClient(main.app)
+    monkeypatch.setattr(
+        main,
+        "get_settings",
+        lambda: SimpleNamespace(app_public_url="https://staging.example.test"),
+    )
+
+    secure_response = client.get("/health/live")
+
+    assert secure_response.headers["strict-transport-security"] == "max-age=31536000"
+
+    monkeypatch.setattr(
+        main,
+        "get_settings",
+        lambda: SimpleNamespace(app_public_url="http://localhost:8000"),
+    )
+    local_response = client.get("/health/live")
+
+    assert "strict-transport-security" not in local_response.headers
 
 
 def test_account_action_email_keeps_token_in_url_fragment(monkeypatch):
