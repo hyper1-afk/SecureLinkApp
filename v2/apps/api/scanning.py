@@ -28,8 +28,8 @@ from packages.security_core.models import (
     User,
 )
 from packages.security_core.url_analysis import (
-    FindingDraft,
     PARSER_VERSION,
+    FindingDraft,
     InvalidScanURL,
     analyze_url,
     evidence_hash,
