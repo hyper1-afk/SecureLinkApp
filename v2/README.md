@@ -32,7 +32,7 @@ The dashboard currently supports passive URL hygiene analysis and scan history. 
 - `apps/api`: HTTP API and application composition
 - `packages/security_core`: identity and tenant data models
 - `migrations`: Alembic migrations
-- `docs`: architecture, threat model, staging runbook and extension redesign
+- `docs`: [product direction](docs/PRODUCT-DIRECTION.md), architecture, threat model, staging runbook and extension redesign
 - `tests`: unit, PostgreSQL migration and API tests
 
 ## Production status
