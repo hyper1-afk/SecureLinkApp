@@ -1,6 +1,7 @@
 """Regression checks that SecureLink never re-enables paid HIBP lookups by accident."""
 
 import unittest
+
 from pathlib import Path
 
 
