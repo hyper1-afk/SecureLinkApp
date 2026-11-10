@@ -231,6 +231,14 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
         f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}/verify",
         headers=other_headers,
     ).status_code == 404
+    assert client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}/challenge",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.delete(
+        f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}",
+        headers=other_headers,
+    ).status_code == 404
 
     class Resolver:
         timeout = None
@@ -283,9 +291,13 @@ def test_domain_asset_rejects_non_domain_targets(client: TestClient, hostname: s
 def test_domain_asset_creation_is_admin_only(client: TestClient):
     owner = register(client, "asset-rbac-owner@example.test")
     viewer = register(client, "asset-rbac-viewer@example.test")
+    analyst = register(client, "asset-rbac-analyst@example.test")
     with client.app.state.test_session_factory() as session:
         viewer_user = session.scalar(
             select(User).where(User.email_normalized == "asset-rbac-viewer@example.test")
+        )
+        analyst_user = session.scalar(
+            select(User).where(User.email_normalized == "asset-rbac-analyst@example.test")
         )
         session.add(
             Membership(
@@ -294,13 +306,27 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
                 role="viewer",
             )
         )
+        session.add(Membership(
+            organization_id=owner["organization_id"], user_id=analyst_user.id, role="analyst",
+        ))
         session.commit()
-    response = client.post(
-        f"/organizations/{owner['organization_id']}/assets/domains",
-        headers={"Authorization": f"Bearer {viewer['access_token']}"},
-        json={"hostname": "example.com"},
-    )
-    assert response.status_code == 403
+    path = f"/organizations/{owner['organization_id']}/assets/domains"
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    asset = client.post(path, headers=owner_headers, json={"hostname": "rbac.example.com"})
+    assert asset.status_code == 201
+    for member in (viewer, analyst):
+        headers = {"Authorization": f"Bearer {member['access_token']}"}
+        assert client.get(path, headers=headers).status_code == 200
+        response = client.post(
+            path,
+            headers=headers,
+            json={"hostname": f"{member['email'].split('@')[0]}.example.com"},
+        )
+        assert response.status_code == 403
+        asset_id = asset.json()["id"]
+        assert client.post(f"{path}/{asset_id}/challenge", headers=headers).status_code == 403
+        assert client.post(f"{path}/{asset_id}/verify", headers=headers).status_code == 403
+        assert client.delete(f"{path}/{asset_id}", headers=headers).status_code == 403
 
 
 def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
@@ -514,6 +540,10 @@ def test_priority_email_preference_is_member_scoped_and_audited(client: TestClie
     response = client.patch(path, headers=headers, json={"priority_email_enabled": False})
     assert response.status_code == 200
     assert response.json() == {"priority_email_enabled": False}
+    other = register(client, "alerts-other@example.test")
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    assert client.get(path, headers=other_headers).status_code == 404
+    assert client.patch(path, headers=other_headers, json={"priority_email_enabled": True}).status_code == 404
     with client.app.state.test_session_factory() as session:
         event = session.scalar(select(AuditEvent).where(
             AuditEvent.action == "notification.priority_email_preference_changed"
@@ -794,6 +824,7 @@ def test_extension_sessions_can_be_revoked_only_by_the_owning_account(client: Te
     assert sessions.status_code == 200
     assert sessions.headers["cache-control"] == "no-store"
     assert len(sessions.json()) == 1
+    assert client.get("/extension/oauth/sessions", headers=other_headers).json() == []
     session_id = sessions.json()[0]["id"]
     assert sessions.json()[0]["organization_id"] == owner["organization_id"]
     assert sessions.json()[0]["status"] == "active"

@@ -428,6 +428,7 @@ def test_authentication_rejects_invalid_credentials_and_tokens(client: TestClien
 def test_only_owners_and_admins_can_list_organization_members(client: TestClient):
     owner = register(client, "team-owner@example.test")
     viewer = register(client, "team-viewer@example.test")
+    analyst = register(client, "team-analyst@example.test")
     with client.app.state.test_session_factory() as session:
         viewer_id = session.scalar(
             select(User.id).where(User.email_normalized == "team-viewer@example.test")
@@ -439,6 +440,12 @@ def test_only_owners_and_admins_can_list_organization_members(client: TestClient
                 role="viewer",
             )
         )
+        analyst_id = session.scalar(
+            select(User.id).where(User.email_normalized == "team-analyst@example.test")
+        )
+        session.add(Membership(
+            organization_id=owner["organization_id"], user_id=analyst_id, role="analyst",
+        ))
         session.commit()
 
     owner_response = client.get(
@@ -446,13 +453,22 @@ def test_only_owners_and_admins_can_list_organization_members(client: TestClient
         headers={"Authorization": f"Bearer {owner['access_token']}"},
     )
     assert owner_response.status_code == 200
-    assert {item["role"] for item in owner_response.json()} == {"owner", "viewer"}
+    assert {item["role"] for item in owner_response.json()} == {"owner", "viewer", "analyst"}
 
     viewer_response = client.get(
         f"/organizations/{owner['organization_id']}/members",
         headers={"Authorization": f"Bearer {viewer['access_token']}"},
     )
     assert viewer_response.status_code == 403
+    analyst_headers = {"Authorization": f"Bearer {analyst['access_token']}"}
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/members", headers=analyst_headers,
+    ).status_code == 403
+    assert client.post(
+        f"/organizations/{owner['organization_id']}/invitations",
+        headers=analyst_headers,
+        json={"email": "unauthorized-invite@example.test", "role": "viewer"},
+    ).status_code == 403
 
 
 def test_disabling_a_user_invalidates_existing_access_tokens(client: TestClient):
