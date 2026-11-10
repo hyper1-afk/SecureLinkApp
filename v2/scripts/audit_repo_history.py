@@ -84,14 +84,20 @@ def main() -> int:
         findings["Sensitive credential file path"] = path_matches
 
     if findings:
-        print("Credential-like material or sensitive files remain in Git history; values are suppressed:")
+        print(
+            "Credential-like material or sensitive files remain in Git history; "
+            "values are suppressed:"
+        )
         for label, commits in findings.items():
             print(f"{label}:")
             for commit in sorted(commits):
                 print(f"  {commit}")
         return 1
 
-    print("No known credential patterns or sensitive credential file paths found on fetched Git refs.")
+    print(
+        "No known credential patterns or sensitive credential file paths "
+        "found on fetched Git refs."
+    )
     return 0
 
 
