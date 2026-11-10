@@ -6,16 +6,18 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.auth import organization_membership
 from apps.api.db import get_session
+from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
     CaseFinding,
+    CaseNote,
     CaseSignal,
     Finding,
     IncidentCase,
@@ -37,6 +39,17 @@ CASE_TRANSITIONS = {
 
 class CaseStatusUpdate(BaseModel):
     status: Literal["open", "investigating", "awaiting_approval", "resolved", "false_positive"]
+
+
+class CaseNoteCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class CaseNoteResponse(BaseModel):
+    id: str
+    created_by_user_id: str | None
+    content: str
+    created_at: datetime
 
 
 class CaseFindingResponse(BaseModel):
@@ -72,6 +85,7 @@ class CaseResponse(BaseModel):
     closed_at: datetime | None
     findings: list[CaseFindingResponse]
     signals: list[SignalResponse]
+    notes: list[CaseNoteResponse]
 
 
 def _require_analyst(membership: Membership) -> None:
@@ -80,7 +94,11 @@ def _require_analyst(membership: Membership) -> None:
 
 
 def _case_response(
-    case: IncidentCase, hostname: str, findings: list[Finding], signals: list[SecuritySignal]
+    case: IncidentCase,
+    hostname: str,
+    findings: list[Finding],
+    signals: list[SecuritySignal],
+    notes: list[CaseNote],
 ) -> CaseResponse:
     return CaseResponse(
         id=case.id,
@@ -117,6 +135,15 @@ def _case_response(
             )
             for signal in signals
         ],
+        notes=[
+            CaseNoteResponse(
+                id=note.id,
+                created_by_user_id=note.created_by_user_id,
+                content=note.content,
+                created_at=note.created_at,
+            )
+            for note in notes
+        ],
     )
 
 
@@ -146,6 +173,15 @@ def _case_signals(session: Session, case: IncidentCase) -> list[SecuritySignal]:
     ).all()
 
 
+def _case_notes(session: Session, case: IncidentCase) -> list[CaseNote]:
+    return session.scalars(
+        select(CaseNote)
+        .where(CaseNote.case_id == case.id, CaseNote.organization_id == case.organization_id)
+        .order_by(CaseNote.created_at.desc(), CaseNote.id)
+        .limit(25)
+    ).all()
+
+
 def _case_scan(session: Session, case: IncidentCase) -> UrlScan | None:
     if case.scan_id is None:
         return None
@@ -166,7 +202,9 @@ def _case_response_for_session(session: Session, case: IncidentCase) -> CaseResp
     subject = scan.hostname if scan is not None else signals[0].subject if signals else None
     if subject is None:
         raise HTTPException(status_code=404, detail="Case evidence not found")
-    return _case_response(case, subject, _findings_for_case(session, case), signals)
+    return _case_response(
+        case, subject, _findings_for_case(session, case), signals, _case_notes(session, case)
+    )
 
 
 @router.get("/organizations/{organization_id}/signals", response_model=list[SignalResponse])
@@ -510,6 +548,52 @@ def get_case(
     )
     if case is None:
         raise HTTPException(status_code=404, detail="Case not found")
+    return _case_response_for_session(session, case)
+
+
+@router.post(
+    "/organizations/{organization_id}/cases/{case_id}/notes",
+    response_model=CaseResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("case_note", 30, 60))],
+)
+def add_case_note(
+    case_id: UUID,
+    payload: CaseNoteCreate,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> CaseResponse:
+    _require_analyst(membership)
+    case = session.scalar(
+        select(IncidentCase).where(
+            IncidentCase.id == str(case_id),
+            IncidentCase.organization_id == membership.organization_id,
+        )
+    )
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Note cannot be blank")
+    note = CaseNote(
+        organization_id=membership.organization_id,
+        case_id=case.id,
+        created_by_user_id=membership.user_id,
+        content=content,
+    )
+    case.updated_at = datetime.now(UTC)
+    session.add(note)
+    session.flush()
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action="case.note_added",
+        target_type="incident_case",
+        target_id=case.id,
+        details=json.dumps({"note_id": note.id}, separators=(",", ":")),
+    ))
+    session.commit()
     return _case_response_for_session(session, case)
 
 

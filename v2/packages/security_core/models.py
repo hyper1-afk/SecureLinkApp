@@ -463,6 +463,27 @@ class CaseSignal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class CaseNote(Base):
+    __tablename__ = "case_notes"
+    __table_args__ = (
+        CheckConstraint("length(content) BETWEEN 1 AND 4000", name="ck_case_notes_content_length"),
+        ForeignKeyConstraint(
+            ["case_id", "organization_id"],
+            ["incident_cases.id", "incident_cases.organization_id"],
+            name="fk_case_notes_case_organization",
+            ondelete="CASCADE",
+        ),
+        Index("ix_case_notes_case_created", "case_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    case_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class CaseFinding(Base):
     __tablename__ = "case_findings"
     __table_args__ = (

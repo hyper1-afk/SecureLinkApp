@@ -94,6 +94,7 @@ def test_postgres_security_signals_reject_update_and_delete():
     signal_id = str(uuid4())
     case_id = str(uuid4())
     case_signal_id = str(uuid4())
+    note_id = str(uuid4())
     try:
         with engine.begin() as connection:
             connection.execute(
@@ -134,6 +135,13 @@ def test_postgres_security_signals_reject_update_and_delete():
                     "signal_id": signal_id,
                 },
             )
+            connection.execute(
+                text(
+                    "INSERT INTO case_notes (id, organization_id, case_id, content) "
+                    "VALUES (:id, :org_id, :case_id, 'Reviewed the evidence fixture')"
+                ),
+                {"id": note_id, "org_id": organization_id, "case_id": case_id},
+            )
         statements = (
             "UPDATE security_signals SET summary = 'tampered' WHERE id = :id",
             "DELETE FROM security_signals WHERE id = :id",
@@ -154,6 +162,15 @@ def test_postgres_security_signals_reject_update_and_delete():
                     connection.execute(
                         text(statement), {"id": case_signal_id, "replacement": str(uuid4())}
                     )
+                transaction.rollback()
+        for statement in (
+            "UPDATE case_notes SET content = 'tampered' WHERE id = :id",
+            "DELETE FROM case_notes WHERE id = :id",
+        ):
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                with pytest.raises(DBAPIError):
+                    connection.execute(text(statement), {"id": note_id})
                 transaction.rollback()
     finally:
         engine.dispose()

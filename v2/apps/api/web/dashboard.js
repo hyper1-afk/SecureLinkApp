@@ -131,6 +131,20 @@ function renderCases(cases) {
     }
     item.append(findings);
 
+    const notes = document.createElement("ol");
+    notes.className = "case-notes";
+    for (const note of incident.notes || []) {
+      const row = document.createElement("li");
+      const content = document.createElement("p");
+      content.textContent = note.content;
+      const created = document.createElement("p");
+      created.className = "muted";
+      created.textContent = new Date(note.created_at).toLocaleString();
+      row.append(content, created);
+      notes.append(row);
+    }
+    item.append(notes);
+
     if (canScan) {
       const controls = document.createElement("div");
       controls.className = "form-row case-controls";
@@ -145,6 +159,16 @@ function renderCases(cases) {
       }
       label.append(select);
       controls.append(label, makeButton("Update case", () => updateCase(incident.id, select.value), ""));
+      const noteInput = document.createElement("textarea");
+      noteInput.maxLength = 4000;
+      noteInput.setAttribute("aria-label", `Investigation note for ${incident.title}`);
+      noteInput.placeholder = "Add an investigation note (4,000 characters max)";
+      controls.append(noteInput, makeButton(
+        "Add note",
+        () => addCaseNote(incident.id, noteInput.value),
+        "button-secondary",
+        "case-status",
+      ));
       item.append(controls);
     }
     list.append(item);
@@ -571,6 +595,23 @@ async function updateCase(caseId, nextStatus) {
   }
   setStatus("case-status", "Case updated and recorded in the audit history.");
   await loadCases();
+}
+
+async function addCaseNote(caseId, content) {
+  const response = await request(`${apiBase}/cases/${encodeURIComponent(caseId)}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("case-status", response.status === 422
+      ? "Notes must contain text and stay within 4,000 characters."
+      : "The investigation note could not be saved.");
+    return;
+  }
+  renderCases(await response.json());
+  setStatus("case-status", "Investigation note saved to the append-only case history.");
 }
 
 async function renewChallenge(assetId) {

@@ -483,6 +483,9 @@ def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient
     assert client.get(scan_url, headers=analyst_headers).status_code == 200
     assert client.get(case_url, headers=analyst_headers).status_code == 200
     assert client.patch(case_url + "/status", headers=analyst_headers, json={"status": "investigating"}).status_code == 200
+    assert client.post(
+        case_url + "/notes", headers=analyst_headers, json={"content": "Reviewed evidence."},
+    ).status_code == 201
 
     assert client.get(scan_url, headers=viewer_headers).status_code == 200
     assert client.get(case_url, headers=viewer_headers).status_code == 200
@@ -496,6 +499,9 @@ def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient
     ).status_code == 403
     assert client.patch(
         case_url + "/status", headers=viewer_headers, json={"status": "resolved"},
+    ).status_code == 403
+    assert client.post(
+        case_url + "/notes", headers=viewer_headers, json={"content": "Not permitted."},
     ).status_code == 403
 
     assert client.get(case_url, headers=other_headers).status_code == 404
@@ -553,6 +559,31 @@ def test_generic_monitor_signal_can_open_a_tenant_scoped_case(client: TestClient
     assert case["hostname"] == "example.test"
     assert case["signals"][0]["id"] == signal_id
     assert case["findings"] == []
+    note_response = client.post(
+        org_url + f"/cases/{case['id']}/notes",
+        headers=owner_headers,
+        json={"content": "Reviewed DNS evidence; confirm with the customer."},
+    )
+    assert note_response.status_code == 201
+    assert note_response.json()["notes"][0]["content"] == "Reviewed DNS evidence; confirm with the customer."
+    with client.app.state.test_session_factory() as session:
+        note_audit = session.scalar(select(AuditEvent).where(
+            AuditEvent.action == "case.note_added",
+            AuditEvent.target_id == case["id"],
+        ))
+        assert note_audit is not None
+        assert note_response.json()["notes"][0]["id"] in note_audit.details
+        assert "confirm with the customer" not in note_audit.details
+    assert client.post(
+        org_url + f"/cases/{case['id']}/notes",
+        headers=owner_headers,
+        json={"content": "   "},
+    ).status_code == 422
+    assert client.post(
+        f"/organizations/{other['organization_id']}/cases/{case['id']}/notes",
+        headers=other_headers,
+        json={"content": "cross-tenant"},
+    ).status_code == 404
     linked = client.post(
         org_url + f"/cases/{case['id']}/signals/{related_signal_id}", headers=owner_headers,
     )
