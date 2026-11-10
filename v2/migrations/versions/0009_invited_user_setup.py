@@ -1,7 +1,7 @@
 """Track accounts created through organization invitations.
 
-Revision ID: 0006_invited_user_setup
-Revises: 0005_passive_url_scans
+Revision ID: 0009_invited_user_setup
+Revises: 0008_extension_oauth
 """
 from typing import Sequence, Union
 
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0006_invited_user_setup"
-down_revision: Union[str, None] = "0005_passive_url_scans"
+revision: str = "0009_invited_user_setup"
+down_revision: Union[str, None] = "0008_extension_oauth"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
