@@ -18,9 +18,9 @@ from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
     AuditEvent,
-    CaseSignal,
     Base,
     CaseFinding,
+    CaseSignal,
     DomainAsset,
     EmailActionToken,
     ExtensionAuthorizationCode,

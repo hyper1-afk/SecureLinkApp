@@ -15,8 +15,8 @@ from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
-    CaseSignal,
     CaseFinding,
+    CaseSignal,
     Finding,
     IncidentCase,
     Membership,
