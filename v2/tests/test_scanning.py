@@ -878,6 +878,34 @@ def test_priority_notification_worker_sends_hostname_only(client: TestClient, mo
     assert status.json() == {"pending_count": 0, "failed_count": 0, "oldest_pending_at": None}
 
 
+def test_repeated_high_priority_scans_update_one_active_case_without_duplicate_email(client: TestClient):
+    owner = register(client, "deduplicated-alert@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    scans = f"/organizations/{owner['organization_id']}/scans"
+    for _ in range(2):
+        response = client.post(scans, headers=headers, json={"url": "https://alice:secret@example.com/private"})
+        assert response.status_code == 201
+
+    cases = client.get(f"/organizations/{owner['organization_id']}/cases", headers=headers)
+    assert cases.status_code == 200
+    assert len(cases.json()) == 1
+    case = cases.json()[0]
+    assert len(case["signals"]) == 2
+    assert len(case["findings"]) == 2
+    delivery = client.get(
+        f"/organizations/{owner['organization_id']}/notification-status", headers=headers,
+    )
+    assert delivery.status_code == 200
+    assert delivery.json()["pending_count"] == 1
+    with client.app.state.test_session_factory() as session:
+        actions = session.scalars(select(AuditEvent.action).where(
+            AuditEvent.organization_id == owner["organization_id"],
+            AuditEvent.action.in_(("case.auto_created_from_scan", "case.auto_updated_from_scan")),
+        )).all()
+        assert actions.count("case.auto_created_from_scan") == 1
+        assert actions.count("case.auto_updated_from_scan") == 1
+
+
 def test_clean_scan_cannot_open_empty_case(client: TestClient):
     owner = register(client, "case-empty-scan@example.test")
     headers = {"Authorization": f"Bearer {owner['access_token']}"}

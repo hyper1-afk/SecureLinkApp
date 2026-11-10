@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from typing import Annotated
@@ -7,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from apps.api.auth import organization_membership
@@ -242,42 +243,67 @@ async def _create_scan(
     session.flush()
     priority_findings = [item for item in findings if item.severity in {"critical", "high"}]
     if priority_findings:
-        severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
+        if session.bind is not None and session.bind.dialect.name == "postgresql":
+            lock_key = int.from_bytes(
+                hashlib.sha256(f"{organization_id}:{scan.hostname}".encode()).digest()[:8],
+                byteorder="big",
+                signed=True,
+            )
+            session.execute(select(func.pg_advisory_xact_lock(lock_key)))
+        case = session.scalar(
+            select(IncidentCase)
+            .join(UrlScan, IncidentCase.scan_id == UrlScan.id)
+            .where(
+                IncidentCase.organization_id == organization_id,
+                IncidentCase.status.in_(("open", "investigating", "awaiting_approval")),
+                IncidentCase.title == f"Review high-priority URL signals for {scan.hostname}",
+                UrlScan.hostname == scan.hostname,
+            )
+            .order_by(IncidentCase.updated_at.desc(), IncidentCase.id)
+            .limit(1)
+            .with_for_update()
+        )
+        created_case = case is None
         priority_severity = min(
             (item.severity for item in priority_findings), key=severity_rank.__getitem__
         )
-        case = IncidentCase(
-            organization_id=organization_id,
-            scan_id=scan.id,
-            created_by_user_id=None,
-            status="open",
-            severity=priority_severity,
-            title=f"Review high-priority URL signals for {scan.hostname}",
-            summary=(
-                f"Automatic triage opened this case after detecting {len(priority_findings)} "
-                "high-priority URL indicator(s). Review the evidence; this is not a safety verdict."
-            ),
-            created_at=observed_at,
-            updated_at=observed_at,
-        )
-        session.add(case)
-        session.flush()
+        if created_case:
+            case = IncidentCase(
+                organization_id=organization_id,
+                scan_id=scan.id,
+                created_by_user_id=None,
+                status="open",
+                severity=priority_severity,
+                title=f"Review high-priority URL signals for {scan.hostname}",
+                summary=(
+                    f"Automatic triage opened this case after detecting {len(priority_findings)} "
+                    "high-priority URL indicator(s). Review the evidence; this is not a safety verdict."
+                ),
+                created_at=observed_at,
+                updated_at=observed_at,
+            )
+            session.add(case)
+            session.flush()
+        else:
+            case.severity = min((case.severity, priority_severity), key=severity_rank.__getitem__)
+            case.updated_at = observed_at
         session.add(CaseSignal(
             organization_id=organization_id, case_id=case.id, signal_id=signal.id,
         ))
-        recipients = session.execute(
-            select(Membership.user_id).join(User, User.id == Membership.user_id).where(
-                Membership.organization_id == organization_id,
-                Membership.role.in_(("owner", "admin")),
-                Membership.priority_email_enabled.is_(True),
-                User.is_active.is_(True),
-                User.email_verified.is_(True),
+        if created_case:
+            recipients = session.execute(
+                select(Membership.user_id).join(User, User.id == Membership.user_id).where(
+                    Membership.organization_id == organization_id,
+                    Membership.role.in_(("owner", "admin")),
+                    Membership.priority_email_enabled.is_(True),
+                    User.is_active.is_(True),
+                    User.email_verified.is_(True),
+                )
+            ).scalars().all()
+            session.add_all(
+                SecurityNotificationOutbox(organization_id=organization_id, case_id=case.id, user_id=recipient)
+                for recipient in recipients
             )
-        ).scalars().all()
-        session.add_all(
-            SecurityNotificationOutbox(organization_id=organization_id, case_id=case.id, user_id=recipient)
-            for recipient in recipients
-        )
         session.add_all(
             CaseFinding(
                 organization_id=organization_id,
@@ -291,7 +317,7 @@ async def _create_scan(
                 organization_id=organization_id,
                 actor_user_id=None,
                 actor_type="system",
-                action="case.auto_created_from_scan",
+                action="case.auto_created_from_scan" if created_case else "case.auto_updated_from_scan",
                 target_type="incident_case",
                 target_id=case.id,
                 details=json.dumps(
@@ -300,7 +326,7 @@ async def _create_scan(
                         "finding_count": len(findings),
                         "priority_finding_count": len(priority_findings),
                         "triggering_severity": priority_severity,
-                        "triage_version": "url-priority-v1",
+                        "triage_version": "url-priority-v2",
                     },
                     separators=(",", ":"),
                 ),
