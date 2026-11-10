@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from functools import lru_cache
 from urllib.parse import urlsplit
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
     mfa_encryption_key: str | None = None
     trusted_proxy_cidrs: str = ""
     extension_redirect_uris: str = ""
+    domain_dns_resolvers: str = ""
 
     @model_validator(mode="after")
     def validate_deployment_settings(self) -> "Settings":
@@ -79,6 +81,15 @@ class Settings(BaseSettings):
                 problems.append("MFA_ENCRYPTION_KEY must be different from EMAIL_OUTBOX_ENCRYPTION_KEY")
         if not self.smtp_starttls:
             problems.append("SMTP_STARTTLS must be enabled")
+        resolvers = [item.strip() for item in self.domain_dns_resolvers.split(",") if item.strip()]
+        if not resolvers:
+            problems.append("DOMAIN_DNS_RESOLVERS must list approved recursive resolver IPs")
+        else:
+            try:
+                for resolver in resolvers:
+                    ipaddress.ip_address(resolver)
+            except ValueError:
+                problems.append("DOMAIN_DNS_RESOLVERS must contain numeric IP addresses only")
         if not all((self.smtp_host, self.smtp_from_email)):
             problems.append("SMTP host and sender must be configured")
         if self.smtp_username and not self.smtp_password:

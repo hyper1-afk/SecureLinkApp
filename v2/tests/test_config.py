@@ -24,6 +24,7 @@ def deployment_settings(**overrides):
         "smtp_password": "staging-password",
         "smtp_from_email": "staging@example.test",
         "smtp_starttls": True,
+        "domain_dns_resolvers": "1.1.1.1,1.0.0.1",
         "extension_redirect_uris": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
     }
     values.update(overrides)
@@ -107,3 +108,9 @@ def test_development_settings_keep_local_defaults():
     settings = Settings(app_env="development")
 
     assert settings.database_url.endswith("@localhost:5432/securelink")
+
+
+@pytest.mark.parametrize("resolvers", ["", "resolver.example.test", "1.1.1.1,not-an-ip"])
+def test_deployment_requires_numeric_dns_resolvers(resolvers):
+    with pytest.raises(ValidationError, match="DOMAIN_DNS_RESOLVERS"):
+        Settings(**deployment_settings(domain_dns_resolvers=resolvers))

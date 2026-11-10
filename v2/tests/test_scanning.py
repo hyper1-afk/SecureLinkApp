@@ -588,6 +588,28 @@ def test_domain_monitor_collector_checks_only_spf_and_dmarc_txt_records():
     assert set(malformed_prefix) == {"spf_policy", "dmarc_policy"}
 
 
+def test_domain_monitor_uses_only_explicit_deployment_resolvers(monkeypatch):
+    captured = {}
+
+    class Resolver:
+        def __init__(self, *, configure):
+            captured["configure"] = configure
+
+    monkeypatch.setattr(
+        domain_monitor_worker,
+        "get_settings",
+        lambda: SimpleNamespace(app_env="staging", domain_dns_resolvers="192.0.2.53,192.0.2.54"),
+    )
+    monkeypatch.setattr(domain_monitor_worker.dns.resolver, "Resolver", Resolver)
+
+    resolver = domain_monitor_worker._make_resolver()
+
+    assert captured["configure"] is False
+    assert resolver.nameservers == ["192.0.2.53", "192.0.2.54"]
+    assert resolver.timeout == 2
+    assert resolver.lifetime == 5
+
+
 def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
     owner = register(client, "case-owner@example.test")
     other = register(client, "case-other@example.test")

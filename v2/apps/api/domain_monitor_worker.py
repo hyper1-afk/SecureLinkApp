@@ -11,6 +11,7 @@ import dns.resolver
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
+from apps.api.config import get_settings
 from apps.api.db import get_session_factory
 from packages.security_core.models import (
     AuditEvent,
@@ -123,6 +124,20 @@ def collect_issues(hostname: str, resolver: dns.resolver.Resolver) -> dict[str, 
     if dmarc:
         issues["dmarc_policy"] = dmarc
     return issues
+
+
+def _make_resolver() -> dns.resolver.Resolver:
+    settings = get_settings()
+    if settings.app_env in {"staging", "production"}:
+        resolver = dns.resolver.Resolver(configure=False)
+        resolver.nameservers = [
+            item.strip() for item in settings.domain_dns_resolvers.split(",") if item.strip()
+        ]
+    else:
+        resolver = dns.resolver.Resolver(configure=True)
+    resolver.timeout = 2
+    resolver.lifetime = 5
+    return resolver
 
 
 def _claim_one(now: datetime) -> tuple[str, str, str] | None:
@@ -359,9 +374,7 @@ def process_one() -> bool:
     if claim is None:
         return False
     asset_id, organization_id, hostname = claim
-    resolver = dns.resolver.Resolver(configure=True)
-    resolver.timeout = 2
-    resolver.lifetime = 5
+    resolver = _make_resolver()
     try:
         issues = collect_issues(hostname, resolver)
     except (dns.exception.DNSException, OSError) as exc:
