@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 SPEC_PATH = (
     Path(__file__).parents[1]
     / "deploy"
