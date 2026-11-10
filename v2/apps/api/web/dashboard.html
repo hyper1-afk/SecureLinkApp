@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>SecureLink dashboard</title>
+  <title>SecureLink SOC dashboard</title>
   <link rel="stylesheet" href="/assets/dashboard.css">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="brand">SecureLink 2.0</p>
-        <h1 id="organization-name">Security dashboard</h1>
+        <p class="brand">SECURELINK 2.0 · SECURITY OPERATIONS</p>
+        <h1 id="organization-name">Security operations</h1>
         <p id="organization-role" class="muted" aria-live="polite"></p>
       </div>
       <nav aria-label="Account">
@@ -21,31 +21,72 @@
       </nav>
     </header>
 
-    <section class="panel">
-      <h2>Passive URL check</h2>
+    <section class="panel" aria-labelledby="scan-title">
+      <h2 id="scan-title">Check a link</h2>
       <p class="notice">
-        This check inspects URL structure only. SecureLink does not fetch the submitted URL,
-        query reputation services, or determine whether a link is safe. No findings are not a safety verdict.
-        The path, query, fragment, and embedded credentials are omitted from stored results.
+        This version inspects URL structure only. It does not fetch the page or check malware and reputation sources.
+        A clean result is not a safety verdict. Paths, query strings, fragments, and embedded credentials are not retained.
       </p>
       <form id="scan-form">
         <label for="scan-url">URL to inspect</label>
-        <input id="scan-url" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com/path" required>
-        <button id="scan-submit" type="submit">Inspect URL</button>
+        <div class="form-row">
+          <input id="scan-url" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com/path" required>
+          <button id="scan-submit" type="submit">Inspect link</button>
+        </div>
       </form>
-      <p id="scan-status" role="status" aria-live="polite"></p>
+      <p id="scan-status" class="status" role="status" aria-live="polite"></p>
     </section>
 
-    <section class="panel">
+    <section class="panel" aria-labelledby="cases-title">
       <div class="section-heading">
         <div>
-          <h2>Recent scans</h2>
+          <h2 id="cases-title">Cases</h2>
+          <p class="muted">Review findings, evidence, and case status in one place.</p>
+        </div>
+        <button id="refresh-cases" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <p id="case-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="case-list" class="card-list"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="assets-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="assets-title">Authorized domains</h2>
+          <p class="muted">Verify domain control before SecureLink can include it in future monitoring.</p>
+        </div>
+        <button id="refresh-assets" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <p class="notice">Ownership verification only adds a domain to your inventory. Monitoring is not active yet.</p>
+      <form id="asset-form">
+        <label for="asset-hostname">Domain name</label>
+        <div class="form-row">
+          <input id="asset-hostname" type="text" maxlength="253" autocomplete="url" placeholder="example.com" required>
+          <button id="asset-submit" type="submit">Add domain</button>
+        </div>
+      </form>
+      <p id="asset-status" class="status" role="status" aria-live="polite"></p>
+      <div id="challenge-panel" class="challenge-panel" hidden>
+        <h3>Publish this DNS TXT record</h3>
+        <dl>
+          <div><dt>Record name</dt><dd><code id="challenge-name"></code></dd></div>
+          <div><dt>Record value</dt><dd><code id="challenge-value"></code></dd></div>
+        </dl>
+        <p class="muted">The value is shown once. After publishing it, select “Verify DNS” for this domain.</p>
+      </div>
+      <ol id="asset-list" class="card-list"></ol>
+    </section>
+
+    <section class="panel" aria-labelledby="history-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="history-title">Recent link checks</h2>
           <p class="muted">Organization-scoped scan history</p>
         </div>
-        <button id="refresh-scans" type="button">Refresh</button>
+        <button id="refresh-scans" type="button" class="button-secondary">Refresh</button>
       </div>
-      <p id="history-status" role="status" aria-live="polite"></p>
-      <ol id="scan-history" class="scan-list"></ol>
+      <p id="history-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="scan-history" class="card-list"></ol>
     </section>
     <footer><p>Sessions expire after 15 minutes. <a href="/">Manage account</a></p></footer>
   </main>

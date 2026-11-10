@@ -65,9 +65,9 @@ Add organization-scoped assets, ownership verification, member permissions, audi
 
 Build finding lifecycle, deduplication, severity/confidence, evidence-grounded investigation, notification preferences, quiet hours, email digests, and high-priority alert routing. Start with phishing/link threats and authorized domain exposure. Add integrations and further detection sources only when they improve case outcomes. Keep evidence immutable and give customers controls over retention.
 
-### 5. Usable SOC console and sustainable SaaS operations
+### 5. Complete the connected SOC console and sustainable SaaS operations
 
-Turn the existing account scaffold into a case-centered dashboard for organizations, assets, alerts, investigation history, playbooks, and billing. Add subscription checkout, verified webhooks, entitlements, metering, cancellation/export, support tooling, billing recovery, and abuse controls. Test billing in provider sandbox before enabling charges.
+The initial dashboard now connects passive link checks, domain verification, scan history, and case review/status updates. Continue with case details, approvals, notification preferences, and billing status. Add subscription checkout, verified webhooks, entitlements, metering, cancellation/export, support tooling, billing recovery, and abuse controls. Test billing in provider sandbox before enabling charges.
 
 ### 6. Additional SOC integrations and self-hosted packaging
 
@@ -79,7 +79,7 @@ Prove backup restore, alert delivery, incident response, capacity limits, securi
 
 ## Current position
 
-The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a basic scan dashboard, a local Compose environment, DNS ownership verification for domain assets, and an evidence-backed case lifecycle for scan findings. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, automated investigation, the full SOC dashboard, billing, or V2 extension integration. It is not production-ready.
+The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a local Compose environment, DNS ownership verification for domain assets, an evidence-backed case lifecycle for scan findings, and a dashboard connecting those features. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, automated investigation, approval workflows, billing, or V2 extension integration. It is not production-ready.
 
 ## Feature portfolio: acquisition hypotheses
 
@@ -92,7 +92,7 @@ These are directional scores for the chance a capability helps attract the inten
 | Continuous verified-domain and external exposure monitoring | 4/5 | Medium | Build as a detection source after ownership verification and isolated, read-only checks. |
 | Existing email-link monitoring | 4/5 | Low | Preserve pending usage review; improve consent, credential handling, and signal quality before expanding mailbox access. |
 | Domain health (TLS, SPF, DKIM, DMARC) | 3/5 | Low | Bundle into monitoring; weak as a standalone product. |
-| Breach lookup with concrete response guidance | 3/5 | Low | Consider a partner-backed add-on only if it can show specific, safe next steps. Never accept or store plaintext passwords. |
+| Breach lookup with concrete response guidance | 3/5 | Low | No paid HIBP account/email/domain API dependency. Defer email breach lookup until a no-cost or customer-funded source meets privacy and data-license requirements. The separate free Pwned Passwords k-anonymity service is optional and not currently integrated. Never accept or store plaintext passwords. |
 | Compliance reporting | 3/5 | Low | Defer until a specific buyer segment and framework are validated; keeping mappings current is costly. |
 | Alerting and concise digests | 3/5 for acquisition; 5/5 for retention | Low | Build with monitoring. Prioritize signal quality and customer-configurable thresholds over alert volume. |
 | AI analyst | 2/5 standalone | Low | Treat as an evidence-grounded workflow assistant, not the product promise or an autonomous remediation agent. |
@@ -113,3 +113,7 @@ Dark-web alerts have a specific actionability problem: Google ended its Dark Web
 ### Validation before investing further
 
 Track landing-page conversion, account verification, first useful scan, repeat weekly use, paid conversion, churn, alert dismissals, and support time. Interview SMB operators and MSPs separately; consumer extension installs and B2B subscription demand are different markets. Change these rankings when SecureLink's own evidence contradicts the hypotheses.
+
+## Breach-data cost boundary
+
+V2 must not require a paid Have I Been Pwned API key. HIBP's email/account and domain breach-search APIs require a subscription, so they are excluded unless the customer explicitly funds a later integration. HIBP's separate Pwned Passwords range API is free and uses k-anonymity, but is not currently integrated. Email breach lookup stays deferred until a no-cost or customer-funded source satisfies privacy, provenance, and data-licensing review.

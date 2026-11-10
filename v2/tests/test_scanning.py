@@ -385,5 +385,7 @@ def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: T
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["referrer-policy"] == "no-referrer"
-    assert "does not fetch the submitted URL" in response.text
+    assert "does not fetch the page" in response.text
     assert "not a safety verdict" in response.text
+    assert "Authorized domains" in response.text
+    assert "Cases" in response.text

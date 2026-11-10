@@ -27,7 +27,9 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 
-The dashboard currently supports passive URL hygiene analysis and scan history. The API supports DNS-verified domain inventory and evidence-backed cases, but does not yet schedule domain monitoring or automate investigations. Domain ownership verification performs only a bounded DNS TXT lookup; verifying ownership does not authorize arbitrary scanning and does not prove that resolved IP addresses are public. Any future collector must revalidate DNS answers and reject private/reserved IPs at execution time. Active URL fetching, third-party reputation checks, and automated response playbooks are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
+The dashboard connects passive URL hygiene checks, domain verification, scan history, and the evidence-backed case lifecycle. It does not yet schedule domain monitoring or automate investigations. Domain ownership verification performs only a bounded DNS TXT lookup; verifying ownership does not authorize arbitrary scanning and does not prove that resolved IP addresses are public. Any future collector must revalidate DNS answers and reject private/reserved IPs at execution time. Active URL fetching, third-party reputation checks, and automated response playbooks are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
+
+V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and requires no HIBP API key. Pwned Passwords has a separate free k-anonymity range service, but it is not currently integrated. Email breach lookup is deferred until there is a suitable source that meets cost, privacy, and data-licensing requirements.
 
 ## Workspace
 
