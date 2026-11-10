@@ -26,8 +26,9 @@ def test_digitalocean_spec_is_manual_and_uses_the_v2_branch_only() -> None:
 
 
 def test_migrations_run_once_before_manual_staging_deployments() -> None:
-    assert len(spec := yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))["jobs"]) == 1
-    migration = spec[0]
+    spec = yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))
+    assert len(spec["jobs"]) == 1
+    migration = spec["jobs"][0]
     assert migration["name"] == "database-migrations"
     assert migration["kind"] == "PRE_DEPLOY"
     assert migration["run_command"] == "alembic upgrade head"
