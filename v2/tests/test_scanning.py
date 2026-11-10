@@ -449,7 +449,16 @@ def test_domain_monitor_dns_checks_are_explicit_and_deduplicate_state_transition
     assert cases[0]["severity"] == "critical"
     assert {item["id"] for item in cases[0]["signals"]} == {item["id"] for item in signals}
     sent = []
-    monkeypatch.setattr(notification_worker, "send_high_priority_case_email", lambda *args: sent.append(args))
+    monkeypatch.setattr(
+        notification_worker,
+        "get_session_factory",
+        lambda: client.app.state.test_session_factory,
+    )
+    monkeypatch.setattr(
+        notification_worker,
+        "send_high_priority_case_email",
+        lambda *args: sent.append(args),
+    )
     assert notification_worker.process_one() is True
     assert sent[0][3] == "mail.example.test"
     assert domain_monitor_worker.process_one() is False
