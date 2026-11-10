@@ -60,6 +60,36 @@ class Organization(Base):
     memberships: Mapped[list[Membership]] = relationship(back_populates="organization")
 
 
+class DomainAsset(Base):
+    __tablename__ = "domain_assets"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "hostname", name="uq_domain_assets_org_hostname"),
+        CheckConstraint("status IN ('pending', 'verified')", name="ck_domain_assets_status"),
+        CheckConstraint(
+            "(status = 'pending' AND verification_token_hash IS NOT NULL "
+            "AND verification_expires_at IS NOT NULL AND verified_at IS NULL) OR "
+            "(status = 'verified' AND verification_token_hash IS NULL "
+            "AND verification_expires_at IS NULL AND verified_at IS NOT NULL)",
+            name="ck_domain_assets_verification_state",
+        ),
+        Index("ix_domain_assets_org_status", "organization_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    hostname: Mapped[str] = mapped_column(String(253), nullable=False)
+    status: Mapped[str] = mapped_column(String(12), default="pending", server_default="pending", nullable=False)
+    verification_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
+    )
+
+
 class Membership(Base):
     __tablename__ = "memberships"
     __table_args__ = (

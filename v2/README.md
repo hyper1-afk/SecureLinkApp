@@ -11,6 +11,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 - Password reset and logout increment a token version and invalidate existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
 - Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
+- Owners/admins can add domain assets, publish a one-time DNS TXT challenge, and verify control. Challenge values are returned once, marked no-store, kept only as digests, expire after 24 hours, and are removed after verification. Domain assets and audit events are organization-scoped.
 - Audit events are append-only in PostgreSQL.
 - Access tokens expire after 15 minutes.
 
@@ -25,7 +26,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 
-The dashboard currently supports passive URL hygiene analysis and scan history. Active URL fetching, third-party reputation checks, and the broader investigations workflow are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
+The dashboard currently supports passive URL hygiene analysis and scan history. Domain ownership verification performs only a bounded DNS TXT lookup; verifying ownership does not authorize arbitrary scanning and does not prove that resolved IP addresses are public. Any future collector must revalidate DNS answers and reject private/reserved IPs at execution time. Active URL fetching, third-party reputation checks, and the broader investigations workflow are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
 
 ## Workspace
 

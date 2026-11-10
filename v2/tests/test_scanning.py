@@ -8,11 +8,13 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import auth, emailer, main, rate_limits
+from apps.api import assets, auth, emailer, main, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
     Base,
+    AuditEvent,
+    DomainAsset,
     EmailActionToken,
     Finding,
     Membership,
@@ -180,6 +182,112 @@ def test_viewers_cannot_start_scans(client: TestClient):
         f"/organizations/{owner['organization_id']}/scans",
         headers={"Authorization": f"Bearer {viewer['access_token']}"},
         json={"url": "https://example.com"},
+    )
+    assert response.status_code == 403
+
+
+def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestClient, monkeypatch):
+    owner = register(client, "asset-owner@example.test")
+    other = register(client, "asset-other@example.test")
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+
+    created = client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains",
+        headers=owner_headers,
+        json={"hostname": "Example.COM."},
+    )
+    assert created.status_code == 201
+    asset_data = created.json()
+    assert asset_data["hostname"] == "example.com"
+    assert asset_data["status"] == "pending"
+    assert asset_data["dns_name"] == "_securelink-verification.example.com"
+    challenge_value = asset_data["dns_value"]
+    assert challenge_value.startswith("securelink-verification=")
+
+    with client.app.state.test_session_factory() as session:
+        asset = session.get(DomainAsset, asset_data["id"])
+        assert asset.status == "pending"
+        assert challenge_value not in asset.verification_token_hash
+
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/assets/domains", headers=other_headers
+    ).status_code == 404
+    assert client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}/verify",
+        headers=other_headers,
+    ).status_code == 404
+
+    class TXTRecord:
+        strings = [challenge_value.encode()]
+
+    class Resolver:
+        timeout = None
+        lifetime = None
+
+        def resolve(self, qname, record_type):
+            assert qname == "_securelink-verification.example.com"
+            assert record_type == "TXT"
+            return [TXTRecord()]
+
+    monkeypatch.setattr(assets.dns.resolver, "Resolver", lambda configure=True: Resolver())
+    verified = client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains/{asset_data['id']}/verify",
+        headers=owner_headers,
+    )
+    assert verified.status_code == 200
+    assert verified.json()["status"] == "verified"
+    assert verified.json()["dns_value"] is None
+
+    with client.app.state.test_session_factory() as session:
+        asset = session.get(DomainAsset, asset_data["id"])
+        audit = session.scalars(
+            select(AuditEvent).where(AuditEvent.target_id == asset_data["id"])
+        ).all()
+        assert asset.status == "verified"
+        assert asset.verification_token_hash is None
+        assert {event.action for event in audit} == {"domain_asset.created", "domain_asset.verified"}
+
+
+@pytest.mark.parametrize(
+    ("hostname", "email"),
+    [
+        ("https://example.com", "invalid-domain-url@example.test"),
+        ("example.com/path", "invalid-domain-path@example.test"),
+        ("*.example.com", "invalid-domain-wildcard@example.test"),
+        ("127.0.0.1", "invalid-domain-ip@example.test"),
+        ("localhost", "invalid-domain-localhost@example.test"),
+    ],
+)
+def test_domain_asset_rejects_non_domain_targets(client: TestClient, hostname: str, email: str):
+    owner = register(client, email)
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"hostname": hostname},
+    )
+    assert response.status_code == 422
+
+
+def test_domain_asset_creation_is_admin_only(client: TestClient):
+    owner = register(client, "asset-rbac-owner@example.test")
+    viewer = register(client, "asset-rbac-viewer@example.test")
+    with client.app.state.test_session_factory() as session:
+        viewer_user = session.scalar(
+            select(User).where(User.email_normalized == "asset-rbac-viewer@example.test")
+        )
+        session.add(
+            Membership(
+                organization_id=owner["organization_id"],
+                user_id=viewer_user.id,
+                role="viewer",
+            )
+        )
+        session.commit()
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/assets/domains",
+        headers={"Authorization": f"Bearer {viewer['access_token']}"},
+        json={"hostname": "example.com"},
     )
     assert response.status_code == 403
 
