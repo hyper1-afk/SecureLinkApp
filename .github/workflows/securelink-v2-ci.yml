@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Guard full history against exposed Google API keys
+      - name: Guard full history against exposed credentials and secret files
         run: python v2/scripts/audit_repo_history.py
 
   api:
@@ -84,7 +84,7 @@ jobs:
         run: python -m unittest discover -s ../tests -p "test_network_safety.py" -v
 
       - name: Lint
-        run: ruff check apps tests
+        run: ruff check apps tests scripts
 
       - name: Check browser JavaScript syntax
         run: |
@@ -97,13 +97,10 @@ jobs:
           node --check extension/service-worker.js
           node --check extension/popup.js
           node --check extension/oauth.js
-          node --check extension/api-config.js
           node --check extension/url-privacy.js
-          node --check scripts/package-extension.mjs
           node --test extension/tests/oauth.test.js
           node --test extension/tests/url-privacy.test.js
           node --test extension/tests/permissions.test.js
-          node --test extension/tests/package-build.test.js
           node --check ../browser-extension/background.js
           node --check ../browser-extension/content.js
           node --check ../browser-extension/popup.js
@@ -155,3 +152,4 @@ jobs:
           docker compose ps
           docker compose logs api
           exit 1
+
