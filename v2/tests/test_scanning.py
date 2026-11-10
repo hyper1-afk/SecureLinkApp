@@ -813,7 +813,7 @@ def test_case_approval_requires_separate_owner_review_and_never_executes_action(
     assert client.post(
         case_url + f"/approvals/{approval['id']}/decision",
         headers=analyst_headers,
-        json={"decision": "approved"},
+        json={"decision": "approved", "note": "Analyst cannot review this."},
     ).status_code == 403
     assert client.post(
         case_url + f"/approvals/{approval['id']}/decision",
