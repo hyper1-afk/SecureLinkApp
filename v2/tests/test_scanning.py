@@ -305,10 +305,11 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
 def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
     owner = register(client, "case-owner@example.test")
     other = register(client, "case-other@example.test")
+    register(client, "case-analyst@example.test")
     owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
     other_headers = {"Authorization": f"Bearer {other['access_token']}"}
     with client.app.state.test_session_factory() as session, session.begin():
-        analyst_user = session.scalar(select(User).where(User.email_normalized == "case-other@example.test"))
+        analyst_user = session.scalar(select(User).where(User.email_normalized == "case-analyst@example.test"))
         assert analyst_user is not None
         session.add(Membership(
             organization_id=owner["organization_id"], user_id=analyst_user.id, role="analyst"
