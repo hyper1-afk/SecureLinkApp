@@ -4247,59 +4247,21 @@ def get_threat_map_stats():
 @limiter.limit("5 per minute")
 @require_auth
 def fetch_live_threats():
-    """Fetch real threats from AbuseIPDB (requires authentication)"""
-    import os
-    from features import fetch_abuseipdb_recent_reports
-    
-    threats_added = 0
-    
-    # Check if AbuseIPDB API key is configured
-    if not os.environ.get('ABUSEIPDB_API_KEY'):
-        return jsonify({
-            'success': False, 
-            'error': 'AbuseIPDB API key not configured',
-            'count': 0,
-            'sources': {'abuseipdb': 0}
-        }), 400
-    
-    try:
-        abuseipdb_threats = fetch_abuseipdb_recent_reports(limit=50)
-        for threat in abuseipdb_threats:
-            db.record_threat_event(
-                threat_type=threat['threat_type'],
-                url=threat.get('domain'),
-                country_code=threat['country_code'],
-                latitude=threat['latitude'],
-                longitude=threat['longitude'],
-                severity=threat['severity']
-            )
-            threats_added += 1
-    except Exception as e:
-        logger.error(f"AbuseIPDB fetch error: {e}", exc_info=True)
-        return jsonify({
-            'success': False, 
-            'error': 'An internal error occurred',
-            'count': 0,
-            'sources': {'abuseipdb': 0}
-        }), 500
-    
+    """Disable external threat-feed ingestion pending commercial terms review."""
     return jsonify({
-        'success': True, 
-        'count': threats_added,
-        'sources': {
-            'abuseipdb': threats_added
-        }
-    })
+        'success': False,
+        'error': 'External threat-feed ingestion is not enabled in this build',
+        'count': 0,
+        'sources': {}
+    }), 503
 
 
 @app.route('/api/threatmap/check-ip/<ip>', methods=['GET'])
 @require_auth
 @limiter.limit("30 per minute")
 def check_ip_abuse(ip):
-    """Check an IP's reputation using AbuseIPDB"""
-    from features import check_ip_reputation
-    result = check_ip_reputation(ip)
-    return jsonify(result)
+    """External IP reputation lookup is disabled pending commercial terms review."""
+    return jsonify({'error': 'External IP reputation is not enabled in this build'}), 503
 
 
 # ============================================================================

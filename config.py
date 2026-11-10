@@ -40,9 +40,6 @@ class Config:
     EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
     EMAIL_CHECK_INTERVAL = int(os.getenv('EMAIL_CHECK_INTERVAL', 60))
     
-    # VirusTotal API (optional - for enhanced scanning)
-    VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY', '')
-    
     # Notification Settings
     ENABLE_DESKTOP_NOTIFICATIONS = os.getenv('ENABLE_DESKTOP_NOTIFICATIONS', 'False').lower() == 'true'
     ENABLE_EMAIL_NOTIFICATIONS = os.getenv('ENABLE_EMAIL_NOTIFICATIONS', 'True').lower() == 'true'

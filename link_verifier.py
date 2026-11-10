@@ -5,7 +5,6 @@ Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import re
 import ssl
-import hashlib
 import logging
 from urllib.parse import urlparse
 from datetime import datetime
@@ -173,13 +172,6 @@ class LinkVerifier:
             details['whois_check'] = whois_result['details']
             risk_scores.append(whois_result['score'])
             warnings.extend(whois_result['warnings'])
-        
-        # 7. Check against VirusTotal (if API key available)
-        if self.config.VIRUSTOTAL_API_KEY:
-            vt_result = self._check_virustotal(url)
-            details['virustotal'] = vt_result['details']
-            risk_scores.append(vt_result['score'])
-            threats.extend(vt_result['threats'])
         
         # Calculate final risk score
         final_score = sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
@@ -527,56 +519,6 @@ class LinkVerifier:
         return {
             'score': score,
             'warnings': warnings,
-            'details': details
-        }
-    
-    def _check_virustotal(self, url: str) -> Dict:
-        """Check URL against VirusTotal API"""
-        threats = []
-        details = {}
-        score = 0.0
-        
-        try:
-            # Submit URL for scanning
-            headers = {'x-apikey': self.config.VIRUSTOTAL_API_KEY}
-            
-            # First, get URL ID
-            url_id = hashlib.sha256(url.encode()).hexdigest()
-            
-            response = self.session.get(
-                f'https://www.virustotal.com/api/v3/urls/{url_id}',
-                headers=headers,
-                timeout=self.config.REQUEST_TIMEOUT
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                stats = data.get('data', {}).get('attributes', {}).get('last_analysis_stats', {})
-                
-                malicious = stats.get('malicious', 0)
-                suspicious = stats.get('suspicious', 0)
-                total = sum(stats.values()) if stats else 0
-                
-                details['malicious_detections'] = malicious
-                details['suspicious_detections'] = suspicious
-                details['total_scanners'] = total
-                details['scan_available'] = True
-                
-                if malicious > 0:
-                    threats.append(f"VirusTotal: {malicious} scanners flagged as malicious")
-                    score = min(malicious / 10, 1.0)
-                elif suspicious > 0:
-                    score = min(suspicious / 20, 0.5)
-            else:
-                details['scan_available'] = False
-                
-        except Exception as e:
-            details['scan_available'] = False
-            details['error'] = str(e)[:50]
-        
-        return {
-            'score': score,
-            'threats': threats,
             'details': details
         }
     
