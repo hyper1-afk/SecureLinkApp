@@ -1,5 +1,6 @@
 import json
 from collections.abc import Generator
+from types import SimpleNamespace
 
 import pytest
 from cryptography.fernet import Fernet
@@ -12,8 +13,8 @@ from apps.api import assets, auth, emailer, main, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
-    Base,
     AuditEvent,
+    Base,
     DomainAsset,
     EmailActionToken,
     Finding,
@@ -218,9 +219,6 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
         headers=other_headers,
     ).status_code == 404
 
-    class TXTRecord:
-        strings = [challenge_value.encode()]
-
     class Resolver:
         timeout = None
         lifetime = None
@@ -228,7 +226,7 @@ def test_domain_assets_require_dns_ownership_and_are_tenant_scoped(client: TestC
         def resolve(self, qname, record_type):
             assert qname == "_securelink-verification.example.com"
             assert record_type == "TXT"
-            return [TXTRecord()]
+            return [SimpleNamespace(strings=[challenge_value.encode()])]
 
     monkeypatch.setattr(assets.dns.resolver, "Resolver", lambda configure=True: Resolver())
     verified = client.post(
