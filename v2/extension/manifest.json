@@ -3,7 +3,8 @@
   "name": "SecureLink V2 (Local Preview)",
   "version": "0.1.0",
   "description": "Submit links to your SecureLink V2 workspace for a structural security review.",
-  "permissions": ["identity", "storage"],
+  "permissions": ["storage"],
+  "optional_permissions": ["identity"],
   "host_permissions": ["http://localhost:8000/*"],
   "action": {
     "default_title": "SecureLink V2",

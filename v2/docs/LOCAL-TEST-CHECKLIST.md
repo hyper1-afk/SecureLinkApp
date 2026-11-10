@@ -22,7 +22,7 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 
 1. In Chrome, open `chrome://extensions`, enable Developer mode, and load the unpacked `v2/extension` directory.
 2. Copy the extension ID. Set `EXTENSION_REDIRECT_URIS` in the untracked `v2/.env` to exactly `https://<extension-id>.chromiumapp.org/`, then restart the API and worker.
-3. From the extension popup, connect the verified test account, select its organization, and approve access.
+3. From the extension popup, choose **Connect account**, grant the optional Chrome identity permission for that authorization attempt, then connect the verified test account, select its organization, and approve access.
 4. Review an HTTPS link. Confirm it produces a scan and, for a high-priority indicator, the same dashboard case and email behavior as a website scan.
 5. As an owner/admin, add an exact-host organization indicator in the dashboard. Check that a scan of that exact host shows a medium review finding, while its subdomain and the same host in a different organization do not match. Remove the indicator and confirm it no longer affects new scans. Viewers may see the list but cannot add or remove entries.
 6. For the existing extension warning flow, use a controlled link that the legacy scanner classifies high risk. Confirm the warning address contains only a random incident ID, warning details disappear after five minutes, and **Continue anyway** bypasses only that exact URL once in the same tab. A later navigation to the same link should be checked again.

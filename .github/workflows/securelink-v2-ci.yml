@@ -100,6 +100,7 @@ jobs:
           node --check extension/url-privacy.js
           node --test extension/tests/oauth.test.js
           node --test extension/tests/url-privacy.test.js
+          node --test extension/tests/permissions.test.js
           node --check ../browser-extension/background.js
           node --check ../browser-extension/content.js
           node --check ../browser-extension/popup.js

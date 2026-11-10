@@ -15,7 +15,8 @@ users.
 4. Add that exact callback URI to `EXTENSION_REDIRECT_URIS` in the untracked
    `v2/.env` file, for example:
    `EXTENSION_REDIRECT_URIS=https://<extension-id>.chromiumapp.org/`
-5. Restart the API, open the extension, choose **Connect account**, sign in on
+5. Restart the API, open the extension, choose **Connect account**, grant the
+   optional Chrome identity permission for the authorization attempt, sign in on
    the SecureLink page, choose an organization, and approve the scan-only access.
 6. Submit an HTTPS URL using **Review link**. The result is a passive structural
    URL review; it does not query threat intelligence and does not certify a link

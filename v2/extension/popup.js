@@ -21,13 +21,26 @@ async function refreshConnection() {
 
 connectButton.addEventListener("click", async () => {
   connectButton.disabled = true;
-  status.textContent = "Opening SecureLink authorization…";
+  status.textContent = "Requesting Chrome identity access…";
   try {
+    const granted = await new Promise((resolve) => {
+      chrome.permissions.request({ permissions: ["identity"] }, resolve);
+    });
+    if (chrome.runtime.lastError || !granted) {
+      throw new Error("Chrome identity access was not granted.");
+    }
+    status.textContent = "Opening SecureLink authorization…";
     await send({ type: "connect" });
     status.textContent = "Account connected.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Could not connect.";
   } finally {
+    await new Promise((resolve) => {
+      chrome.permissions.remove({ permissions: ["identity"] }, () => {
+        void chrome.runtime.lastError;
+        resolve();
+      });
+    });
     connectButton.disabled = false;
     await refreshConnection();
   }

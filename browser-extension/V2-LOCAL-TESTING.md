@@ -14,7 +14,8 @@ Chrome Web Store.
    `EXTENSION_REDIRECT_URIS=https://<local-extension-id>.chromiumapp.org/`
    Restart the V2 API after changing the setting.
 4. Open the extension, open Settings, enter `http://localhost:8000` as the V2 API
-   origin, and save it. Then choose **Connect** in the SecureLink V2 workspace
+   origin, and save it. Chrome will request host access for that origin; allow it
+   for the local API. Then choose **Connect** in the SecureLink V2 workspace
    panel. Grant the optional Chrome identity permission, sign in on the
    first-party SecureLink page, select an organization, and approve scan-only
    access.
@@ -22,6 +23,12 @@ Chrome Web Store.
    **Submit link for V2 review**. The V2 finding list is structural only. It
    does not claim that the URL is malicious or safe. Disconnect from the panel
    or revoke the session from the V2 dashboard.
+6. The popup's **Scan links on this page** action requires a regular HTTP or
+   HTTPS tab and checks at most 25 external links after an explicit click. It
+   uses the legacy `/api/extension/verify` endpoint; the unpacked development
+   build intentionally has no default legacy API, so this action will not submit
+   those links to the local V2 API. Use the V2 single-link review above for the
+   local V2 integration test. Do not point local tests at production.
 
 The V2 connector removes URL credentials and fragments and masks values for
 sensitive query keys before sending the manual review. Other query values,
