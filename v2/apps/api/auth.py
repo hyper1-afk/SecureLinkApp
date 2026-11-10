@@ -25,11 +25,11 @@ from apps.api.emailer import email_delivery_configured, encrypt_action_token
 from apps.api.mfa import (
     decrypt_secret,
     encrypt_secret,
+    matching_totp_step,
     new_recovery_codes,
     new_totp_secret,
     recovery_code_hash,
     recovery_code_matches,
-    verify_totp,
 )
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
@@ -160,7 +160,11 @@ def _valid_mfa_code(session: Session, user: User, code: str | None) -> bool:
         secret = decrypt_secret(user.mfa_secret_ciphertext, _mfa_key())
     except ValueError:
         return False
-    if verify_totp(secret, code):
+    totp_step = matching_totp_step(secret, code)
+    if totp_step is not None:
+        if user.mfa_last_totp_step is not None and totp_step <= user.mfa_last_totp_step:
+            return False
+        user.mfa_last_totp_step = totp_step
         return True
     try:
         digest = recovery_code_hash(code)
@@ -604,11 +608,13 @@ def confirm_mfa_enrollment(
         secret = decrypt_secret(user.mfa_secret_ciphertext, _mfa_key())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail="MFA enrollment cannot be verified") from exc
-    if not verify_totp(secret, payload.code):
+    totp_step = matching_totp_step(secret, payload.code)
+    if totp_step is None:
         raise HTTPException(status_code=400, detail="Invalid authentication code")
     codes = new_recovery_codes()
     user.mfa_enabled = True
     user.mfa_enrollment_expires_at = None
+    user.mfa_last_totp_step = totp_step
     user.token_version += 1
     session.add_all(
         MFARecoveryCode(user_id=user.id, code_hash=recovery_code_hash(code)) for code in codes
@@ -720,11 +726,13 @@ def confirm_mfa_rotation(
         new_secret = decrypt_secret(user.mfa_rotation_secret_ciphertext, _mfa_key())
     except ValueError as exc:
         raise HTTPException(status_code=503, detail="Authenticator rotation cannot be verified") from exc
-    if not verify_totp(new_secret, payload.code):
+    totp_step = matching_totp_step(new_secret, payload.code)
+    if totp_step is None:
         raise HTTPException(status_code=400, detail="Invalid authentication code")
 
     codes = new_recovery_codes()
     user.mfa_secret_ciphertext = user.mfa_rotation_secret_ciphertext
+    user.mfa_last_totp_step = totp_step
     user.mfa_rotation_secret_ciphertext = None
     user.mfa_rotation_expires_at = None
     user.token_version += 1

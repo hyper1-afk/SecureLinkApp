@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
+from time import time
 
 import pytest
 from cryptography.fernet import Fernet
@@ -21,6 +22,11 @@ from packages.security_core.models import (
 )
 
 TEST_SECRET = "test-secret-key-with-at-least-32-bytes"
+
+
+def _previous_totp_code(secret: str) -> str:
+    step_start = int(time()) // 30 * 30
+    return mfa.totp_code(secret, timestamp=max(0, step_start - 30))
 
 
 class FakeRedis:
@@ -158,14 +164,19 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
     enrollment = client.post("/auth/mfa/enrollment", headers=headers)
     assert enrollment.status_code == 200
     secret = enrollment.json()["secret"]
-    confirmation_code = mfa.totp_code(secret)
+    confirmation_code = _previous_totp_code(secret)
     confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": confirmation_code})
     assert confirmed.status_code == 200
     assert client.get(f"/organizations/{registered['organization_id']}", headers=headers).status_code == 401
+    current_code = mfa.totp_code(secret, timestamp=int(time()) // 30 * 30)
     refreshed_login = client.post("/auth/login", json={
-        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": current_code,
     })
     assert refreshed_login.status_code == 200
+    replayed_totp = client.post("/auth/login", json={
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": current_code,
+    })
+    assert replayed_totp.status_code == 401
     headers = {"Authorization": f"Bearer {refreshed_login.json()['access_token']}"}
     recovery_codes = confirmed.json()["recovery_codes"]
     assert len(recovery_codes) == 10
@@ -177,10 +188,6 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
 
     no_code = client.post("/auth/login", json={"email": "mfa@example.test", "password": "a-long-test-password"})
     assert no_code.status_code == 401
-    login = client.post("/auth/login", json={
-        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
-    })
-    assert login.status_code == 200
     recovery_login = client.post("/auth/login", json={
         "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": recovery_codes[0],
     })
@@ -196,7 +203,7 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
         session.commit()
 
     disable = client.post("/auth/mfa/disable", headers=headers, json={
-        "password": "a-long-test-password", "code": mfa.totp_code(secret),
+        "password": "a-long-test-password", "code": recovery_codes[1],
     })
     assert disable.status_code == 200
     assert disable.json()["enabled"] is False
@@ -209,10 +216,10 @@ def _enable_mfa(client: TestClient, email: str) -> tuple[dict[str, str], str, li
     headers = {"Authorization": f"Bearer {registered['access_token']}"}
     enrollment = client.post("/auth/mfa/enrollment", headers=headers)
     secret = enrollment.json()["secret"]
-    confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": mfa.totp_code(secret)})
+    confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": _previous_totp_code(secret)})
     assert confirmed.status_code == 200
     logged_in = client.post("/auth/login", json={
-        "email": email, "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+        "email": email, "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret, timestamp=int(time()) // 30 * 30),
     })
     assert logged_in.status_code == 200
     return {**registered, "access_token": logged_in.json()["access_token"]}, secret, confirmed.json()["recovery_codes"]
@@ -222,14 +229,16 @@ def test_mfa_rotation_preserves_old_factor_until_confirm_then_revokes_sessions(c
     registered, old_secret, old_recovery_codes = _enable_mfa(client, "rotate@example.test")
     headers = {"Authorization": f"Bearer {registered['access_token']}"}
     started = client.post("/auth/mfa/rotation", headers=headers, json={
-        "password": "a-long-test-password", "code": mfa.totp_code(old_secret),
+        "password": "a-long-test-password", "code": old_recovery_codes[0],
     })
     assert started.status_code == 200
     new_secret = started.json()["secret"]
     assert client.get("/auth/mfa", headers=headers).status_code == 200
-    assert client.post("/auth/login", json={
-        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(old_secret),
-    }).status_code == 200
+    with client.app.state.test_session_factory() as session:
+        current_secret = session.scalar(select(User.mfa_secret_ciphertext).where(
+            User.email_normalized == "rotate@example.test",
+        ))
+        assert mfa.decrypt_secret(current_secret, auth.get_settings().mfa_encryption_key) == old_secret
 
     confirmed = client.post("/auth/mfa/rotation/confirm", headers=headers, json={
         "code": mfa.totp_code(new_secret),
@@ -242,7 +251,7 @@ def test_mfa_rotation_preserves_old_factor_until_confirm_then_revokes_sessions(c
         "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(old_secret),
     }).status_code == 401
     assert client.post("/auth/login", json={
-        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret),
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret, timestamp=(int(time()) // 30 + 1) * 30),
     }).status_code == 200
     assert client.post("/auth/login", json={
         "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": old_recovery_codes[1],
@@ -278,7 +287,7 @@ def test_mfa_rotation_accepts_recovery_code_and_rejects_bad_password(client: Tes
         "code": mfa.totp_code(new_secret),
     }).status_code == 200
     fresh_login = client.post("/auth/login", json={
-        "email": "rotate-recovery@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret),
+        "email": "rotate-recovery@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret, timestamp=(int(time()) // 30 + 1) * 30),
     })
     assert fresh_login.status_code == 200
     fresh_headers = {"Authorization": f"Bearer {fresh_login.json()['access_token']}"}
@@ -303,12 +312,12 @@ def test_privileged_mfa_grace_expires_and_enrolled_admin_cannot_disable(client: 
     enrollment = client.post("/auth/mfa/enrollment", headers=headers)
     secret = enrollment.json()["secret"]
     enabled = client.post(
-        "/auth/mfa/confirm", headers=headers, json={"code": mfa.totp_code(secret)}
+        "/auth/mfa/confirm", headers=headers, json={"code": _previous_totp_code(secret)}
     )
     assert enabled.status_code == 200
     assert client.get(f"/organizations/{owner['organization_id']}", headers=headers).status_code == 401
     logged_in = client.post("/auth/login", json={
-        "email": "mfa-required@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+        "email": "mfa-required@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret, timestamp=int(time()) // 30 * 30),
     })
     assert logged_in.status_code == 200
     headers = {"Authorization": f"Bearer {logged_in.json()['access_token']}"}
@@ -352,18 +361,18 @@ def test_owner_transfer_requires_mfa_and_targets_existing_admin(client: TestClie
     enrollment = client.post("/auth/mfa/enrollment", headers=owner_headers)
     secret = enrollment.json()["secret"]
     confirmed = client.post(
-        "/auth/mfa/confirm", headers=owner_headers, json={"code": mfa.totp_code(secret)}
+        "/auth/mfa/confirm", headers=owner_headers, json={"code": _previous_totp_code(secret)}
     )
     assert confirmed.status_code == 200
     assert client.get(f"/organizations/{owner['organization_id']}", headers=owner_headers).status_code == 401
     owner_login = client.post("/auth/login", json={
-        "email": "transfer-owner@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+        "email": "transfer-owner@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret, timestamp=int(time()) // 30 * 30),
     })
     owner_headers = {"Authorization": f"Bearer {owner_login.json()['access_token']}"}
     transferred = client.post(transfer_url, headers=owner_headers, json={
         "target_membership_id": successor_membership_id,
         "password": "a-long-test-password",
-        "mfa_code": mfa.totp_code(secret),
+        "mfa_code": confirmed.json()["recovery_codes"][0],
     })
     assert transferred.status_code == 200
     assert transferred.json()["role"] == "owner"

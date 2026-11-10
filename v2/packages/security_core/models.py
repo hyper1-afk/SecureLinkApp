@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from sqlalchemy import (
     Boolean,
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -53,6 +54,7 @@ class User(Base):
     mfa_enrollment_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     mfa_rotation_secret_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     mfa_rotation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mfa_last_totp_step: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     privileged_mfa_grace_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

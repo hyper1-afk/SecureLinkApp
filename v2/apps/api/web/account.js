@@ -207,8 +207,8 @@ byId("mfa-confirm-form").addEventListener("submit", async (event) => {
   byId("dashboard-link").hidden = true;
   byId("mfa-start").hidden = true;
   byId("mfa-disable-form").hidden = true;
-  byId("mfa-status").textContent = "Two-factor authentication enabled. All sessions were revoked; save these recovery codes, then sign in again.";
-  say("session-status", "MFA was enabled and all previous sessions were revoked. Save your recovery codes, then sign in again.");
+  byId("mfa-status").textContent = "Two-factor authentication enabled. All sessions were revoked; save these recovery codes, wait for the next authenticator code, then sign in again.";
+  say("session-status", "MFA was enabled and all previous sessions were revoked. Save your recovery codes, wait for the next authenticator code, then sign in again.");
 });
 
 byId("mfa-rotation-start-form").addEventListener("submit", async (event) => {
@@ -260,7 +260,7 @@ byId("mfa-rotation-confirm-form").addEventListener("submit", async (event) => {
   byId("dashboard-link").hidden = true;
   byId("mfa-rotation-start-form").hidden = true;
   byId("mfa-disable-form").hidden = true;
-  say("session-status", "Your authenticator was replaced and all sessions were revoked. Save these new recovery codes, then sign in again.");
+  say("session-status", "Your authenticator was replaced and all sessions were revoked. Save these new recovery codes, wait for the next authenticator code, then sign in again.");
   say("mfa-status", "Authenticator replaced. Previous recovery codes are no longer valid.");
 });
 

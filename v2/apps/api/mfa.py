@@ -25,14 +25,19 @@ def totp_code(secret: str, timestamp: int | None = None) -> str:
     return f"{binary % 1_000_000:06d}"
 
 
-def verify_totp(secret: str, code: str, timestamp: int | None = None) -> bool:
+def matching_totp_step(secret: str, code: str, timestamp: int | None = None) -> int | None:
     if len(code) != 6 or not code.isascii() or not code.isdigit():
-        return False
+        return None
     moment = int(time.time() if timestamp is None else timestamp)
-    return any(
-        hmac.compare_digest(totp_code(secret, moment + delta * 30), code)
-        for delta in (-1, 0, 1)
-    )
+    current_step = moment // 30
+    for step in (current_step, current_step - 1, current_step + 1):
+        if step >= 0 and hmac.compare_digest(totp_code(secret, step * 30), code):
+            return step
+    return None
+
+
+def verify_totp(secret: str, code: str, timestamp: int | None = None) -> bool:
+    return matching_totp_step(secret, code, timestamp) is not None
 
 
 def encrypt_secret(secret: str, key: str) -> bytes:
