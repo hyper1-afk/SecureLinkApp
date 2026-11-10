@@ -6,8 +6,8 @@ import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
-from uuid import UUID, uuid4
 from urllib.parse import quote
+from uuid import UUID, uuid4
 
 import jwt
 from cryptography.fernet import Fernet
