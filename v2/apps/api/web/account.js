@@ -11,11 +11,23 @@ async function refreshMFAStatus() {
   });
   if (!response.ok) return;
   const status = await response.json();
+  const note = byId("mfa-policy-note");
+  note.hidden = !status.required;
+  if (status.required) {
+    const deadline = status.grace_expires_at ? new Date(status.grace_expires_at) : null;
+    note.textContent = deadline && deadline > new Date()
+      ? `Owners and admins must enable MFA by ${deadline.toLocaleString()}. Organization access will pause after this deadline.`
+      : "MFA is required for owner/admin access. Enable it to continue using privileged organization features.";
+  }
   byId("mfa-status").textContent = status.enabled
-    ? "Two-factor authentication is enabled."
-    : "Two-factor authentication is not enabled.";
+    ? status.can_disable
+      ? "Two-factor authentication is enabled."
+      : "Two-factor authentication is enabled and required for your organization role."
+    : status.required
+      ? "Two-factor authentication is not enabled yet."
+      : "Two-factor authentication is not enabled.";
   byId("mfa-start").hidden = status.enabled;
-  byId("mfa-disable-form").hidden = !status.enabled;
+  byId("mfa-disable-form").hidden = !status.enabled || !status.can_disable;
 }
 
 byId("register-form").addEventListener("submit", async (event) => {

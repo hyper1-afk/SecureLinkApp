@@ -53,6 +53,7 @@ access_token_minutes = 15
 verification_lifetime = timedelta(hours=24)
 reset_lifetime = timedelta(hours=1)
 invitation_lifetime = timedelta(hours=48)
+privileged_mfa_grace_period = timedelta(days=7)
 generic_email_message = "If the address is eligible, an email will be sent with next steps."
 
 
@@ -84,6 +85,9 @@ class MFAEnrollmentResponse(BaseModel):
 
 class MFAStatusResponse(BaseModel):
     enabled: bool
+    required: bool = False
+    grace_expires_at: datetime | None = None
+    can_disable: bool = True
 
 
 class EmailRequest(BaseModel):
@@ -171,6 +175,22 @@ def _valid_mfa_code(session: Session, user: User, code: str | None) -> bool:
         return False
     recovery.consumed_at = datetime.now(UTC)
     return True
+
+
+def privileged_mfa_grace_expired(user: User, *, now: datetime | None = None) -> bool:
+    if user.mfa_enabled:
+        return False
+    deadline = user.privileged_mfa_grace_expires_at
+    if deadline is None:
+        return True
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=UTC)
+    return deadline <= (now or datetime.now(UTC))
+
+
+def _ensure_privileged_mfa_grace(user: User, role: str) -> None:
+    if role in {"owner", "admin"} and not user.mfa_enabled and user.privileged_mfa_grace_expires_at is None:
+        user.privileged_mfa_grace_expires_at = datetime.now(UTC) + privileged_mfa_grace_period
 
 
 def _issue_token(user_id: str, token_version: int) -> str:
@@ -273,6 +293,7 @@ def register(
         email_normalized=email.casefold(),
         password_hash=password_hash.hash(payload.password),
         email_verified=False,
+        privileged_mfa_grace_expires_at=datetime.now(UTC) + privileged_mfa_grace_period,
     )
     organization = Organization(name=organization_name)
     try:
@@ -510,11 +531,25 @@ def current_principal(
 def mfa_status(
     principal: Annotated[Principal, Depends(current_principal)],
     session: Annotated[Session, Depends(get_session)],
+    response: Response,
 ) -> MFAStatusResponse:
+    response.headers["Cache-Control"] = "no-store"
     user = session.get(User, principal.user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication required")
-    return MFAStatusResponse(enabled=user.mfa_enabled)
+    has_privileged_membership = session.scalar(
+        select(func.count()).select_from(Membership).where(
+            Membership.user_id == user.id,
+            Membership.role.in_(("owner", "admin")),
+        )
+    ) > 0
+    required = has_privileged_membership and not user.mfa_enabled
+    return MFAStatusResponse(
+        enabled=user.mfa_enabled,
+        required=required,
+        grace_expires_at=user.privileged_mfa_grace_expires_at if required else None,
+        can_disable=not has_privileged_membership,
+    )
 
 
 @router.post(
@@ -597,12 +632,21 @@ def disable_mfa(
     user = session.get(User, principal.user_id, with_for_update=True)
     if user is None or not user.mfa_enabled or not password_hash.verify(payload.password, user.password_hash):
         raise HTTPException(status_code=400, detail="MFA could not be disabled")
+    has_privileged_membership = session.scalar(
+        select(func.count()).select_from(Membership).where(
+            Membership.user_id == user.id,
+            Membership.role.in_(("owner", "admin")),
+        )
+    ) > 0
+    if has_privileged_membership:
+        raise HTTPException(status_code=403, detail="MFA is required while you are an organization owner/admin")
     if not _valid_mfa_code(session, user, payload.code):
         session.rollback()
         raise HTTPException(status_code=400, detail="MFA could not be disabled")
     user.mfa_enabled = False
     user.mfa_secret_ciphertext = None
     user.mfa_enrollment_expires_at = None
+    user.privileged_mfa_grace_expires_at = None
     user.token_version += 1
     session.execute(
         update(MFARecoveryCode)
@@ -664,6 +708,13 @@ def organization_membership(
     )
     if membership is None:
         raise HTTPException(status_code=404, detail="Organization not found")
+    if membership.role in {"owner", "admin"}:
+        user = session.get(User, principal.user_id)
+        if user is None or privileged_mfa_grace_expired(user):
+            raise HTTPException(
+                status_code=403,
+                detail="MFA enrollment is required for owner/admin access",
+            )
     return membership
 
 
@@ -735,6 +786,9 @@ def transfer_organization_ownership(
 
     current_membership.role = "admin"
     target.role = "owner"
+    target_user = session.get(User, target.user_id)
+    if target_user is not None:
+        _ensure_privileged_mfa_grace(target_user, "owner")
     session.add(AuditEvent(
         organization_id=organization_id,
         actor_user_id=user.id,
@@ -805,6 +859,9 @@ def update_organization_member_role(
     previous_role = target.role
     if previous_role != payload.role:
         target.role = payload.role
+        target_user = session.get(User, target.user_id)
+        if target_user is not None:
+            _ensure_privileged_mfa_grace(target_user, payload.role)
         session.add(
             AuditEvent(
                 organization_id=actor.organization_id,
@@ -999,6 +1056,7 @@ def accept_organization_invitation(
             user_id=user.id,
             role=role,
         )
+        _ensure_privileged_mfa_grace(user, role)
         session.add(membership)
         session.flush()
         session.add(

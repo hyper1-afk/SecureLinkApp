@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
@@ -581,6 +582,43 @@ def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
         headers=extension_headers,
         json={"url": "https://example.test"},
     ).status_code == 401
+
+
+def test_expired_privileged_mfa_grace_blocks_existing_extension_session(client: TestClient):
+    owner = register(client, "extension-mfa@example.test")
+    verifier = "m" * 43
+    code = _authorize_extension(client, owner, verifier)
+    exchange = client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": verifier,
+        },
+    )
+    assert exchange.status_code == 200
+    extension_headers = {"Authorization": f"Bearer {exchange.json()['access_token']}"}
+
+    with client.app.state.test_session_factory() as session:
+        user = session.scalar(select(User).where(User.email_normalized == "extension-mfa@example.test"))
+        user.privileged_mfa_grace_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        session.commit()
+
+    assert client.get("/extension/oauth/organizations", headers={
+        "Authorization": f"Bearer {owner['access_token']}"
+    }).json()["organizations"] == []
+    assert client.get("/extension/oauth/session", headers=extension_headers).status_code == 403
+    sessions = client.get(
+        "/extension/oauth/sessions",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert sessions.status_code == 200
+    assert sessions.json()[0]["status"] == "invalidated"
+    assert client.post(
+        "/extension/v1/scans", headers=extension_headers, json={"url": "https://example.com"}
+    ).status_code == 403
 
 
 def test_extension_oauth_rejects_unregistered_redirect_and_bad_pkce(client: TestClient):

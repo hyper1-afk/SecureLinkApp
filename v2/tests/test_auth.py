@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from cryptography.fernet import Fernet
@@ -140,6 +141,10 @@ def test_registration_creates_owner_and_login_issues_access_token(client: TestCl
     )
     assert response.status_code == 200
     assert response.json()["role"] == "owner"
+    mfa_status = client.get("/auth/mfa", headers={"Authorization": f"Bearer {registered['access_token']}"})
+    assert mfa_status.json()["required"] is True
+    assert mfa_status.json()["grace_expires_at"] is not None
+    assert mfa_status.headers["cache-control"] == "no-store"
     with client.app.state.test_session_factory() as session:
         login_events = session.scalar(
             select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "user.login")
@@ -179,6 +184,11 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
     })
     assert replayed_recovery.status_code == 401
 
+    with client.app.state.test_session_factory() as session:
+        user = session.scalar(select(User).where(User.email_normalized == "mfa@example.test"))
+        session.execute(update(Membership).where(Membership.user_id == user.id).values(role="viewer"))
+        session.commit()
+
     disable = client.post("/auth/mfa/disable", headers=headers, json={
         "password": "a-long-test-password", "code": mfa.totp_code(secret),
     })
@@ -186,6 +196,35 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
     assert disable.json()["enabled"] is False
     assert client.get(f"/organizations/{registered['organization_id']}", headers=headers).status_code == 401
     assert client.post("/auth/login", json={"email": "mfa@example.test", "password": "a-long-test-password"}).status_code == 200
+
+
+def test_privileged_mfa_grace_expires_and_enrolled_admin_cannot_disable(client: TestClient):
+    owner = register(client, "mfa-required@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    with client.app.state.test_session_factory() as session:
+        user = session.scalar(select(User).where(User.email_normalized == "mfa-required@example.test"))
+        user.privileged_mfa_grace_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        session.commit()
+
+    blocked = client.get(f"/organizations/{owner['organization_id']}", headers=headers)
+    assert blocked.status_code == 403
+    assert "MFA enrollment is required" in blocked.json()["detail"]
+    assert client.get("/auth/mfa", headers=headers).json()["required"] is True
+
+    enrollment = client.post("/auth/mfa/enrollment", headers=headers)
+    secret = enrollment.json()["secret"]
+    enabled = client.post(
+        "/auth/mfa/confirm", headers=headers, json={"code": mfa.totp_code(secret)}
+    )
+    assert enabled.status_code == 200
+    assert client.get(f"/organizations/{owner['organization_id']}", headers=headers).status_code == 200
+    assert client.get("/auth/mfa", headers=headers).json()["can_disable"] is False
+    cannot_disable = client.post(
+        "/auth/mfa/disable",
+        headers=headers,
+        json={"password": "a-long-test-password", "code": mfa.totp_code(secret)},
+    )
+    assert cannot_disable.status_code == 403
 
 
 def test_totp_matches_rfc_6238_sha1_vector():
@@ -420,6 +459,11 @@ def test_owner_can_change_roles_and_mutations_create_audit_events(client: TestCl
         analyst_user_id = session.scalar(
             select(User.id).where(User.email_normalized == "role-analyst@example.test")
         )
+        session.execute(
+            update(User)
+            .where(User.id == analyst_user_id)
+            .values(privileged_mfa_grace_expires_at=None)
+        )
         analyst_membership = Membership(
             organization_id=owner["organization_id"],
             user_id=analyst_user_id,
@@ -432,10 +476,16 @@ def test_owner_can_change_roles_and_mutations_create_audit_events(client: TestCl
     changed = client.patch(
         f"/organizations/{owner['organization_id']}/members/{analyst_membership_id}",
         headers={"Authorization": f"Bearer {owner['access_token']}"},
-        json={"role": "analyst"},
+        json={"role": "admin"},
     )
     assert changed.status_code == 200
-    assert changed.json()["role"] == "analyst"
+    assert changed.json()["role"] == "admin"
+    with client.app.state.test_session_factory() as session:
+        target_user = session.get(User, changed.json()["user_id"])
+        deadline = target_user.privileged_mfa_grace_expires_at
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        assert deadline > datetime.now(UTC)
 
     removed = client.delete(
         f"/organizations/{owner['organization_id']}/members/{analyst_membership_id}",

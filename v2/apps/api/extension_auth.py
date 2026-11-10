@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from apps.api.auth import Principal, bearer, current_principal
+from apps.api.auth import Principal, bearer, current_principal, privileged_mfa_grace_expired
 from apps.api.config import get_settings
 from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
@@ -155,9 +155,13 @@ def list_authorizable_organizations(
         )
         .order_by(Membership.created_at, Membership.id)
     ).all()
+    user = session.get(User, principal.user_id)
+    if user is None or not user.is_active or not user.email_verified:
+        raise HTTPException(status_code=401, detail="Authentication required")
     organizations = [
         OAuthOrganization(id=organization_id, name=name, role=role)
         for organization_id, name, role in rows
+        if role not in {"owner", "admin"} or not privileged_mfa_grace_expired(user)
     ]
     return OAuthOrganizations(organizations=organizations)
 
@@ -193,6 +197,8 @@ def authorize_extension(
     user = session.get(User, principal.user_id)
     if user is None or not user.is_active or not user.email_verified:
         raise HTTPException(status_code=401, detail="Authentication required")
+    if membership.role in {"owner", "admin"} and privileged_mfa_grace_expired(user):
+        raise HTTPException(status_code=403, detail="MFA enrollment is required for owner/admin access")
 
     authorization_code = secrets.token_urlsafe(32)
     now = datetime.now(UTC)
@@ -271,6 +277,10 @@ def exchange_authorization_code(
         or user.token_version != row.token_version
         or membership is None
         or membership.role not in {"owner", "admin", "analyst"}
+        or (
+            membership.role in {"owner", "admin"}
+            and privileged_mfa_grace_expired(user)
+        )
     ):
         session.commit()
         raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
@@ -310,6 +320,8 @@ def list_extension_sessions(
             Organization.name,
             User.token_version,
             User.is_active,
+            User.mfa_enabled,
+            User.privileged_mfa_grace_expires_at,
             Membership.role,
         )
         .join(Organization, Organization.id == ExtensionSession.organization_id)
@@ -339,11 +351,27 @@ def list_extension_sessions(
                     not is_active
                     or extension_session.token_version != current_token_version
                     or role not in {"owner", "admin", "analyst"}
+                    or (
+                        role in {"owner", "admin"}
+                        and not mfa_enabled
+                        and (
+                            grace_expires_at is None
+                            or _as_utc(grace_expires_at) <= now
+                        )
+                    )
                 )
                 else "active"
             ),
         )
-        for extension_session, organization_name, current_token_version, is_active, role in rows
+        for (
+            extension_session,
+            organization_name,
+            current_token_version,
+            is_active,
+            mfa_enabled,
+            grace_expires_at,
+            role,
+        ) in rows
     ]
 
 
@@ -408,6 +436,8 @@ def extension_principal(
         raise HTTPException(status_code=401, detail="Invalid or expired extension authorization")
     if membership.role not in {"owner", "admin", "analyst"}:
         raise HTTPException(status_code=403, detail="Analyst role or higher is required")
+    if membership.role in {"owner", "admin"} and privileged_mfa_grace_expired(user):
+        raise HTTPException(status_code=403, detail="MFA enrollment is required for owner/admin access")
     return ExtensionPrincipal(
         session_id=extension_session.id,
         user_id=extension_session.user_id,

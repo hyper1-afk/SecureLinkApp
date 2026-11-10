@@ -234,7 +234,9 @@ async function loadOrganization() {
     return false;
   }
   if (!response.ok) {
-    setStatus("scan-status", "Organization details are unavailable. Return to the account page and sign in again.");
+    setStatus("scan-status", response.status === 403
+      ? "Owner/admin access needs MFA. Return to the account page to enable it, then reopen the dashboard."
+      : "Organization details are unavailable. Return to the account page and sign in again.");
     return false;
   }
   const organization = await response.json();

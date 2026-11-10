@@ -10,7 +10,7 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 
 ## Website, scan, and alert flow
 
-1. Register a test account and verify it through the message captured in Mailpit. Sign in and open the dashboard.
+1. Register a test account and verify it through the message captured in Mailpit. Sign in. The account page should show that the owner role requires MFA within seven days; enroll an authenticator and save the one-time recovery codes before continuing.
 2. Submit `https://demo-user:demo-password@example.com/private?token=demo-value` in **Inspect a link**.
 3. Confirm the result displays only `https://example.com/[path and query omitted]`, and that a high-priority case appears in **Cases** without manually opening it.
 4. Confirm an alert email is captured in Mailpit. It should identify the organization, severity, hostname, case ID, and dashboard link. It must not contain `demo-user`, `demo-password`, `/private`, or `demo-value`.

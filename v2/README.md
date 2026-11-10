@@ -8,7 +8,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 - Email verification is required before login. A same-origin account page supports registration, sign-in, verification, resend, and password recovery.
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
-- Optional TOTP multi-factor authentication uses separately encrypted secrets, 24-character one-time recovery codes stored only as hashes, rate-limited enrollment and disable actions, and session revocation when disabled. Web and extension OAuth sign-in both accept MFA codes.
+- TOTP MFA uses separately encrypted secrets, 24-character one-time recovery codes stored only as hashes, rate-limited enrollment, and session revocation when disabled. Owners/admins receive a seven-day enrollment grace period; privileged API and extension access is blocked after it expires until MFA is enabled. MFA cannot be disabled while holding a privileged role.
 - Password reset and logout increment a token version and invalidate existing access tokens.
 - Login and account lifecycle endpoints use Redis-backed IP rate limits and return 503 if Redis protection is unavailable.
 - Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
@@ -46,4 +46,4 @@ V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and 
 
 ## Production status
 
-Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and broader investigation workflows are not. Invitations to existing and new accounts, organization switching, optional account MFA, and MFA-protected ownership transfer are implemented. A documented and enforced MFA policy for owners/admins, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and broader investigation workflows are not. Invitations to existing and new accounts, organization switching, enforced owner/admin MFA with a seven-day grace period, and MFA-protected ownership transfer are implemented. Assisted recovery after all MFA factors are lost, local browser and staging validation of the extension integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
