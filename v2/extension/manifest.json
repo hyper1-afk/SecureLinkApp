@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "SecureLink V2 (Local Preview)",
+  "version": "0.1.0",
+  "description": "Submit links to your SecureLink V2 workspace for a structural security review.",
+  "permissions": ["identity", "storage"],
+  "host_permissions": ["http://localhost:8000/*"],
+  "action": {
+    "default_title": "SecureLink V2",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "service-worker.js" }
+}
