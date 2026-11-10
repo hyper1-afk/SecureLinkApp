@@ -23,10 +23,12 @@ from packages.security_core.models import (
     ScanEvidence,
     SecurityNotificationOutbox,
     SecuritySignal,
+    ThreatIndicator,
     UrlScan,
     User,
 )
 from packages.security_core.url_analysis import (
+    FindingDraft,
     PARSER_VERSION,
     InvalidScanURL,
     analyze_url,
@@ -190,6 +192,15 @@ async def _create_scan(
     )
     session.add(evidence)
     session.flush()
+    finding_drafts = list(analysis.findings)
+    if session.scalar(select(ThreatIndicator.id).where(
+        ThreatIndicator.organization_id == organization_id,
+        ThreatIndicator.hostname == analysis.hostname,
+    )):
+        finding_drafts.append(FindingDraft(
+            "tenant_threat_indicator_match", "medium", "Hostname matches an organization indicator",
+            "This hostname exactly matches an indicator maintained by your organization. Review its source and context; this match alone is not a safety verdict.",
+        ))
     findings = [
         Finding(
             organization_id=organization_id,
@@ -201,7 +212,7 @@ async def _create_scan(
             description=item.description,
             created_at=observed_at,
         )
-        for item in analysis.findings
+        for item in finding_drafts
     ]
     session.add_all(findings)
     severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}

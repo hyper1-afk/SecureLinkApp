@@ -105,6 +105,25 @@ class DomainAsset(Base):
     )
 
 
+class ThreatIndicator(Base):
+    """Organization-managed exact-host indicators; no external feed implied."""
+
+    __tablename__ = "threat_indicators"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "hostname", name="uq_threat_indicators_org_hostname"),
+        CheckConstraint("source = 'customer'", name="ck_threat_indicators_source"),
+        Index("ix_threat_indicators_org_hostname", "organization_id", "hostname"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    hostname: Mapped[str] = mapped_column(String(253), nullable=False)
+    source: Mapped[str] = mapped_column(String(16), default="customer", server_default="customer", nullable=False)
+    note: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class DomainMonitorState(Base):
     __tablename__ = "domain_monitor_states"
     __table_args__ = (

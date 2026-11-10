@@ -11,6 +11,7 @@ const caseTransitions = {
 };
 let canScan = false;
 let canManageAssets = false;
+let canManageIndicators = false;
 let canTransferOwnership = false;
 let caseScanIds = new Set();
 let caseSignalIds = new Set();
@@ -349,10 +350,13 @@ async function loadOrganization() {
   byId("organization-role").textContent = `Role: ${organization.role}`;
   canScan = ["owner", "admin", "analyst"].includes(organization.role);
   canManageAssets = ["owner", "admin"].includes(organization.role);
+  canManageIndicators = canManageAssets;
   canTransferOwnership = organization.role === "owner";
   byId("team-panel").hidden = !canManageAssets;
   byId("scan-submit").disabled = !canScan;
   byId("asset-submit").disabled = !canManageAssets;
+  byId("indicator-submit").disabled = !canManageIndicators;
+  if (!canManageIndicators) setStatus("indicator-status", "Only organization owners and admins can manage threat indicators.");
   if (!canScan) setStatus("scan-status", "Your viewer role can review results but cannot scan or update cases.");
   if (!canManageAssets) setStatus("asset-status", "Only organization owners and admins can add or verify domains.");
   const preferenceResponse = await request(`${apiBase}/notification-preferences`);
@@ -469,6 +473,45 @@ async function loadAssets() {
   renderAssets(await response.json());
 }
 
+async function loadIndicators() {
+  const response = await request(`${apiBase}/threat-indicators`);
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("indicator-status", "Organization indicators could not be loaded.");
+    return;
+  }
+  const indicators = await response.json();
+  const list = byId("indicator-list");
+  list.replaceChildren();
+  setStatus("indicator-status", indicators.length ? `${indicators.length} exact-host indicator(s).` : "No organization indicators yet.");
+  for (const item of indicators) {
+    const row = document.createElement("li");
+    row.className = "card";
+    const heading = document.createElement("h3");
+    heading.textContent = item.hostname;
+    row.append(heading);
+    if (item.note) {
+      const note = document.createElement("p");
+      note.textContent = item.note;
+      row.append(note);
+    }
+    if (canManageIndicators) row.append(makeButton("Remove indicator", () => deleteIndicator(item.id), "button-danger", "indicator-status"));
+    list.append(row);
+  }
+}
+
+async function deleteIndicator(id) {
+  if (!window.confirm("Remove this organization threat indicator?")) return;
+  const response = await request(`${apiBase}/threat-indicators/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("indicator-status", "The indicator could not be removed.");
+    return;
+  }
+  setStatus("indicator-status", "Indicator removed.");
+  await loadIndicators();
+}
+
 async function loadScans() {
   setStatus("history-status", "Loading link check history…");
   const response = await request(`${apiBase}/scans?limit=50`);
@@ -559,7 +602,7 @@ async function revokeExtensionSession(sessionId) {
 
 async function refreshAll() {
   await loadCases();
-  await Promise.all([loadAssets(), loadExtensionSessions(), loadMembers(), loadSignals(), loadScans()]);
+  await Promise.all([loadAssets(), loadIndicators(), loadExtensionSessions(), loadMembers(), loadSignals(), loadScans()]);
 }
 
 async function openCaseFromSignal(signalId) {
@@ -762,9 +805,39 @@ byId("asset-form").addEventListener("submit", async (event) => {
   }
 });
 
+byId("indicator-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canManageIndicators) return;
+  const button = byId("indicator-submit");
+  button.disabled = true;
+  setStatus("indicator-status", "Adding organization indicator…");
+  try {
+    const response = await request(`${apiBase}/threat-indicators`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hostname: byId("indicator-hostname").value, note: byId("indicator-note").value || null }),
+    });
+    if (response.status === 401) return clearSession();
+    if (!response.ok) {
+      setStatus("indicator-status", response.status === 409
+        ? "That hostname is already listed."
+        : "The indicator could not be added. Check the hostname and your permissions.");
+      return;
+    }
+    byId("indicator-form").reset();
+    setStatus("indicator-status", "Organization indicator added.");
+    await loadIndicators();
+  } catch {
+    setStatus("indicator-status", "SecureLink could not be reached. The indicator was not added.");
+  } finally {
+    button.disabled = !canManageIndicators;
+  }
+});
+
 byId("refresh-cases").addEventListener("click", loadCases);
 byId("refresh-signals").addEventListener("click", loadSignals);
 byId("refresh-assets").addEventListener("click", loadAssets);
+byId("refresh-indicators").addEventListener("click", loadIndicators);
 byId("refresh-members").addEventListener("click", loadMembers);
 byId("refresh-scans").addEventListener("click", loadScans);
 byId("refresh-extension-sessions").addEventListener("click", loadExtensionSessions);
@@ -820,6 +893,7 @@ if (!token) {
   setStatus("scan-status", "Sign in from the account page to use the dashboard.");
   byId("scan-submit").disabled = true;
   byId("asset-submit").disabled = true;
+  byId("indicator-submit").disabled = true;
 } else {
   loadMyOrganizations().then(async (ok) => {
     if (ok && await loadOrganization()) await refreshAll();

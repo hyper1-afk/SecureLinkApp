@@ -17,6 +17,7 @@ from apps.api.cases import router as cases_router
 from apps.api.config import get_settings
 from apps.api.extension_auth import router as extension_router
 from apps.api.scanning import router as scanning_router
+from apps.api.threat_intel import router as threat_intel_router
 
 
 class HealthResponse(BaseModel):
@@ -41,6 +42,7 @@ ACCOUNT_HEADERS = {
 app.include_router(auth_router)
 app.include_router(assets_router)
 app.include_router(scanning_router)
+app.include_router(threat_intel_router)
 app.include_router(cases_router)
 app.include_router(extension_router)
 app.mount("/assets", StaticFiles(directory=WEB_DIR), name="account-assets")

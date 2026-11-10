@@ -41,6 +41,7 @@ from packages.security_core.models import (
     ScanEvidence,
     SecurityNotificationOutbox,
     SecuritySignal,
+    ThreatIndicator,
     UrlScan,
     User,
 )
@@ -204,6 +205,54 @@ def test_scans_are_tenant_scoped_and_never_store_raw_url(client: TestClient):
     assert signals.json()[0]["source_type"] == "url_scan"
     assert signals.json()[0]["subject"] == "example.com"
     assert "topsecret" not in signals.text
+
+
+def test_tenant_managed_hostname_indicators_are_audited_and_exact_match_only(client: TestClient):
+    owner = register(client, "indicator-owner@example.test")
+    other = register(client, "indicator-other@example.test")
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    path = f"/organizations/{owner['organization_id']}/threat-indicators"
+
+    created = client.post(path, headers=owner_headers, json={
+        "hostname": "Bad.Example.com.", "note": "Customer supplied report",
+    })
+    assert created.status_code == 201
+    assert created.json()["hostname"] == "bad.example.com"
+    assert client.get(path, headers=other_headers).status_code == 404
+    assert client.post(path, headers=owner_headers, json={"hostname": "https://bad.example.com/path"}).status_code == 422
+    assert client.post(path, headers=owner_headers, json={"hostname": "bad.example.com"}).status_code == 409
+
+    exact = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=owner_headers,
+        json={"url": "https://bad.example.com/login?email=private@example.com"},
+    )
+    subdomain = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=owner_headers,
+        json={"url": "https://sub.bad.example.com/"},
+    )
+    unrelated_tenant = client.post(
+        f"/organizations/{other['organization_id']}/scans",
+        headers=other_headers,
+        json={"url": "https://bad.example.com/"},
+    )
+    assert exact.status_code == subdomain.status_code == unrelated_tenant.status_code == 201
+    assert "tenant_threat_indicator_match" in {item["detector_code"] for item in exact.json()["findings"]}
+    assert "tenant_threat_indicator_match" not in {item["detector_code"] for item in subdomain.json()["findings"]}
+    assert "tenant_threat_indicator_match" not in {item["detector_code"] for item in unrelated_tenant.json()["findings"]}
+    assert "private@example.com" not in exact.text
+
+    with client.app.state.test_session_factory() as session:
+        events = session.scalars(select(AuditEvent).where(
+            AuditEvent.organization_id == owner["organization_id"],
+            AuditEvent.action == "threat_indicator.created",
+        )).all()
+        assert len(events) == 1
+        assert session.scalar(select(ThreatIndicator.hostname).where(
+            ThreatIndicator.organization_id == owner["organization_id"],
+        )) == "bad.example.com"
 
 
 def test_viewers_cannot_start_scans(client: TestClient):

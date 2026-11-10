@@ -128,6 +128,27 @@
       </div>
     </section>
 
+    <section class="panel" aria-labelledby="indicators-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="indicators-title">Organization threat indicators</h2>
+          <p class="muted">Add exact hostnames reported by your team. Checks match only the exact hostname and create a review finding; this list is not a global threat feed.</p>
+        </div>
+        <button id="refresh-indicators" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <form id="indicator-form">
+        <label for="indicator-hostname">Hostname</label>
+        <div class="form-row">
+          <input id="indicator-hostname" type="text" maxlength="253" placeholder="suspicious.example" required>
+          <button id="indicator-submit" type="submit">Add indicator</button>
+        </div>
+        <label for="indicator-note">Note (optional)</label>
+        <input id="indicator-note" type="text" maxlength="240" placeholder="Source or investigation reference">
+      </form>
+      <p id="indicator-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="indicator-list" class="card-list"></ol>
+    </section>
+
     <section class="panel" aria-labelledby="history-title">
       <div class="section-heading">
         <div>
