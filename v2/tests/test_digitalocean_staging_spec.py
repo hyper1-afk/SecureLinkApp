@@ -62,8 +62,14 @@ def test_spec_contains_no_secrets_or_domain_monitor_worker() -> None:
     spec = yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))
     serialized = SPEC_PATH.read_text(encoding="utf-8").casefold()
 
+    component_envs = [
+        env
+        for component in [*spec["services"], *spec["workers"], *spec["jobs"]]
+        for env in component.get("envs", [])
+    ]
+
     assert "domain-monitor-worker" not in {worker["name"] for worker in spec["workers"]}
-    assert all(env.get("type") != "SECRET" for env in spec["envs"])
-    assert "database_url" not in {env["key"].casefold() for env in spec["envs"]}
+    assert all(env.get("type") != "SECRET" for env in component_envs)
+    assert "database_url" not in {env["key"].casefold() for env in component_envs}
     assert "rediss://" not in serialized
     assert "postgresql+psycopg://" not in serialized
