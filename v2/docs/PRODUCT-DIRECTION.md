@@ -79,7 +79,7 @@ Prove backup restore, alert delivery, incident response, capacity limits, securi
 
 ## Current position
 
-The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a basic scan dashboard, a local Compose environment, and the first domain asset inventory slice with DNS ownership verification. Ownership verification does not itself run monitoring. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, correlated cases, automated investigation, the full SOC dashboard, billing, or V2 extension integration. It is not production-ready.
+The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a basic scan dashboard, a local Compose environment, DNS ownership verification for domain assets, and an evidence-backed case lifecycle for scan findings. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, automated investigation, the full SOC dashboard, billing, or V2 extension integration. It is not production-ready.
 
 ## Feature portfolio: acquisition hypotheses
 

@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from apps.api.assets import router as assets_router
 from apps.api.auth import router as auth_router
+from apps.api.cases import router as cases_router
 from apps.api.config import get_settings
 from apps.api.scanning import router as scanning_router
 
@@ -39,6 +40,7 @@ ACCOUNT_HEADERS = {
 app.include_router(auth_router)
 app.include_router(assets_router)
 app.include_router(scanning_router)
+app.include_router(cases_router)
 app.mount("/assets", StaticFiles(directory=WEB_DIR), name="account-assets")
 
 

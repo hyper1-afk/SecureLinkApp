@@ -248,3 +248,72 @@ class Finding(Base):
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class IncidentCase(Base):
+    __tablename__ = "incident_cases"
+    __table_args__ = (
+        UniqueConstraint("id", "organization_id", name="uq_incident_cases_id_organization"),
+        UniqueConstraint("scan_id", "organization_id", name="uq_incident_cases_scan_organization"),
+        CheckConstraint(
+            "status IN ('open', 'investigating', 'awaiting_approval', 'resolved', 'false_positive')",
+            name="ck_incident_cases_status",
+        ),
+        CheckConstraint(
+            "severity IN ('critical', 'high', 'medium', 'low', 'informational')",
+            name="ck_incident_cases_severity",
+        ),
+        Index("ix_incident_cases_org_status_created", "organization_id", "status", "created_at"),
+        ForeignKeyConstraint(
+            ["scan_id", "organization_id"],
+            ["url_scans.id", "url_scans.organization_id"],
+            name="fk_incident_cases_scan_organization",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    scan_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(24), default="open", server_default="open", nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    summary: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), onupdate=utc_now, nullable=False
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class CaseFinding(Base):
+    __tablename__ = "case_findings"
+    __table_args__ = (
+        UniqueConstraint("case_id", "finding_id", name="uq_case_findings_case_finding"),
+        UniqueConstraint("finding_id", "organization_id", name="uq_case_findings_finding_organization"),
+        ForeignKeyConstraint(
+            ["case_id", "organization_id"],
+            ["incident_cases.id", "incident_cases.organization_id"],
+            name="fk_case_findings_case_organization",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["finding_id", "organization_id"],
+            ["findings.id", "findings.organization_id"],
+            name="fk_case_findings_finding_organization",
+            ondelete="CASCADE",
+        ),
+        Index("ix_case_findings_case", "case_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    case_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    finding_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)

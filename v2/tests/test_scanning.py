@@ -15,9 +15,11 @@ from apps.api.db import get_session
 from packages.security_core.models import (
     AuditEvent,
     Base,
+    CaseFinding,
     DomainAsset,
     EmailActionToken,
     Finding,
+    IncidentCase,
     Membership,
     ScanEvidence,
     UrlScan,
@@ -288,6 +290,93 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
         json={"hostname": "example.com"},
     )
     assert response.status_code == 403
+
+
+def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
+    owner = register(client, "case-owner@example.test")
+    other = register(client, "case-other@example.test")
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+
+    scan_response = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=owner_headers,
+        json={"url": "https://alice:secret@example.com/path?access_token=topsecret"},
+    )
+    assert scan_response.status_code == 201
+    scan = scan_response.json()
+    assert scan["findings"]
+
+    case_response = client.post(
+        f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
+        headers=owner_headers,
+    )
+    assert case_response.status_code == 201
+    case = case_response.json()
+    assert case["status"] == "open"
+    assert case["hostname"] == "example.com"
+    assert len(case["findings"]) == len(scan["findings"])
+    assert "topsecret" not in case_response.text
+
+    duplicate = client.post(
+        f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
+        headers=owner_headers,
+    )
+    assert duplicate.status_code == 200
+    assert duplicate.json()["id"] == case["id"]
+
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/cases/{case['id']}", headers=other_headers
+    ).status_code == 404
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/cases", headers=other_headers
+    ).status_code == 404
+
+    invalid_transition = client.patch(
+        f"/organizations/{owner['organization_id']}/cases/{case['id']}/status",
+        headers=owner_headers,
+        json={"status": "awaiting_approval"},
+    )
+    assert invalid_transition.status_code == 409
+    for next_status in ("investigating", "awaiting_approval", "resolved"):
+        updated = client.patch(
+            f"/organizations/{owner['organization_id']}/cases/{case['id']}/status",
+            headers=owner_headers,
+            json={"status": next_status},
+        )
+        assert updated.status_code == 200
+        assert updated.json()["status"] == next_status
+    assert updated.json()["closed_at"] is not None
+
+    with client.app.state.test_session_factory() as session:
+        stored = session.get(IncidentCase, case["id"])
+        links = session.scalars(
+            select(CaseFinding).where(CaseFinding.case_id == case["id"])
+        ).all()
+        events = session.scalars(
+            select(AuditEvent).where(AuditEvent.target_id == case["id"])
+        ).all()
+        assert stored.status == "resolved"
+        assert len(links) == len(scan["findings"])
+        assert sum(event.action == "case.status_changed" for event in events) == 3
+        assert any(event.action == "case.created_from_scan" for event in events)
+
+
+def test_clean_scan_cannot_open_empty_case(client: TestClient):
+    owner = register(client, "case-empty-scan@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    scan_response = client.post(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=headers,
+        json={"url": "https://example.com/"},
+    )
+    assert scan_response.status_code == 201
+    assert scan_response.json()["findings"] == []
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/cases/from-scan/{scan_response.json()['id']}",
+        headers=headers,
+    )
+    assert response.status_code == 409
 
 
 def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: TestClient):
