@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             var score = r.score || 0;
             var threats = r.threats || [];
             if (score < 30) {
-                showResult('safe', '✓', 'Safe', 'Risk score: ' + score + '/100', threats);
+                showResult('safe', '✓', 'No threat flagged', 'Risk score: ' + score + '/100', threats);
             } else if (score < 50) {
                 showResult('warning', '!', 'Suspicious', 'Risk score: ' + score + '/100 — proceed with caution', threats);
             } else {
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             var threats = (resp.threats || []).concat(resp.warnings || []).slice(0, 5);
 
             if (score < 30) {
-                showResult('safe',    'OK',  'Safe',            'Risk score: ' + score + '/100', threats);
+                showResult('safe',    'OK',  'No threat flagged', 'Risk score: ' + score + '/100', threats);
             } else if (score < 70) {
                 showResult('warning', '!',   'Suspicious',      'Risk score: ' + score + '/100 - proceed with caution', threats);
             } else {

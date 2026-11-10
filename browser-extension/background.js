@@ -8,6 +8,7 @@ import {
     readAuthorizationCallback,
     validateApiOrigin
 } from './v2-oauth.js';
+import { legacyScanFailure, normalizeLegacyScan } from './legacy-scan.js';
 
 const DEFAULT_API_BASE = 'https://securelinkapp.com';
 const PUBLISHED_EXTENSION_ID = 'dpegeipjmofhdikcbniodhohpckoeole';
@@ -301,7 +302,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 // Check URL against our API
 async function checkUrl(url) {
     try {
-        if (!API_BASE) return { error: true, riskScore: 0, threats: [], message: 'Legacy API is not configured in this unpacked build.' };
+        if (!API_BASE) return legacyScanFailure('Legacy API is not configured in this unpacked build.');
         const headers = { 'Content-Type': 'application/json' };
         
         // Add auth token if logged in
@@ -327,28 +328,13 @@ async function checkUrl(url) {
         }
         
         if (!response.ok) {
-            return { error: true, riskScore: 0, threats: [], message: 'Legacy scanner could not reach its API.' };
+            return legacyScanFailure('Legacy scanner could not reach its API.');
         }
         
         const data = await response.json();
-        
-        // API returns 0-1 scale, convert to 0-100
-        let riskScore = data.risk_score || 0;
-        if (riskScore <= 1) {
-            riskScore = Math.round(riskScore * 100);
-        }
-        
-        return {
-            riskScore: riskScore,
-            threats: data.threats_detected || data.threats || [],
-            warnings: data.warnings || [],
-            isSafe: data.is_safe,
-            scansRemaining: data.scans_remaining,
-            subscriptionTier: data.subscription_tier,
-            message: data.message || ''
-        };
+        return normalizeLegacyScan(data);
     } catch (_) {
-        return { error: true, riskScore: 0, threats: [], message: 'Legacy scanner could not verify this link.' };
+        return legacyScanFailure('Legacy scanner could not verify this link.');
     }
 }
 

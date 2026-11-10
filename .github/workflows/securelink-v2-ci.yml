@@ -77,7 +77,9 @@ jobs:
           node --check ../browser-extension/popup.js
           node --check ../browser-extension/v2-popup.js
           node --check ../browser-extension/v2-oauth.js
+          node --check ../browser-extension/legacy-scan.js
           node --test ../browser-extension/tests/v2-oauth.test.js
+          node --test ../browser-extension/tests/legacy-scan.test.js
 
       - name: Audit Python dependencies
         run: pip-audit
