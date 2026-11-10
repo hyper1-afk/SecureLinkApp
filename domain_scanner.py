@@ -1,6 +1,6 @@
 """
 Domain Scanner - Attack Surface Monitoring Engine
-Scans domains for security posture: SSL, headers, DNS, WHOIS, breaches, and technology fingerprinting.
+Scans domains for security posture: SSL, headers, DNS, WHOIS, and technology fingerprinting.
 Reuses core analysis from LinkVerifier and extends it for continuous monitoring.
 
 Copyright (c) 2026 SecureLink. All rights reserved.
@@ -814,59 +814,14 @@ class DomainScanner:
     # ================================================================
 
     def _check_breaches(self, domain: str) -> Tuple[Dict, List[SecurityFinding]]:
-        """Check domain for known data breaches"""
-        findings = []
-        info = {'checked': False, 'breaches': []}
-
-        import os
-        api_key = os.environ.get('HIBP_API_KEY')
-
-        if not api_key:
-            info['demo_mode'] = True
-            info['message'] = 'Breach monitoring requires a HaveIBeenPwned API key.'
-            return info, findings
-
-        try:
-            # Search for breaches associated with this domain
-            response = requests.get(
-                f"https://haveibeenpwned.com/api/v3/breaches",
-                headers={
-                    "hibp-api-key": api_key,
-                    "User-Agent": "SecureLink-DomainScanner"
-                },
-                timeout=10
-            )
-
-            if response.status_code == 200:
-                all_breaches = response.json()
-                # Filter breaches that match this domain
-                domain_breaches = [b for b in all_breaches if b.get('Domain', '').lower() == domain.lower()]
-
-                info['checked'] = True
-                info['breaches'] = [{
-                    'name': b.get('Name'),
-                    'date': b.get('BreachDate'),
-                    'pwn_count': b.get('PwnCount', 0),
-                    'data_classes': b.get('DataClasses', []),
-                    'description': b.get('Description', '')[:200]
-                } for b in domain_breaches]
-
-                if domain_breaches:
-                    total_accounts = sum(b.get('PwnCount', 0) for b in domain_breaches)
-                    findings.append(SecurityFinding(
-                        category=FindingCategory.BREACH.value,
-                        severity=FindingSeverity.HIGH.value,
-                        title=f'{len(domain_breaches)} Known Data Breach(es)',
-                        description=f'This domain has been involved in {len(domain_breaches)} known data breach(es) affecting approximately {total_accounts:,} accounts.',
-                        remediation='Review breached data types, force password resets for affected accounts, and implement additional security controls.',
-                        details={'breach_count': len(domain_breaches), 'total_accounts': total_accounts}
-                    ))
-
-        except Exception as e:
-            info['error'] = str(e)[:200]
-            logger.warning(f"Breach check error for {domain}: {e}")
-
-        return info, findings
+        """Report unavailable without making a paid breach-provider call."""
+        del domain
+        return {
+            'checked': False,
+            'available': False,
+            'breaches': [],
+            'message': 'Domain breach lookup is disabled; SecureLink does not call paid breach-search APIs.'
+        }, []
 
     # ================================================================
     #  IDS Checks

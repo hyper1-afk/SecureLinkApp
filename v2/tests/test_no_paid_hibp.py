@@ -11,6 +11,9 @@ def test_runtime_has_no_paid_hibp_credentials_or_endpoints():
         REPO_ROOT / "config.py",
         REPO_ROOT / "features.py",
         REPO_ROOT / "dark_web_monitor.py",
+        REPO_ROOT / "domain_scanner.py",
+        REPO_ROOT / "vercel.json",
+        REPO_ROOT / ".env.example",
         REPO_ROOT / ".env.docker.example",
     ]
     runtime = "\n".join(path.read_text(encoding="utf-8") for path in runtime_files)
@@ -19,6 +22,7 @@ def test_runtime_has_no_paid_hibp_credentials_or_endpoints():
     assert "hibp_api_key" not in lowered
     assert "api/v3/breachedaccount" not in lowered
     assert "api/v3/pasteaccount" not in lowered
+    assert "api/v3/breaches" not in lowered
     assert "haveibeenpwned.com/api" not in lowered
 
 
