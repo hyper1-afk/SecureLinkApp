@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showResult('info', '!', 'Page scan unavailable', response?.error || 'Open a regular web page and try again.', []);
                 return;
             }
-            showResult('scanning', '…', 'Page scan started', response?.message || 'Results will appear on the page.', []);
+            showResult('info', '…', 'Page scan started', response?.message || 'Results will appear on the page.', []);
         });
     }
 

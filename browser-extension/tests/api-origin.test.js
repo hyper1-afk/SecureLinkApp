@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { configuredApiOrigin, validateApiOrigin } from "../api-origin.js";
+import { configuredApiOrigin, requestApiOriginPermission, validateApiOrigin } from "../api-origin.js";
 
 test("accepts HTTPS API origins and localhost development", () => {
   assert.equal(validateApiOrigin("https://api.example.test").origin, "https://api.example.test");
@@ -25,5 +25,30 @@ test("rejects API origins that can expose credentials or target an unexpected en
     "https://example.test/#fragment",
   ]) {
     assert.throws(() => validateApiOrigin(value), `${value} should be rejected`);
+  }
+});
+
+test("requests permission only for the configured API origin and reports denial", async () => {
+  const originalChrome = globalThis.chrome;
+  const requests = [];
+  globalThis.chrome = {
+    permissions: {
+      request(options, callback) {
+        requests.push(options);
+        callback(requests.length === 1);
+      },
+    },
+    runtime: {},
+  };
+  try {
+    assert.equal(await requestApiOriginPermission("https://api.example.test"), true);
+    assert.equal(await requestApiOriginPermission("http://localhost:8000"), false);
+    assert.deepEqual(requests, [
+      { origins: ["https://api.example.test/*"] },
+      { origins: ["http://localhost:8000/*"] },
+    ]);
+  } finally {
+    if (originalChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = originalChrome;
   }
 });
