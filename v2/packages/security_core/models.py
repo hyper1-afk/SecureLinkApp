@@ -218,6 +218,7 @@ class ScanEvidence(Base):
 class Finding(Base):
     __tablename__ = "findings"
     __table_args__ = (
+        UniqueConstraint("id", "organization_id", name="uq_findings_id_organization"),
         ForeignKeyConstraint(
             ["scan_id", "organization_id"],
             ["url_scans.id", "url_scans.organization_id"],

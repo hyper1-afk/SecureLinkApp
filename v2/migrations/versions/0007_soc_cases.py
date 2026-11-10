@@ -53,6 +53,9 @@ def upgrade() -> None:
         "incident_cases",
         ["organization_id", "status", "created_at"],
     )
+    op.create_unique_constraint(
+        "uq_findings_id_organization", "findings", ["id", "organization_id"]
+    )
     op.create_table(
         "case_findings",
         sa.Column("id", sa.Uuid(as_uuid=False), nullable=False),
@@ -82,5 +85,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_case_findings_case", table_name="case_findings")
     op.drop_table("case_findings")
+    op.drop_constraint("uq_findings_id_organization", "findings", type_="unique")
     op.drop_index("ix_incident_cases_org_status_created", table_name="incident_cases")
     op.drop_table("incident_cases")
