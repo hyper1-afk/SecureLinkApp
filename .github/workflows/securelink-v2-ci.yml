@@ -121,6 +121,11 @@ jobs:
       - name: Apply PostgreSQL migrations
         run: alembic upgrade head
 
+      - name: Verify latest migration downgrade and reapply
+        run: |
+          alembic downgrade 0018_threat_indicators
+          alembic upgrade head
+
       - name: Run tests
         run: pytest -q
 
