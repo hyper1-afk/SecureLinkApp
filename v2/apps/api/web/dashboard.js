@@ -260,20 +260,34 @@ async function loadOrganization() {
   }
   const deliveryStatus = byId("notification-delivery-status");
   deliveryStatus.hidden = !canManageAssets;
+  byId("refresh-notification-status").hidden = !canManageAssets;
   if (canManageAssets) {
-    const deliveryResponse = await request(`${apiBase}/notification-status`);
-    if (deliveryResponse.ok) {
-      const delivery = await deliveryResponse.json();
-      deliveryStatus.textContent = `${delivery.pending_count} pending, ${delivery.failed_count} failed alert email(s).`;
-      if (delivery.oldest_pending_at) {
-        deliveryStatus.textContent += ` Oldest pending since ${new Date(delivery.oldest_pending_at).toLocaleString()}.`;
-      }
-    } else {
-      deliveryStatus.textContent = "Alert delivery status is unavailable.";
-    }
+    await loadNotificationDeliveryStatus();
   }
   return true;
 }
+
+async function loadNotificationDeliveryStatus() {
+  if (!canManageAssets) return;
+  const response = await request(`${apiBase}/notification-status`);
+  if (response.status === 401) return clearSession();
+  const status = byId("notification-delivery-status");
+  if (!response.ok) {
+    status.textContent = "Alert delivery status is unavailable.";
+    return;
+  }
+  const delivery = await response.json();
+  status.textContent = `${delivery.pending_count} pending, ${delivery.failed_count} failed alert email(s).`;
+  if (delivery.oldest_pending_at) {
+    status.textContent += ` Oldest pending since ${new Date(delivery.oldest_pending_at).toLocaleString()}.`;
+  }
+}
+
+byId("refresh-notification-status").addEventListener("click", () => {
+  loadNotificationDeliveryStatus().catch(() => {
+    setStatus("notification-preference-status", "Alert delivery status is unavailable.");
+  });
+});
 
 byId("priority-email-enabled").addEventListener("change", async (event) => {
   const checkbox = event.currentTarget;
@@ -526,7 +540,7 @@ byId("scan-form").addEventListener("submit", async (event) => {
     await response.json();
     setStatus("scan-status", "URL structure inspection complete. This is not a malware or safety verdict.");
     byId("scan-form").reset();
-    await Promise.all([loadCases(), loadScans()]);
+    await Promise.all([loadCases(), loadScans(), loadNotificationDeliveryStatus()]);
   } catch {
     setStatus("scan-status", "SecureLink could not be reached. The URL was not confirmed or classified.");
   } finally {
