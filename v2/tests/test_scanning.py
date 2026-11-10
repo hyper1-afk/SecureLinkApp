@@ -815,6 +815,11 @@ def test_case_approval_requires_separate_owner_review_and_never_executes_action(
         headers=analyst_headers,
         json={"decision": "approved"},
     ).status_code == 403
+    assert client.post(
+        case_url + f"/approvals/{approval['id']}/decision",
+        headers=owner_headers,
+        json={"decision": "approved", "note": "   "},
+    ).status_code == 422
     decision = client.post(
         case_url + f"/approvals/{approval['id']}/decision",
         headers=owner_headers,
@@ -830,6 +835,40 @@ def test_case_approval_requires_separate_owner_review_and_never_executes_action(
         assert session.scalar(select(AuditEvent).where(
             AuditEvent.action == "case.approval_approved", AuditEvent.target_id == approval["id"],
         )) is not None
+
+    expiring = client.post(
+        case_url + "/approvals",
+        headers=analyst_headers,
+        json={"action": "disable_domain_monitoring", "rationale": "Review monitoring scope."},
+    )
+    assert expiring.status_code == 201
+    expiring_id = expiring.json()["id"]
+    with client.app.state.test_session_factory() as session:
+        stored = session.get(CaseApproval, expiring_id)
+        assert stored is not None
+        stored.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        session.commit()
+    history = client.get(case_url + "/approvals", headers=owner_headers)
+    assert history.status_code == 200
+    assert next(item for item in history.json() if item["id"] == expiring_id)["status"] == "expired"
+    assert client.get(case_url, headers=owner_headers).json()["status"] == "investigating"
+    with client.app.state.test_session_factory() as session:
+        expiry_audit = session.scalar(select(AuditEvent).where(
+            AuditEvent.action == "case.approval_expired", AuditEvent.target_id == expiring_id,
+        ))
+        assert expiry_audit is not None and expiry_audit.actor_type == "system"
+
+    owner_request = client.post(
+        case_url + "/approvals",
+        headers=owner_headers,
+        json={"action": "disable_threat_indicator", "rationale": "Test requester reviewer separation."},
+    )
+    assert owner_request.status_code == 201
+    assert client.post(
+        case_url + f"/approvals/{owner_request.json()['id']}/decision",
+        headers=owner_headers,
+        json={"decision": "approved", "note": "I cannot approve my own request."},
+    ).status_code == 403
 
 
 def test_generic_monitor_signal_can_open_a_tenant_scoped_case(client: TestClient):

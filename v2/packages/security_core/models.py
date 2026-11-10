@@ -548,6 +548,11 @@ class CaseApproval(Base):
             "status IN ('pending', 'approved', 'rejected', 'expired')",
             name="ck_case_approvals_status",
         ),
+        CheckConstraint(
+            "status NOT IN ('approved', 'rejected') OR "
+            "(reviewer_user_id IS NOT NULL AND decision_note IS NOT NULL AND decided_at IS NOT NULL)",
+            name="ck_case_approvals_decision_fields",
+        ),
         CheckConstraint("requester_user_id <> reviewer_user_id", name="ck_case_approvals_no_self_review"),
         Index(
             "uq_case_approvals_one_pending_per_case",

@@ -10,6 +10,7 @@ const caseTransitions = {
   false_positive: ["investigating"],
 };
 let canScan = false;
+let canReviewApprovals = false;
 let canManageAssets = false;
 let canManageIndicators = false;
 let canTransferOwnership = false;
@@ -152,14 +153,17 @@ function renderCases(cases) {
       const label = document.createElement("label");
       const select = document.createElement("select");
       select.setAttribute("aria-label", `Change status for ${incident.title}`);
-      for (const value of caseTransitions[incident.status] || []) {
+      const availableTransitions = caseTransitions[incident.status] || [];
+      for (const value of availableTransitions) {
         const option = document.createElement("option");
         option.value = value;
         option.textContent = value.replaceAll("_", " ");
         select.append(option);
       }
-      label.append(select);
-      controls.append(label, makeButton("Update case", () => updateCase(incident.id, select.value), ""));
+      if (availableTransitions.length) {
+        label.append(select);
+        controls.append(label, makeButton("Update case", () => updateCase(incident.id, select.value), ""));
+      }
       const noteInput = document.createElement("textarea");
       noteInput.maxLength = 4000;
       noteInput.setAttribute("aria-label", `Investigation note for ${incident.title}`);
@@ -171,6 +175,59 @@ function renderCases(cases) {
         "case-status",
       ));
       item.append(controls);
+
+      if (incident.status === "investigating") {
+        const approvalForm = document.createElement("form");
+        approvalForm.className = "case-controls";
+        const actionLabel = document.createElement("label");
+        actionLabel.textContent = "Response approval request (records intent only)";
+        const actionSelect = document.createElement("select");
+        actionSelect.required = true;
+        actionSelect.setAttribute("aria-label", `Requested response for ${incident.title}`);
+        const actionOptions = [
+          ["", "Choose a proposed action"],
+          ["disable_domain_monitoring", "Disable domain monitoring"],
+          ["disable_threat_indicator", "Disable an organization threat indicator"],
+          ["revoke_extension_sessions", "Revoke extension sessions"],
+        ];
+        for (const [value, title] of actionOptions) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = title;
+          actionSelect.append(option);
+        }
+        actionLabel.append(actionSelect);
+        const rationale = document.createElement("textarea");
+        rationale.required = true;
+        rationale.maxLength = 1000;
+        rationale.placeholder = "Explain why this action is requested (1,000 characters max)";
+        rationale.setAttribute("aria-label", `Approval rationale for ${incident.title}`);
+        const warning = document.createElement("p");
+        warning.className = "notice";
+        warning.textContent = "This saves an approval record only. SecureLink will not perform the action.";
+        const submit = document.createElement("button");
+        submit.type = "submit";
+        submit.textContent = "Request owner/admin approval";
+        approvalForm.append(actionLabel, rationale, warning, submit);
+        approvalForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          requestCaseApproval(incident.id, actionSelect.value, rationale.value)
+            .catch(() => setStatus("case-status", "The approval request could not be submitted."));
+        });
+        item.append(approvalForm);
+      }
+    }
+    if (incident.status === "awaiting_approval") {
+      const approvalPanel = document.createElement("div");
+      approvalPanel.className = "case-controls";
+      const heading = document.createElement("h4");
+      heading.textContent = "Approval review";
+      const approvalList = document.createElement("ol");
+      approvalList.className = "case-notes";
+      approvalPanel.append(heading, approvalList);
+      item.append(approvalPanel);
+      loadCaseApprovals(incident.id, approvalList)
+        .catch(() => setStatus("case-status", "Approval requests could not be loaded."));
     }
     list.append(item);
   }
@@ -349,6 +406,7 @@ async function loadOrganization() {
   byId("organization-name").textContent = organization.name;
   byId("organization-role").textContent = `Role: ${organization.role}`;
   canScan = ["owner", "admin", "analyst"].includes(organization.role);
+  canReviewApprovals = ["owner", "admin"].includes(organization.role);
   canManageAssets = ["owner", "admin"].includes(organization.role);
   canManageIndicators = canManageAssets;
   canTransferOwnership = organization.role === "owner";
@@ -661,6 +719,84 @@ async function updateCase(caseId, nextStatus) {
     return;
   }
   setStatus("case-status", "Case updated and recorded in the audit history.");
+  await loadCases();
+}
+
+async function requestCaseApproval(caseId, action, rationale) {
+  setStatus("case-status", "Submitting approval request…");
+  const response = await request(`${apiBase}/cases/${encodeURIComponent(caseId)}/approvals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, rationale }),
+  });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("case-status", response.status === 409
+      ? "This case is not ready for a new approval request. Refresh and review its status."
+      : "The approval request could not be saved.");
+    return;
+  }
+  setStatus("case-status", "Approval request recorded. A different owner/admin must review it within 24 hours.");
+  await loadCases();
+}
+
+async function loadCaseApprovals(caseId, list) {
+  const response = await request(`${apiBase}/cases/${encodeURIComponent(caseId)}/approvals`);
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("case-status", "Approval requests could not be loaded.");
+    return;
+  }
+  const approvals = await response.json();
+  list.replaceChildren();
+  for (const approval of approvals) {
+    const item = document.createElement("li");
+    const summary = document.createElement("p");
+    summary.textContent = `${approval.action.replaceAll("_", " ")} — ${approval.status}; expires ${new Date(approval.expires_at).toLocaleString()}`;
+    const rationale = document.createElement("p");
+    rationale.textContent = approval.rationale;
+    item.append(summary, rationale);
+    if (approval.decision_note) {
+      const decisionNote = document.createElement("p");
+      decisionNote.textContent = `Reviewer note: ${approval.decision_note}`;
+      item.append(decisionNote);
+    }
+    if (approval.status === "pending" && canReviewApprovals) {
+      item.append(
+        makeButton("Approve record", () => decideCaseApproval(caseId, approval.id, "approved")),
+        makeButton("Reject record", () => decideCaseApproval(caseId, approval.id, "rejected")),
+      );
+    }
+    list.append(item);
+  }
+  if (approvals.some((approval) => approval.status === "expired")) await loadCases();
+}
+
+async function decideCaseApproval(caseId, approvalId, decision) {
+  const verb = decision === "approved" ? "approve" : "reject";
+  if (!window.confirm(`Record a decision to ${verb} this request? No response action will run.`)) return;
+  const note = window.prompt("Give a short reason for this decision (required):");
+  if (note === null) return;
+  if (!note.trim()) {
+    setStatus("case-status", "A decision reason is required.");
+    return;
+  }
+  const response = await request(
+    `${apiBase}/cases/${encodeURIComponent(caseId)}/approvals/${encodeURIComponent(approvalId)}/decision`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision, note }),
+    },
+  );
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("case-status", response.status === 403
+      ? "Only a different owner/admin can review this request."
+      : "The approval decision could not be recorded.");
+    return;
+  }
+  setStatus("case-status", `Approval ${decision} recorded in the audit history. No response action was run.`);
   await loadCases();
 }
 

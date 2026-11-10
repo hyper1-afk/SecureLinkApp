@@ -31,6 +31,11 @@ def upgrade() -> None:
             name="ck_case_approvals_action",
         ),
         sa.CheckConstraint("status IN ('pending', 'approved', 'rejected', 'expired')", name="ck_case_approvals_status"),
+        sa.CheckConstraint(
+            "status NOT IN ('approved', 'rejected') OR "
+            "(reviewer_user_id IS NOT NULL AND decision_note IS NOT NULL AND decided_at IS NOT NULL)",
+            name="ck_case_approvals_decision_fields",
+        ),
         sa.CheckConstraint("requester_user_id <> reviewer_user_id", name="ck_case_approvals_no_self_review"),
         sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["requester_user_id"], ["users.id"], ondelete="RESTRICT"),
@@ -78,6 +83,7 @@ def upgrade() -> None:
                OR NEW.expires_at <> OLD.expires_at
                OR NEW.created_at <> OLD.created_at
                OR (NEW.reviewer_user_id IS NULL AND NEW.status <> ''expired'')
+               OR (NEW.status IN (''approved'', ''rejected'') AND NEW.decision_note IS NULL)
                OR NEW.decided_at IS NULL THEN
                 RAISE EXCEPTION ''case approval allows one audited decision only'';
             END IF;

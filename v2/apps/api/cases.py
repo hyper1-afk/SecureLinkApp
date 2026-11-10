@@ -57,7 +57,7 @@ class CaseApprovalCreate(BaseModel):
 
 class CaseApprovalDecision(BaseModel):
     decision: Literal["approved", "rejected"]
-    note: str | None = Field(default=None, max_length=1000)
+    note: str = Field(min_length=1, max_length=1000)
 
 
 class CaseApprovalResponse(BaseModel):
@@ -813,9 +813,12 @@ def decide_case_approval(
         raise HTTPException(status_code=409, detail="Approval expired")
     if case.status != "awaiting_approval":
         raise HTTPException(status_code=409, detail="Case is no longer awaiting approval")
+    decision_note = payload.note.strip()
+    if not decision_note:
+        raise HTTPException(status_code=422, detail="A decision reason is required")
     approval.status = payload.decision
     approval.reviewer_user_id = membership.user_id
-    approval.decision_note = payload.note.strip() if payload.note and payload.note.strip() else None
+    approval.decision_note = decision_note
     approval.decided_at = now
     case.status = "investigating"
     case.updated_at = now
@@ -852,6 +855,7 @@ def list_case_approvals(
         select(CaseApproval)
         .where(CaseApproval.case_id == str(case_id), CaseApproval.organization_id == membership.organization_id)
         .order_by(CaseApproval.created_at.desc(), CaseApproval.id)
+        .limit(100)
         .with_for_update()
     ).all()
     now = datetime.now(UTC)

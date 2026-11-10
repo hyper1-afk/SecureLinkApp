@@ -213,6 +213,7 @@ def test_postgres_case_approval_allows_one_decision_then_rejects_mutation():
             connection.execute(
                 text(
                     "UPDATE case_approvals SET status = 'approved', reviewer_user_id = :reviewer_id, "
+                    "decision_note = 'Reviewed test evidence', "
                     "decided_at = now() WHERE id = :id"
                 ),
                 {"reviewer_id": reviewer_id, "id": approval_id},
