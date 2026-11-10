@@ -1,11 +1,10 @@
 """Regression checks that SecureLink never re-enables paid HIBP lookups by accident."""
 
 import unittest
+import pathlib
 
-from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 class PaidHibpDisabledTests(unittest.TestCase):
