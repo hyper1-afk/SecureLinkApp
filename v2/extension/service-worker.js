@@ -5,6 +5,7 @@ import {
   readAuthorizationCallback,
   validateApiOrigin,
 } from "./oauth.js";
+import { redactUrlForSubmission } from "./url-privacy.js";
 
 // Local preview default. Change this origin when preparing a staging package.
 const API_BASE_URL = "http://localhost:8000";
@@ -75,6 +76,7 @@ async function disconnect() {
 
 async function scanUrl(rawUrl) {
   const api = assertApiUrl();
+  const sanitized = redactUrlForSubmission(rawUrl);
   const { [TOKEN_KEY]: accessToken, [TOKEN_META_KEY]: expiresAt } =
     await chrome.storage.session.get([TOKEN_KEY, TOKEN_META_KEY]);
   if (!accessToken || !expiresAt || expiresAt <= Date.now()) {
@@ -87,7 +89,7 @@ async function scanUrl(rawUrl) {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ url: rawUrl }),
+    body: JSON.stringify({ url: sanitized.url, redactions: sanitized.redactions }),
     cache: "no-store",
     credentials: "omit",
     referrerPolicy: "no-referrer",

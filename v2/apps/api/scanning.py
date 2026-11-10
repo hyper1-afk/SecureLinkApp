@@ -83,7 +83,7 @@ def _response(scan: UrlScan, findings: list[Finding]) -> ScanResponse:
     )
 
 
-async def _read_scan_url(request: Request) -> str:
+async def _read_scan_payload(request: Request) -> tuple[str, dict[str, object]]:
     content = bytearray()
     async for chunk in request.stream():
         content.extend(chunk)
@@ -95,7 +95,38 @@ async def _read_scan_url(request: Request) -> str:
         raise HTTPException(status_code=422, detail="Invalid scan request") from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("url"), str):
         raise HTTPException(status_code=422, detail="A URL string is required")
-    return payload["url"]
+    return payload["url"], payload
+
+
+async def _read_scan_url(request: Request) -> str:
+    raw_url, _payload = await _read_scan_payload(request)
+    return raw_url
+
+
+def _read_client_redactions(payload: dict[str, object]) -> dict[str, bool | int] | None:
+    redactions = payload.get("redactions")
+    if redactions is None:
+        return None
+    if not isinstance(redactions, dict):
+        raise HTTPException(status_code=422, detail="Invalid URL privacy metadata")
+    credentials_removed = redactions.get("credentials_removed")
+    fragment_removed = redactions.get("fragment_removed")
+    sensitive_count = redactions.get("sensitive_query_values_removed")
+    if (
+        type(credentials_removed) is not bool
+        or type(fragment_removed) is not bool
+        or type(sensitive_count) is not int
+        or not 0 <= sensitive_count <= 64
+        or set(redactions) != {
+            "credentials_removed", "fragment_removed", "sensitive_query_values_removed"
+        }
+    ):
+        raise HTTPException(status_code=422, detail="Invalid URL privacy metadata")
+    return {
+        "credentials_removed": credentials_removed,
+        "fragment_removed": fragment_removed,
+        "sensitive_query_values_removed": sensitive_count,
+    }
 
 
 @router.post(
@@ -121,6 +152,7 @@ async def _create_scan(
     user_id: str,
     session: Session,
     source_type: str = "url_scan",
+    client_reported_redactions: dict[str, bool | int] | None = None,
 ) -> ScanResponse:
     try:
         analysis = analyze_url(raw_url)
@@ -133,6 +165,8 @@ async def _create_scan(
         "parser_version": PARSER_VERSION,
         "attributes": analysis.evidence,
     }
+    if source_type == "extension_scan" and client_reported_redactions is not None:
+        evidence_payload["client_reported_redactions"] = client_reported_redactions
     serialized_evidence = json.dumps(evidence_payload, sort_keys=True, separators=(",", ":"))
     scan = UrlScan(
         organization_id=organization_id,

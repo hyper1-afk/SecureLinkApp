@@ -72,7 +72,9 @@ jobs:
           node --check extension/service-worker.js
           node --check extension/popup.js
           node --check extension/oauth.js
+          node --check extension/url-privacy.js
           node --test extension/tests/oauth.test.js
+          node --test extension/tests/url-privacy.test.js
           node --check ../browser-extension/background.js
           node --check ../browser-extension/popup.js
           node --check ../browser-extension/v2-popup.js

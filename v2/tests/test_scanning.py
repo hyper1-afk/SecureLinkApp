@@ -943,11 +943,38 @@ def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
     scan = client.post(
         "/extension/v1/scans",
         headers=extension_headers,
-        json={"url": "https://example.test/path?session=private"},
+        json={
+            "url": "https://example.test/path?session=%5BREDACTED%5D",
+            "redactions": {
+                "credentials_removed": True,
+                "fragment_removed": True,
+                "sensitive_query_values_removed": 1,
+            },
+        },
     )
     assert scan.status_code == 201
     assert scan.json()["display_url"] == "https://example.test/[path and query omitted]"
     assert "private" not in scan.text
+    with client.app.state.test_session_factory() as session:
+        evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == scan.json()["id"]))
+        assert evidence is not None
+        evidence_document = json.loads(evidence.payload)
+        assert evidence_document["client_reported_redactions"] == {
+            "credentials_removed": True,
+            "fragment_removed": True,
+            "sensitive_query_values_removed": 1,
+        }
+        assert "[REDACTED]" not in evidence.payload
+        assert "private" not in evidence.payload
+    invalid_redactions = client.post(
+        "/extension/v1/scans",
+        headers=extension_headers,
+        json={
+            "url": "https://example.test/path",
+            "redactions": {"sensitive_query_values_removed": 65},
+        },
+    )
+    assert invalid_redactions.status_code == 422
     assert client.get(
         f"/organizations/{owner['organization_id']}/signals",
         headers={"Authorization": f"Bearer {owner['access_token']}"},
