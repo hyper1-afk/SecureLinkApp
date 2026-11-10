@@ -13,7 +13,16 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import assets, auth, domain_monitor_worker, emailer, extension_auth, main, notification_worker, rate_limits
+from apps.api import (
+    assets,
+    auth,
+    domain_monitor_worker,
+    emailer,
+    extension_auth,
+    main,
+    notification_worker,
+    rate_limits,
+)
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
