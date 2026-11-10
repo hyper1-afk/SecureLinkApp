@@ -66,6 +66,7 @@ jobs:
           node --check apps/api/web/account.js
           node --check apps/api/web/accept-invitation.js
           node --check apps/api/web/dashboard.js
+          node --check apps/api/web/extension-authorize.js
           node --check apps/api/web/reset-password.js
           node --check apps/api/web/verify-email.js
 

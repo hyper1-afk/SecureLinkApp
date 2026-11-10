@@ -15,6 +15,7 @@ from apps.api.assets import router as assets_router
 from apps.api.auth import router as auth_router
 from apps.api.cases import router as cases_router
 from apps.api.config import get_settings
+from apps.api.extension_auth import router as extension_router
 from apps.api.scanning import router as scanning_router
 
 
@@ -41,6 +42,7 @@ app.include_router(auth_router)
 app.include_router(assets_router)
 app.include_router(scanning_router)
 app.include_router(cases_router)
+app.include_router(extension_router)
 app.mount("/assets", StaticFiles(directory=WEB_DIR), name="account-assets")
 
 
@@ -71,6 +73,11 @@ def reset_password_page() -> FileResponse:
 @app.get("/accept-invitation", include_in_schema=False)
 def accept_invitation_page() -> FileResponse:
     return _account_page("accept-invitation.html")
+
+
+@app.get("/extension/authorize", include_in_schema=False)
+def extension_authorize_page() -> FileResponse:
+    return _account_page("extension-authorize.html")
 
 
 @app.get("/health/live", response_model=HealthResponse, tags=["health"])

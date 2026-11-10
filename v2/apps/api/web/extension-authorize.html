@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Connect SecureLink extension</title>
+  <link rel="stylesheet" href="/assets/account.css">
+</head>
+<body>
+  <main class="layout">
+    <header class="card">
+      <p class="brand">SecureLink 2.0</p>
+      <h1>Connect your browser extension</h1>
+      <p>
+        The SecureLink Chrome extension can submit URLs you choose to scan and read the
+        resulting scan findings for one organization. It cannot manage members, domains,
+        cases, or account settings.
+      </p>
+      <p id="authorization-status" role="status" aria-live="polite"></p>
+    </header>
+    <section class="card" id="sign-in-panel">
+      <h2>Sign in to authorize</h2>
+      <p>Enter your account details on this SecureLink page. Your password is not sent to the extension.</p>
+      <form id="sign-in-form">
+        <label for="email">Email</label>
+        <input id="email" type="email" maxlength="320" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" maxlength="128" autocomplete="current-password" required>
+        <button type="submit">Sign in</button>
+      </form>
+      <p id="sign-in-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card" id="consent-panel" hidden>
+      <h2>Review access</h2>
+      <p>Choose the organization whose link scans the extension may submit and view.</p>
+      <label for="organization">Organization</label>
+      <select id="organization" required></select>
+      <p>Access ends after 12 hours. You can disconnect this extension from its popup at any time. Password reset or account deactivation also revokes its access.</p>
+      <button id="approve-button" type="button">Authorize extension</button>
+      <button id="cancel-button" type="button">Cancel</button>
+    </section>
+  </main>
+  <script src="/assets/extension-authorize.js" defer></script>
+</body>
+</html>

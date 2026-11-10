@@ -10,7 +10,10 @@ def deployment_settings(**overrides):
     values = {
         "app_env": "staging",
         "app_public_url": "https://staging.example.test",
-        "database_url": "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink",
+        "database_url": (
+            "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
+            "?sslmode=require"
+        ),
         "redis_url": "rediss://redis.internal:6379/0",
         "app_secret_key": "s" * 48,
         "email_outbox_encryption_key": base64.urlsafe_b64encode(b"e" * 32).decode(),
@@ -20,6 +23,7 @@ def deployment_settings(**overrides):
         "smtp_password": "staging-password",
         "smtp_from_email": "staging@example.test",
         "smtp_starttls": True,
+        "extension_redirect_uris": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
     }
     values.update(overrides)
     return values
@@ -46,12 +50,33 @@ def test_deployment_settings_accept_complete_staging_configuration():
             "DATABASE_URL must not use the local example credential",
         ),
         (
-            {"database_url": "postgresql+psycopg://securelink:unique@localhost:5432/securelink"},
+            {
+                "database_url": (
+                    "postgresql+psycopg://securelink:unique@localhost:5432/securelink"
+                    "?sslmode=require"
+                )
+            },
             "DATABASE_URL must point to the deployment database",
         ),
         (
-            {"redis_url": "redis://user:pass@localhost:6379/0"},
+            {"redis_url": "rediss://user:pass@localhost:6379/0"},
             "REDIS_URL must point to the deployment Redis service",
+        ),
+        (
+            {"redis_url": "redis://redis.internal:6379/0"},
+            "REDIS_URL must use TLS",
+        ),
+        (
+            {"database_url": "sqlite:///./not-production.db"},
+            "DATABASE_URL must use PostgreSQL",
+        ),
+        (
+            {
+                "database_url": (
+                    "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
+                )
+            },
+            "DATABASE_URL must require TLS for PostgreSQL",
         ),
         ({"email_outbox_encryption_key": None}, "EMAIL_OUTBOX_ENCRYPTION_KEY must be set"),
         (
@@ -60,6 +85,10 @@ def test_deployment_settings_accept_complete_staging_configuration():
         ),
         ({"smtp_starttls": False}, "SMTP_STARTTLS must be enabled"),
         ({"smtp_password": None}, "SMTP_PASSWORD is required when SMTP_USERNAME is set"),
+        (
+            {"extension_redirect_uris": "https://attacker.example.test/callback"},
+            "EXTENSION_REDIRECT_URIS contains an invalid Chrome extension redirect URI",
+        ),
     ],
 )
 def test_deployment_settings_reject_insecure_or_incomplete_values(override, message):

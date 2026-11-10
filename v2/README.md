@@ -13,6 +13,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 - Organization access is checked against current membership on every request. Owners/admins can list members; owner/admin role changes and member removals are audited, with last-owner protection and stricter admin limits.
 - Owners/admins can add domain assets, publish a one-time DNS TXT challenge, and verify control. Challenge values are returned once, marked no-store, kept only as digests, expire after 24 hours, and are removed after verification. Domain assets and audit events are organization-scoped.
 - Analysts and admins can open an evidence-backed case from a scan with findings, then move it through a restricted, audited lifecycle. Tenant-scoped composite foreign keys keep findings attached only to cases in the same organization.
+- The V2 API has a PKCE authorization-code flow for the Chrome extension, with exact redirect allowlisting, one-time codes, hashed opaque sessions, 12-hour expiry, scan-only scope, and individual session revocation. The legacy extension has not been switched over; its extension-side client and staging test remain release gates.
 - Audit events are append-only in PostgreSQL.
 - Access tokens expire after 15 minutes.
 
@@ -41,4 +42,4 @@ V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and 
 
 ## Production status
 
-Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing verified accounts are implemented. New-user invitation onboarding and ownership transfer, MFA, refresh-token/per-device session management, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.
+Not production-ready. The account and email action pages plus a basic passive-scan dashboard are implemented; active scanning and the broader investigation workflows are not. Invitations to existing verified accounts are implemented. New-user invitation onboarding and ownership transfer, MFA, dashboard management of individual extension sessions, extension client integration, trusted-proxy configuration, external security review, deployment automation, backup-restore drills, and a staging soak test remain open.

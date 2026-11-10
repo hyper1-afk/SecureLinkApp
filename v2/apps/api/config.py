@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     smtp_starttls: bool = True
     email_outbox_encryption_key: str | None = None
     trusted_proxy_cidrs: str = ""
+    extension_redirect_uris: str = ""
 
     @model_validator(mode="after")
     def validate_deployment_settings(self) -> "Settings":
@@ -30,19 +32,33 @@ class Settings(BaseSettings):
             return self
 
         problems: list[str] = []
-        if not self.app_public_url.startswith("https://"):
+        public_url = urlsplit(self.app_public_url)
+        if (
+            public_url.scheme != "https"
+            or not public_url.hostname
+            or public_url.username
+            or public_url.password
+            or public_url.query
+            or public_url.fragment
+        ):
             problems.append("APP_PUBLIC_URL must use HTTPS")
         if not self.app_secret_key or len(self.app_secret_key.encode("utf-8")) < 32:
             problems.append("APP_SECRET_KEY must contain at least 32 bytes")
         if self.app_secret_key and "replace-with" in self.app_secret_key:
             problems.append("APP_SECRET_KEY must not use the example placeholder")
         database = make_url(self.database_url)
+        if not database.drivername.startswith("postgresql"):
+            problems.append("DATABASE_URL must use PostgreSQL")
         if "change-this-local-password" in (database.password or ""):
             problems.append("DATABASE_URL must not use the local example credential")
-        if database.host in {"localhost", "127.0.0.1", "::1"}:
+        if not database.host or database.host in {"localhost", "127.0.0.1", "::1"}:
             problems.append("DATABASE_URL must point to the deployment database")
-        redis_host = urlsplit(self.redis_url).hostname
-        if redis_host in {"localhost", "127.0.0.1", "::1"}:
+        if database.query.get("sslmode") not in {"require", "verify-ca", "verify-full"}:
+            problems.append("DATABASE_URL must require TLS for PostgreSQL")
+        redis = urlsplit(self.redis_url)
+        if redis.scheme != "rediss":
+            problems.append("REDIS_URL must use TLS")
+        if not redis.hostname or redis.hostname in {"localhost", "127.0.0.1", "::1"}:
             problems.append("REDIS_URL must point to the deployment Redis service")
         if not self.email_outbox_encryption_key or "replace-with" in self.email_outbox_encryption_key:
             problems.append("EMAIL_OUTBOX_ENCRYPTION_KEY must be set to a unique secret")
@@ -57,6 +73,23 @@ class Settings(BaseSettings):
             problems.append("SMTP host and sender must be configured")
         if self.smtp_username and not self.smtp_password:
             problems.append("SMTP_PASSWORD is required when SMTP_USERNAME is set")
+        redirect_uris = [uri.strip() for uri in self.extension_redirect_uris.split(",") if uri.strip()]
+        if not redirect_uris:
+            problems.append("EXTENSION_REDIRECT_URIS must contain the published extension redirect URI")
+        for uri in redirect_uris:
+            parsed = urlsplit(uri)
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname is None
+                or not re.fullmatch(r"[a-p]{32}\.chromiumapp\.org", parsed.hostname)
+                or parsed.path != "/"
+                or parsed.query
+                or parsed.fragment
+                or parsed.username
+                or parsed.password
+            ):
+                problems.append("EXTENSION_REDIRECT_URIS contains an invalid Chrome extension redirect URI")
+                break
         if problems:
             raise ValueError("Invalid staging/production configuration: " + "; ".join(problems))
         return self

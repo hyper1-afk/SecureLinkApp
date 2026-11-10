@@ -1,6 +1,9 @@
+import base64
+import hashlib
 import json
 from collections.abc import Generator
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from cryptography.fernet import Fernet
@@ -9,7 +12,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from apps.api import assets, auth, emailer, main, rate_limits
+from apps.api import assets, auth, emailer, extension_auth, main, rate_limits
 from apps.api.config import Settings
 from apps.api.db import get_session
 from packages.security_core.models import (
@@ -18,6 +21,8 @@ from packages.security_core.models import (
     CaseFinding,
     DomainAsset,
     EmailActionToken,
+    ExtensionAuthorizationCode,
+    ExtensionSession,
     Finding,
     IncidentCase,
     Membership,
@@ -55,8 +60,12 @@ def client(monkeypatch) -> Generator[TestClient, None, None]:
         smtp_host="mail.example.test",
         smtp_from_email="no-reply@example.test",
         email_outbox_encryption_key=Fernet.generate_key().decode("ascii"),
+        extension_redirect_uris=(
+            "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/"
+        ),
     )
     monkeypatch.setattr(auth, "get_settings", lambda: settings)
+    monkeypatch.setattr(extension_auth, "get_settings", lambda: settings)
     monkeypatch.setattr(emailer, "get_settings", lambda: settings)
     monkeypatch.setattr(auth, "email_delivery_configured", lambda: True)
     redis = FakeRedis()
@@ -389,3 +398,234 @@ def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: T
     assert "not a safety verdict" in response.text
     assert "Authorized domains" in response.text
     assert "Cases" in response.text
+
+
+def _challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+def _authorize_extension(client: TestClient, owner: dict[str, str], verifier: str) -> str:
+    response = client.post(
+        "/extension/oauth/authorize",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={
+            "client_id": "securelink-chrome-extension",
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "organization_id": owner["organization_id"],
+            "state": "s" * 43,
+            "code_challenge": _challenge(verifier),
+            "code_challenge_method": "S256",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    callback = parse_qs(urlsplit(response.json()["redirect_url"]).query)
+    assert callback["state"] == ["s" * 43]
+    return callback["code"][0]
+
+
+def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
+    client: TestClient,
+):
+    owner = register(client, "extension-oauth@example.test")
+    assert client.post(
+        "/extension/v1/scans",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+        json={"url": "https://example.test"},
+    ).status_code == 401
+    authorizable = client.get(
+        "/extension/oauth/organizations",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert authorizable.status_code == 200
+    assert authorizable.headers["cache-control"] == "no-store"
+    assert authorizable.json()["organizations"][0]["id"] == owner["organization_id"]
+    verifier = "v" * 43
+    code = _authorize_extension(client, owner, verifier)
+    exchange = client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": verifier,
+        },
+    )
+    assert exchange.status_code == 200
+    assert exchange.headers["cache-control"] == "no-store"
+    token = exchange.json()["access_token"]
+    assert exchange.json()["scope"] == "url_scan"
+    assert exchange.json()["expires_in"] == 12 * 60 * 60
+    assert "refresh_token" not in exchange.json()
+    with client.app.state.test_session_factory() as session:
+        stored = session.scalar(select(ExtensionSession))
+        auth_code = session.scalar(select(ExtensionAuthorizationCode))
+        assert stored.token_hash != token
+        assert auth_code.consumed_at is not None
+
+    extension_headers = {"Authorization": f"Bearer {token}"}
+    scan = client.post(
+        "/extension/v1/scans",
+        headers=extension_headers,
+        json={"url": "https://example.test/path?session=private"},
+    )
+    assert scan.status_code == 201
+    assert scan.json()["display_url"] == "https://example.test/[path and query omitted]"
+    assert "private" not in scan.text
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers=extension_headers,
+    ).status_code == 401
+    assert client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": verifier,
+        },
+    ).status_code == 400
+    assert client.post("/extension/oauth/revoke", headers=extension_headers).status_code == 204
+    assert client.post(
+        "/extension/v1/scans",
+        headers=extension_headers,
+        json={"url": "https://example.test"},
+    ).status_code == 401
+
+
+def test_extension_oauth_rejects_unregistered_redirect_and_bad_pkce(client: TestClient):
+    owner = register(client, "extension-invalid-oauth@example.test")
+    payload = {
+        "client_id": "securelink-chrome-extension",
+        "redirect_uri": "https://attacker.example.test/callback",
+        "organization_id": owner["organization_id"],
+        "state": "s" * 43,
+        "code_challenge": _challenge("v" * 43),
+        "code_challenge_method": "S256",
+    }
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    assert client.post("/extension/oauth/authorize", headers=headers, json=payload).status_code == 400
+
+    code = _authorize_extension(client, owner, "v" * 43)
+    invalid_exchange = client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": "x" * 43,
+        },
+    )
+    assert invalid_exchange.status_code == 400
+    with client.app.state.test_session_factory() as session:
+        auth_code = session.scalar(select(ExtensionAuthorizationCode))
+        assert auth_code.consumed_at is not None
+
+
+def test_viewer_cannot_authorize_extension_scanning(client: TestClient):
+    viewer = register(client, "extension-viewer@example.test")
+    with client.app.state.test_session_factory() as session:
+        membership = session.scalar(
+            select(Membership).where(Membership.organization_id == viewer["organization_id"])
+        )
+        membership.role = "viewer"
+        session.commit()
+
+    headers = {"Authorization": f"Bearer {viewer['access_token']}"}
+    assert client.get("/extension/oauth/organizations", headers=headers).json() == {
+        "organizations": []
+    }
+    response = client.post(
+        "/extension/oauth/authorize",
+        headers=headers,
+        json={
+            "client_id": "securelink-chrome-extension",
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "organization_id": viewer["organization_id"],
+            "state": "s" * 43,
+            "code_challenge": _challenge("v" * 43),
+            "code_challenge_method": "S256",
+        },
+    )
+    assert response.status_code == 403
+
+
+def test_password_reset_token_version_invalidates_extension_session(client: TestClient):
+    owner = register(client, "extension-revoked-by-reset@example.test")
+    verifier = "v" * 43
+    code = _authorize_extension(client, owner, verifier)
+    response = client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": verifier,
+        },
+    )
+    assert response.status_code == 200
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+    with client.app.state.test_session_factory() as session:
+        user = session.scalar(select(User).where(User.email_normalized == "extension-revoked-by-reset@example.test"))
+        user.token_version += 1
+        session.commit()
+
+    assert client.post(
+        "/extension/v1/scans",
+        headers=headers,
+        json={"url": "https://example.test"},
+    ).status_code == 401
+
+
+def test_extension_sessions_can_be_revoked_only_by_the_owning_account(client: TestClient):
+    owner = register(client, "extension-session-owner@example.test")
+    other = register(client, "extension-session-other@example.test")
+    verifier = "v" * 43
+    code = _authorize_extension(client, owner, verifier)
+    exchange = client.post(
+        "/extension/oauth/token",
+        json={
+            "grant_type": "authorization_code",
+            "client_id": "securelink-chrome-extension",
+            "code": code,
+            "redirect_uri": "https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/",
+            "code_verifier": verifier,
+        },
+    )
+    assert exchange.status_code == 200
+    extension_token = exchange.json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+
+    sessions = client.get("/extension/oauth/sessions", headers=owner_headers)
+    assert sessions.status_code == 200
+    assert sessions.headers["cache-control"] == "no-store"
+    assert len(sessions.json()) == 1
+    session_id = sessions.json()[0]["id"]
+    assert sessions.json()[0]["organization_id"] == owner["organization_id"]
+    assert client.delete(
+        f"/extension/oauth/sessions/{session_id}", headers=other_headers
+    ).status_code == 404
+    assert client.delete(
+        f"/extension/oauth/sessions/{session_id}", headers=owner_headers
+    ).status_code == 204
+    assert client.post(
+        "/extension/v1/scans",
+        headers={"Authorization": f"Bearer {extension_token}"},
+        json={"url": "https://example.test"},
+    ).status_code == 401
+
+
+def test_extension_authorization_page_uses_private_headers(client: TestClient):
+    response = client.get("/extension/authorize")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert "Your password is not sent to the extension" in response.text
+    assert "cannot manage members" in response.text

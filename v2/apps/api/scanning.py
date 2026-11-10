@@ -100,6 +100,15 @@ async def create_url_scan(
 ) -> ScanResponse:
     _require_scan_role(membership)
     raw_url = await _read_scan_url(request)
+    return await _create_scan(raw_url, membership.organization_id, membership.user_id, session)
+
+
+async def _create_scan(
+    raw_url: str,
+    organization_id: str,
+    user_id: str,
+    session: Session,
+) -> ScanResponse:
     try:
         analysis = analyze_url(raw_url)
     except InvalidScanURL as exc:
@@ -113,8 +122,8 @@ async def create_url_scan(
     }
     serialized_evidence = json.dumps(evidence_payload, sort_keys=True, separators=(",", ":"))
     scan = UrlScan(
-        organization_id=membership.organization_id,
-        requested_by_user_id=membership.user_id,
+        organization_id=organization_id,
+        requested_by_user_id=user_id,
         display_url=analysis.display_url,
         hostname=analysis.hostname,
         scheme=analysis.scheme,
@@ -124,7 +133,7 @@ async def create_url_scan(
     session.add(scan)
     session.flush()
     evidence = ScanEvidence(
-        organization_id=membership.organization_id,
+        organization_id=organization_id,
         scan_id=scan.id,
         source_type="passive_url_parser",
         detector_version=PARSER_VERSION,
@@ -136,7 +145,7 @@ async def create_url_scan(
     session.flush()
     findings = [
         Finding(
-            organization_id=membership.organization_id,
+            organization_id=organization_id,
             scan_id=scan.id,
             evidence_id=evidence.id,
             detector_code=item.detector_code,
@@ -150,8 +159,8 @@ async def create_url_scan(
     session.add_all(findings)
     session.add(
         AuditEvent(
-            organization_id=membership.organization_id,
-            actor_user_id=membership.user_id,
+            organization_id=organization_id,
+            actor_user_id=user_id,
             actor_type="user",
             action="url_scan.completed",
             target_type="url_scan",

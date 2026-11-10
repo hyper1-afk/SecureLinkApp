@@ -6,7 +6,7 @@ This is a preparation runbook. It creates no DigitalOcean resources and contains
 
 Create a distinct DigitalOcean App Platform app named `securelink-v2-staging` from branch `securelink-v2`, with a staging-only hostname. Place the app, Managed PostgreSQL, and Managed Valkey in the same region and private network where supported. Do not bind staging to the legacy production database or production mail account.
 
-Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `EMAIL_OUTBOX_ENCRYPTION_KEY`, `DATABASE_URL`, `REDIS_URL`, and SMTP credentials. Set `TRUSTED_PROXY_CIDRS` only to verified ingress proxy CIDRs; leave it empty until the real immediate peer ranges are confirmed. Never trust client-provided forwarding headers by default. Generate a unique Fernet key for each environment and protect it as a high-impact secret. Use staging-only values. Configure `APP_ENV=staging`, `APP_PUBLIC_URL=https://<staging-host>`, `SMTP_STARTTLS=true`, and a least-privilege database user. Never put secrets in this runbook, app spec, or GitHub commit.
+Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `EMAIL_OUTBOX_ENCRYPTION_KEY`, `DATABASE_URL`, `REDIS_URL`, and SMTP credentials. PostgreSQL URLs must use `sslmode=require` or stronger, and Valkey URLs must use `rediss://`. Set `EXTENSION_REDIRECT_URIS` to the exact Chrome identity callback URI for the published extension (`https://dpegeipjmofhdikcbniodhohpckoeole.chromiumapp.org/`). A local unpacked build uses a different extension ID; add its exact callback URI to local `.env` only. Never use wildcard redirect patterns. Set `TRUSTED_PROXY_CIDRS` only to verified ingress proxy CIDRs; leave it empty until the real immediate peer ranges are confirmed. Never trust client-provided forwarding headers by default. Generate a unique Fernet key for each environment and protect it as a high-impact secret. Use staging-only values. Configure `APP_ENV=staging`, `APP_PUBLIC_URL=https://<staging-host>`, `SMTP_STARTTLS=true`, and a least-privilege database user. Never put secrets in this runbook, app spec, or GitHub commit.
 
 ## Deployment sequence
 
@@ -15,9 +15,10 @@ Use App Platform encrypted secret environment variables for `APP_SECRET_KEY`, `E
 3. The API image also serves a minimal same-origin account page and verification/reset pages. Configure the app health check to `/health/ready` and a separate liveness check to `/health/live`.
 4. Keep deployment manual while migrations and auth workflows are being exercised. Run `alembic upgrade head` as a single deployment step before shifting traffic; do not run concurrent migrations from every app replica.
 5. Confirm the database is on the expected migration revision. Exercise registration, email verification, login, password reset, reset-token replay, role denial, cross-tenant denial, Redis throttling, and expired access tokens.
-6. Verify logs omit email action tokens and passwords. Verify 429 behavior and 503 fail-closed behavior when Valkey is unavailable.
-7. Restore a PostgreSQL backup into a separate staging cluster and document measured recovery time and data loss window. Managed PostgreSQL provides daily full backups and point-in-time recovery for the prior seven days; validate an actual restore before relying on it.
-8. Record deploy commit, migration revision, health status, alert routing, rollback steps, and restore evidence before considering any production promotion.
+6. Exercise extension authorization with the Chrome Web Store extension ID and staging origin: verify PKCE state/code binding, exact redirect allowlisting, one-time code exchange, 12-hour extension-session expiry, role checks, password-reset revocation, individual extension logout, and rejection of extension tokens on dashboard APIs. Do not update the published extension until staging and Chrome/Edge release checks pass.
+7. Verify logs omit email action tokens and passwords. Verify 429 behavior and 503 fail-closed behavior when Valkey is unavailable.
+8. Restore a PostgreSQL backup into a separate staging cluster and document measured recovery time and data loss window. Managed PostgreSQL provides daily full backups and point-in-time recovery for the prior seven days; validate an actual restore before relying on it.
+9. Record deploy commit, migration revision, health status, alert routing, rollback steps, and restore evidence before considering any production promotion.
 
 ## Operational gates
 
