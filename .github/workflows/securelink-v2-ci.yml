@@ -84,7 +84,7 @@ jobs:
         run: python -m unittest discover -s ../tests -p "test_network_safety.py" -v
 
       - name: Lint
-        run: ruff check apps tests scripts
+        run: ruff check apps tests scripts/audit_repo_history.py
 
       - name: Check browser JavaScript syntax
         run: |

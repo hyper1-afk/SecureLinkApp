@@ -4,7 +4,6 @@ import re
 import subprocess
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SECRET_PATTERNS = {
     "Google API key": r"AIza[0-9A-Za-z_-]{35}",
