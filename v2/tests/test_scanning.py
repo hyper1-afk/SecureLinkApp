@@ -147,6 +147,14 @@ def test_passive_url_analysis_redacts_sensitive_parts():
     }
 
 
+def test_passive_url_analysis_detects_sensitive_query_key_variants():
+    result = analyze_url(
+        "https://example.test/?api_key=hidden&clientSecret=hidden&apiKey=hidden&email=hidden"
+    )
+    assert result.evidence["sensitive_query_present"] is True
+    assert any(finding.detector_code == "sensitive_query_parameter" for finding in result.findings)
+
+
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "javascript:alert(1)", "https://example.test:bad/"])
 def test_passive_url_analysis_rejects_non_http_or_invalid_urls(url: str):
     with pytest.raises(InvalidScanURL):

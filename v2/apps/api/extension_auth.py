@@ -19,7 +19,12 @@ from apps.api.auth import Principal, bearer, current_principal, privileged_mfa_g
 from apps.api.config import get_settings
 from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
-from apps.api.scanning import ScanResponse, _create_scan, _read_client_redactions, _read_scan_payload
+from apps.api.scanning import (
+    ScanResponse,
+    _create_scan,
+    _read_client_redactions,
+    _read_scan_payload,
+)
 from packages.security_core.models import (
     AuditEvent,
     ExtensionAuthorizationCode,

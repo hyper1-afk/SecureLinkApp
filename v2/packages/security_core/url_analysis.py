@@ -13,6 +13,9 @@ SENSITIVE_QUERY_KEYS = {
     "secret", "session", "sessionid", "token",
 }
 REDIRECT_QUERY_KEYS = {"continue", "next", "redirect", "redirect_uri", "return", "returnto", "url"}
+SENSITIVE_QUERY_KEY_PARTS = {
+    "auth", "authorization", "code", "email", "key", "password", "secret", "session", "sessionid", "token",
+}
 DNS_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
@@ -73,7 +76,8 @@ def analyze_url(raw_url: str) -> URLAnalysis:
     query_keys: set[str] = set()
     try:
         for key, _value in parse_qsl(parsed.query, keep_blank_values=True, max_num_fields=64):
-            query_keys.add(key.casefold())
+            normalized_key = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key).casefold()
+            query_keys.add(normalized_key)
     except ValueError as exc:
         raise InvalidScanURL("URL has too many query parameters") from exc
 
@@ -82,7 +86,9 @@ def analyze_url(raw_url: str) -> URLAnalysis:
     is_non_global_ip = ip_address is not None and not ip_address.is_global
     is_local_hostname = hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal"))
     sensitive_query_present = bool(query_keys & SENSITIVE_QUERY_KEYS) or any(
-        key.endswith(("_token", "_secret", "_password")) for key in query_keys
+        part in SENSITIVE_QUERY_KEY_PARTS
+        for key in query_keys
+        for part in key.split("_")
     )
     redirect_parameter_present = bool(query_keys & REDIRECT_QUERY_KEYS)
 

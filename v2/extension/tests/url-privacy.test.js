@@ -40,6 +40,17 @@ test("keeps duplicate parameters and redacts each sensitive value", () => {
   assert.equal(result.redactions.sensitive_query_values_removed, 2);
 });
 
+test("recognizes camel-case credential parameter names", () => {
+  const result = redactUrlForSubmission(
+    "https://example.com/?apiKey=one&clientSecret=two&accessToken=three",
+  );
+  const url = new URL(result.url);
+  assert.deepEqual(url.searchParams.getAll("apiKey"), ["[REDACTED]"]);
+  assert.deepEqual(url.searchParams.getAll("clientSecret"), ["[REDACTED]"]);
+  assert.deepEqual(url.searchParams.getAll("accessToken"), ["[REDACTED]"]);
+  assert.equal(result.redactions.sensitive_query_values_removed, 3);
+});
+
 test("rejects non-HTTP schemes", () => {
   assert.throws(() => redactUrlForSubmission("javascript:alert(1)"), /HTTP or HTTPS/);
 });

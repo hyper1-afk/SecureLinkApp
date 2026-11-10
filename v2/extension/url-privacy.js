@@ -20,7 +20,7 @@ const SENSITIVE_QUERY_KEYS = new Set([
 ]);
 
 function isSensitiveQueryKey(key) {
-  const normalized = key.toLowerCase();
+  const normalized = key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
   return SENSITIVE_QUERY_KEYS.has(normalized)
     || /(?:^|[_-])(auth|authorization|code|email|key|password|secret|session|token)(?:$|[_-])/.test(normalized);
 }
