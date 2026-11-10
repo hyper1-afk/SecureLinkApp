@@ -102,7 +102,17 @@ async function scanUrl(rawUrl) {
   return response.json();
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+function isPopupSender(sender) {
+  return sender.id === chrome.runtime.id
+    && sender.url === chrome.runtime.getURL("popup.html")
+    && !sender.tab;
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!isPopupSender(sender)) {
+    sendResponse({ ok: false, error: "SecureLink actions must come from the extension popup." });
+    return false;
+  }
   const operation = message?.type === "connect"
     ? connect()
     : message?.type === "disconnect"
