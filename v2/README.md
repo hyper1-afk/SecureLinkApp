@@ -4,7 +4,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 ## Current API foundation
 
-- Organization-scoped passive URL hygiene scans store redacted evidence and deterministic findings. They make no outbound network requests and do not produce malware/reputation verdicts.
+- Organization-scoped passive URL hygiene scans store redacted evidence and deterministic findings. High/critical URL indicators automatically open audited, tenant-scoped cases. Scans make no outbound network requests and do not produce malware/reputation verdicts.
 
 - Email verification is required before login. A same-origin account page supports registration, sign-in, verification, resend, and password recovery.
 - Password reset links are single-use, expire, and are stored as token digests. Delivery uses a database outbox with encrypted payloads and a separate retrying worker.
@@ -30,7 +30,7 @@ SecureLink 2.0 is an evidence-first security operations platform developed separ
 
 SMTP must use STARTTLS. In production, the public URL must use HTTPS. Never commit populated secrets or use production credentials in local development.
 
-The dashboard connects passive URL hygiene checks, domain verification, scan history, and the evidence-backed case lifecycle. Both extension clients can submit explicit manual reviews to that same tenant-scoped scan and evidence pipeline. The V2 action is opt-in and does not replace the existing automatic scanner. V2 does not yet schedule domain monitoring or automate investigations. Domain ownership verification performs only a bounded DNS TXT lookup; verifying ownership does not authorize arbitrary scanning and does not prove that resolved IP addresses are public. Any future collector must revalidate DNS answers and reject private/reserved IPs at execution time. Active URL fetching, third-party reputation checks, and automated response playbooks are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
+The dashboard connects passive URL hygiene checks, domain verification, scan history, and the evidence-backed case lifecycle. High/critical URL indicators open cases automatically; both extension clients can submit explicit manual reviews to the same tenant-scoped scan and evidence pipeline. This deterministic triage is not a threat verdict and does not yet send email alerts. The V2 action is opt-in and does not replace the existing automatic scanner. V2 does not yet schedule domain monitoring or automate investigations. Domain ownership verification performs only a bounded DNS TXT lookup; verifying ownership does not authorize arbitrary scanning and does not prove that resolved IP addresses are public. Any future collector must revalidate DNS answers and reject private/reserved IPs at execution time. Active URL fetching, third-party reputation checks, and automated response playbooks are not implemented; see [URL scan safety](docs/URL-SCAN-SAFETY.md).
 
 V2 has no paid Have I Been Pwned account, breach, or domain API dependency, and requires no HIBP API key. Pwned Passwords has a separate free k-anonymity range service, but it is not currently integrated. Email breach lookup is deferred until there is a suitable source that meets cost, privacy, and data-licensing requirements.
 

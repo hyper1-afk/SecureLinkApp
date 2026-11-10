@@ -13,7 +13,15 @@ from sqlalchemy.orm import Session
 from apps.api.auth import organization_membership
 from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
-from packages.security_core.models import AuditEvent, Finding, Membership, ScanEvidence, UrlScan
+from packages.security_core.models import (
+    AuditEvent,
+    CaseFinding,
+    Finding,
+    IncidentCase,
+    Membership,
+    ScanEvidence,
+    UrlScan,
+)
 from packages.security_core.url_analysis import (
     PARSER_VERSION,
     InvalidScanURL,
@@ -157,6 +165,56 @@ async def _create_scan(
         for item in analysis.findings
     ]
     session.add_all(findings)
+    priority_findings = [item for item in findings if item.severity in {"critical", "high"}]
+    if priority_findings:
+        severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
+        priority_severity = min(
+            (item.severity for item in priority_findings), key=severity_rank.__getitem__
+        )
+        case = IncidentCase(
+            organization_id=organization_id,
+            scan_id=scan.id,
+            created_by_user_id=None,
+            status="open",
+            severity=priority_severity,
+            title=f"Review high-priority URL signals for {scan.hostname}",
+            summary=(
+                f"Automatic triage opened this case after detecting {len(priority_findings)} "
+                "high-priority URL indicator(s). Review the evidence; this is not a safety verdict."
+            ),
+            created_at=observed_at,
+            updated_at=observed_at,
+        )
+        session.add(case)
+        session.flush()
+        session.add_all(
+            CaseFinding(
+                organization_id=organization_id,
+                case_id=case.id,
+                finding_id=finding.id,
+            )
+            for finding in findings
+        )
+        session.add(
+            AuditEvent(
+                organization_id=organization_id,
+                actor_user_id=None,
+                actor_type="system",
+                action="case.auto_created_from_scan",
+                target_type="incident_case",
+                target_id=case.id,
+                details=json.dumps(
+                    {
+                        "scan_id": scan.id,
+                        "finding_count": len(findings),
+                        "priority_finding_count": len(priority_findings),
+                        "triggering_severity": priority_severity,
+                        "triage_version": "url-priority-v1",
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+        )
     session.add(
         AuditEvent(
             organization_id=organization_id,

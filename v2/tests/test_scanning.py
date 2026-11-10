@@ -315,13 +315,21 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
     assert scan_response.status_code == 201
     scan = scan_response.json()
     assert scan["findings"]
+    automatic_cases = client.get(
+        f"/organizations/{owner['organization_id']}/cases", headers=owner_headers
+    )
+    assert automatic_cases.status_code == 200
+    assert len(automatic_cases.json()) == 1
+    assert automatic_cases.json()[0]["severity"] == "high"
+    assert "not a safety verdict" in automatic_cases.json()[0]["summary"]
 
     case_response = client.post(
         f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
         headers=owner_headers,
     )
-    assert case_response.status_code == 201
+    assert case_response.status_code == 200
     case = case_response.json()
+    assert case["id"] == automatic_cases.json()[0]["id"]
     assert case["status"] == "open"
     assert case["hostname"] == "example.com"
     assert len(case["findings"]) == len(scan["findings"])
@@ -366,9 +374,13 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
             select(AuditEvent).where(AuditEvent.target_id == case["id"])
         ).all()
         assert stored.status == "resolved"
+        assert stored.created_by_user_id is None
         assert len(links) == len(scan["findings"])
         assert sum(event.action == "case.status_changed" for event in events) == 3
-        assert any(event.action == "case.created_from_scan" for event in events)
+        assert any(
+            event.action == "case.auto_created_from_scan" and event.actor_type == "system"
+            for event in events
+        )
 
 
 def test_clean_scan_cannot_open_empty_case(client: TestClient):

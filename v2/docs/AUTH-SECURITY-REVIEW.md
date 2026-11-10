@@ -13,6 +13,7 @@ Internal code review of the V2 foundation; this is not an external penetration t
 - PostgreSQL installs an append-only audit trigger; CI verifies update rejection against PostgreSQL.
 - Account email is transactionally queued in PostgreSQL; the token delivery payload is encrypted and a separate worker leases, retries, and clears it after success.
 - The first URL scan is passive and makes no network requests. URLs are redacted before persistence; evidence and findings are organization-scoped and PostgreSQL scan evidence is immutable.
+- High/critical deterministic URL indicators open an audited, tenant-scoped case in the same database transaction as the scan. System-created cases retain scan evidence and explicitly avoid claiming a threat verdict; email notification is not implemented.
 - The V2 extension OAuth server flow requires PKCE S256 and an exact configured Chrome redirect URI. Codes and opaque 12-hour session tokens are stored only as hashes; extension sessions can call only the scoped scan and revoke endpoints. Password reset/account deactivation invalidate sessions through the user token version.
 
 ## Open findings / release gates
