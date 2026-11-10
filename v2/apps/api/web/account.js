@@ -27,6 +27,7 @@ async function refreshMFAStatus() {
       ? "Two-factor authentication is not enabled yet."
       : "Two-factor authentication is not enabled.";
   byId("mfa-start").hidden = status.enabled;
+  byId("mfa-rotation-start-form").hidden = !status.enabled;
   byId("mfa-disable-form").hidden = !status.enabled || !status.can_disable;
 }
 
@@ -101,7 +102,9 @@ byId("sign-out").addEventListener("click", async () => {
   byId("dashboard-link").hidden = true;
   byId("mfa-start").hidden = true;
   byId("mfa-disable-form").hidden = true;
+  byId("mfa-rotation-start-form").hidden = true;
   byId("mfa-enrollment").hidden = true;
+  byId("mfa-rotation-enrollment").hidden = true;
   byId("mfa-recovery").hidden = true;
   byId("mfa-status").textContent = "";
   say("session-status", "You are signed out. The access token was revoked when the server was reachable.");
@@ -198,7 +201,67 @@ byId("mfa-confirm-form").addEventListener("submit", async (event) => {
   byId("mfa-recovery").hidden = false;
   byId("mfa-enrollment").hidden = true;
   byId("mfa-confirm-form").reset();
-  await refreshMFAStatus();
+  sessionStorage.removeItem("securelink.accessToken");
+  sessionStorage.removeItem("securelink.organizationId");
+  byId("sign-out").hidden = true;
+  byId("dashboard-link").hidden = true;
+  byId("mfa-start").hidden = true;
+  byId("mfa-disable-form").hidden = true;
+  byId("mfa-status").textContent = "Two-factor authentication enabled. All sessions were revoked; save these recovery codes, then sign in again.";
+  say("session-status", "MFA was enabled and all previous sessions were revoked. Save your recovery codes, then sign in again.");
+});
+
+byId("mfa-rotation-start-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const response = await fetch("/auth/mfa/rotation", {
+    method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      password: byId("mfa-rotation-password").value,
+      code: byId("mfa-rotation-current-code").value,
+    }),
+    credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer",
+  });
+  if (!response.ok) {
+    say("mfa-status", "Replacement could not start. Check your password and current authenticator or recovery code.");
+    return;
+  }
+  const enrollment = await response.json();
+  byId("mfa-rotation-secret").textContent = enrollment.secret;
+  byId("mfa-rotation-enrollment").hidden = false;
+  byId("mfa-rotation-password").value = "";
+  byId("mfa-rotation-current-code").value = "";
+  say("mfa-status", "Replacement key expires in 15 minutes. Your existing authenticator is still active.");
+});
+
+byId("mfa-rotation-confirm-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const response = await fetch("/auth/mfa/rotation/confirm", {
+    method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ code: byId("mfa-rotation-confirm-code").value }),
+    credentials: "omit", cache: "no-store", referrerPolicy: "no-referrer",
+  });
+  if (!response.ok) {
+    say("mfa-status", "Replacement could not be confirmed. Check the new authenticator code and try before it expires.");
+    return;
+  }
+  const { recovery_codes: codes } = await response.json();
+  const list = byId("mfa-recovery-codes");
+  list.replaceChildren(...codes.map((code) => {
+    const item = document.createElement("li");
+    item.textContent = code;
+    return item;
+  }));
+  byId("mfa-recovery").hidden = false;
+  byId("mfa-rotation-enrollment").hidden = true;
+  byId("mfa-rotation-confirm-form").reset();
+  sessionStorage.removeItem("securelink.accessToken");
+  sessionStorage.removeItem("securelink.organizationId");
+  byId("sign-out").hidden = true;
+  byId("dashboard-link").hidden = true;
+  byId("mfa-rotation-start-form").hidden = true;
+  byId("mfa-disable-form").hidden = true;
+  say("session-status", "Your authenticator was replaced and all sessions were revoked. Save these new recovery codes, then sign in again.");
+  say("mfa-status", "Authenticator replaced. Previous recovery codes are no longer valid.");
 });
 
 byId("mfa-disable-form").addEventListener("submit", async (event) => {

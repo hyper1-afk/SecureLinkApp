@@ -51,6 +51,8 @@ class User(Base):
     mfa_secret_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
     mfa_enrollment_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mfa_rotation_secret_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    mfa_rotation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     privileged_mfa_grace_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -161,6 +161,12 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
     confirmation_code = mfa.totp_code(secret)
     confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": confirmation_code})
     assert confirmed.status_code == 200
+    assert client.get(f"/organizations/{registered['organization_id']}", headers=headers).status_code == 401
+    refreshed_login = client.post("/auth/login", json={
+        "email": "mfa@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+    })
+    assert refreshed_login.status_code == 200
+    headers = {"Authorization": f"Bearer {refreshed_login.json()['access_token']}"}
     recovery_codes = confirmed.json()["recovery_codes"]
     assert len(recovery_codes) == 10
     assert all(len(code) == 24 for code in recovery_codes)
@@ -198,6 +204,82 @@ def test_mfa_enrollment_login_recovery_and_disable(client: TestClient):
     assert client.post("/auth/login", json={"email": "mfa@example.test", "password": "a-long-test-password"}).status_code == 200
 
 
+def _enable_mfa(client: TestClient, email: str) -> tuple[dict[str, str], str, list[str]]:
+    registered = register(client, email)
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    enrollment = client.post("/auth/mfa/enrollment", headers=headers)
+    secret = enrollment.json()["secret"]
+    confirmed = client.post("/auth/mfa/confirm", headers=headers, json={"code": mfa.totp_code(secret)})
+    assert confirmed.status_code == 200
+    logged_in = client.post("/auth/login", json={
+        "email": email, "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+    })
+    assert logged_in.status_code == 200
+    return {**registered, "access_token": logged_in.json()["access_token"]}, secret, confirmed.json()["recovery_codes"]
+
+
+def test_mfa_rotation_preserves_old_factor_until_confirm_then_revokes_sessions(client: TestClient):
+    registered, old_secret, old_recovery_codes = _enable_mfa(client, "rotate@example.test")
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    started = client.post("/auth/mfa/rotation", headers=headers, json={
+        "password": "a-long-test-password", "code": mfa.totp_code(old_secret),
+    })
+    assert started.status_code == 200
+    new_secret = started.json()["secret"]
+    assert client.get("/auth/mfa", headers=headers).status_code == 200
+
+    confirmed = client.post("/auth/mfa/rotation/confirm", headers=headers, json={
+        "code": mfa.totp_code(new_secret),
+    })
+    assert confirmed.status_code == 200
+    new_recovery_codes = confirmed.json()["recovery_codes"]
+    assert len(new_recovery_codes) == 10
+    assert client.get(f"/organizations/{registered['organization_id']}", headers=headers).status_code == 401
+    assert client.post("/auth/login", json={
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(old_secret),
+    }).status_code == 401
+    assert client.post("/auth/login", json={
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret),
+    }).status_code == 200
+    assert client.post("/auth/login", json={
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": old_recovery_codes[1],
+    }).status_code == 401
+    assert client.post("/auth/login", json={
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": new_recovery_codes[0],
+    }).status_code == 200
+    with client.app.state.test_session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(AuditEvent).where(
+            AuditEvent.action == "user.mfa_rotated",
+        )) == 1
+
+
+def test_mfa_rotation_accepts_recovery_code_and_rejects_bad_password(client: TestClient):
+    registered, old_secret, recovery_codes = _enable_mfa(client, "rotate-recovery@example.test")
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    bad_password = client.post("/auth/mfa/rotation", headers=headers, json={
+        "password": "wrong-password", "code": mfa.totp_code(old_secret),
+    })
+    assert bad_password.status_code == 400
+
+    started = client.post("/auth/mfa/rotation", headers=headers, json={
+        "password": "a-long-test-password", "code": recovery_codes[0],
+    })
+    assert started.status_code == 200
+    new_secret = started.json()["secret"]
+    with client.app.state.test_session_factory() as session:
+        consumed = session.scalar(select(MFARecoveryCode).where(
+            MFARecoveryCode.code_hash == auth.recovery_code_hash(recovery_codes[0]),
+        ))
+        assert consumed is not None and consumed.consumed_at is not None
+    assert client.post("/auth/mfa/rotation/confirm", headers=headers, json={
+        "code": mfa.totp_code(new_secret),
+    }).status_code == 200
+    replay = client.post("/auth/mfa/rotation", headers=headers, json={
+        "password": "a-long-test-password", "code": recovery_codes[0],
+    })
+    assert replay.status_code == 401
+
+
 def test_privileged_mfa_grace_expires_and_enrolled_admin_cannot_disable(client: TestClient):
     owner = register(client, "mfa-required@example.test")
     headers = {"Authorization": f"Bearer {owner['access_token']}"}
@@ -217,6 +299,12 @@ def test_privileged_mfa_grace_expires_and_enrolled_admin_cannot_disable(client: 
         "/auth/mfa/confirm", headers=headers, json={"code": mfa.totp_code(secret)}
     )
     assert enabled.status_code == 200
+    assert client.get(f"/organizations/{owner['organization_id']}", headers=headers).status_code == 401
+    logged_in = client.post("/auth/login", json={
+        "email": "mfa-required@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+    })
+    assert logged_in.status_code == 200
+    headers = {"Authorization": f"Bearer {logged_in.json()['access_token']}"}
     assert client.get(f"/organizations/{owner['organization_id']}", headers=headers).status_code == 200
     assert client.get("/auth/mfa", headers=headers).json()["can_disable"] is False
     cannot_disable = client.post(
@@ -260,6 +348,11 @@ def test_owner_transfer_requires_mfa_and_targets_existing_admin(client: TestClie
         "/auth/mfa/confirm", headers=owner_headers, json={"code": mfa.totp_code(secret)}
     )
     assert confirmed.status_code == 200
+    assert client.get(f"/organizations/{owner['organization_id']}", headers=owner_headers).status_code == 401
+    owner_login = client.post("/auth/login", json={
+        "email": "transfer-owner@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(secret),
+    })
+    owner_headers = {"Authorization": f"Bearer {owner_login.json()['access_token']}"}
     transferred = client.post(transfer_url, headers=owner_headers, json={
         "target_membership_id": successor_membership_id,
         "password": "a-long-test-password",

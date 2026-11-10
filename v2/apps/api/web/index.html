@@ -63,6 +63,24 @@
         <p>Save these recovery codes somewhere secure. Each code works once.</p>
         <ul id="mfa-recovery-codes"></ul>
       </div>
+      <form id="mfa-rotation-start-form" hidden>
+        <h3>Replace authenticator</h3>
+        <p>Confirm with your password and current authenticator or an unused recovery code. Your current authenticator remains active until the replacement is confirmed.</p>
+        <label for="mfa-rotation-password">Current password</label>
+        <input id="mfa-rotation-password" type="password" autocomplete="current-password" required>
+        <label for="mfa-rotation-current-code">Current authenticator or unused recovery code</label>
+        <input id="mfa-rotation-current-code" maxlength="32" autocomplete="one-time-code" required>
+        <button type="submit">Start authenticator replacement</button>
+      </form>
+      <div id="mfa-rotation-enrollment" hidden>
+        <p>Set up this new key in your authenticator app, then confirm it. The current authenticator remains active until confirmation.</p>
+        <code id="mfa-rotation-secret"></code>
+        <form id="mfa-rotation-confirm-form">
+          <label for="mfa-rotation-confirm-code">New authenticator code</label>
+          <input id="mfa-rotation-confirm-code" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" required>
+          <button type="submit">Confirm replacement</button>
+        </form>
+      </div>
       <form id="mfa-disable-form" hidden>
         <label for="mfa-disable-password">Current password to disable MFA</label>
         <input id="mfa-disable-password" type="password" autocomplete="current-password" required>

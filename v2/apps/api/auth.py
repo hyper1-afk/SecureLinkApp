@@ -77,6 +77,10 @@ class MFADisableRequest(MFACodeRequest):
     password: str = Field(min_length=1, max_length=128)
 
 
+class MFARotationRequest(MFACodeRequest):
+    password: str = Field(min_length=1, max_length=128)
+
+
 class MFAEnrollmentResponse(BaseModel):
     secret: str
     otpauth_uri: str
@@ -605,6 +609,7 @@ def confirm_mfa_enrollment(
     codes = new_recovery_codes()
     user.mfa_enabled = True
     user.mfa_enrollment_expires_at = None
+    user.token_version += 1
     session.add_all(
         MFARecoveryCode(user_id=user.id, code_hash=recovery_code_hash(code)) for code in codes
     )
@@ -646,6 +651,8 @@ def disable_mfa(
     user.mfa_enabled = False
     user.mfa_secret_ciphertext = None
     user.mfa_enrollment_expires_at = None
+    user.mfa_rotation_secret_ciphertext = None
+    user.mfa_rotation_expires_at = None
     user.token_version += 1
     session.execute(
         update(MFARecoveryCode)
@@ -662,6 +669,80 @@ def disable_mfa(
     ))
     session.commit()
     return MFAStatusResponse(enabled=False)
+
+
+@router.post(
+    "/auth/mfa/rotation", response_model=MFAEnrollmentResponse,
+    dependencies=[Depends(rate_limit("mfa_rotation", 5, 3600))],
+)
+def start_mfa_rotation(
+    payload: MFARotationRequest,
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> MFAEnrollmentResponse:
+    user = session.get(User, principal.user_id, with_for_update=True)
+    if (
+        user is None or not user.is_active or not user.mfa_enabled
+        or not password_hash.verify(payload.password, user.password_hash)
+    ):
+        raise HTTPException(status_code=400, detail="Authenticator rotation could not start")
+    if not _valid_mfa_code(session, user, payload.code):
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Authenticator rotation could not start")
+    secret = new_totp_secret()
+    user.mfa_rotation_secret_ciphertext = encrypt_secret(secret, _mfa_key())
+    user.mfa_rotation_expires_at = datetime.now(UTC) + timedelta(minutes=15)
+    session.commit()
+    label = quote(f"SecureLink:{user.email}")
+    return MFAEnrollmentResponse(
+        secret=secret,
+        otpauth_uri=f"otpauth://totp/{label}?secret={secret}&issuer=SecureLink&digits=6&period=30",
+    )
+
+
+@router.post("/auth/mfa/rotation/confirm", dependencies=[Depends(rate_limit("mfa_rotation_confirm", 5, 300))])
+def confirm_mfa_rotation(
+    payload: MFACodeRequest,
+    principal: Annotated[Principal, Depends(current_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, list[str]]:
+    user = session.get(User, principal.user_id, with_for_update=True)
+    expires_at = user.mfa_rotation_expires_at if user is not None else None
+    if expires_at is not None and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if (
+        user is None or not user.is_active or not user.mfa_enabled
+        or user.mfa_rotation_secret_ciphertext is None or expires_at is None
+        or expires_at <= datetime.now(UTC)
+    ):
+        raise HTTPException(status_code=400, detail="Authenticator rotation is missing or expired")
+    try:
+        new_secret = decrypt_secret(user.mfa_rotation_secret_ciphertext, _mfa_key())
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="Authenticator rotation cannot be verified") from exc
+    if not verify_totp(new_secret, payload.code):
+        raise HTTPException(status_code=400, detail="Invalid authentication code")
+
+    codes = new_recovery_codes()
+    user.mfa_secret_ciphertext = user.mfa_rotation_secret_ciphertext
+    user.mfa_rotation_secret_ciphertext = None
+    user.mfa_rotation_expires_at = None
+    user.token_version += 1
+    now = datetime.now(UTC)
+    session.execute(
+        update(MFARecoveryCode).where(MFARecoveryCode.user_id == user.id).values(consumed_at=now)
+    )
+    session.add_all(MFARecoveryCode(user_id=user.id, code_hash=recovery_code_hash(code)) for code in codes)
+    membership = session.scalar(
+        select(Membership).where(Membership.user_id == user.id).order_by(Membership.created_at).limit(1)
+    )
+    session.add(AuditEvent(
+        organization_id=membership.organization_id if membership else None,
+        actor_user_id=user.id, actor_type="user", action="user.mfa_rotated",
+        target_type="user", target_id=user.id, details="{}",
+    ))
+    session.commit()
+    return {"recovery_codes": codes}
 
 
 
