@@ -320,7 +320,7 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
         response = client.post(
             path,
             headers=headers,
-            json={"hostname": f"{member['email'].split('@')[0]}.example.com"},
+            json={"hostname": "denied.example.com"},
         )
         assert response.status_code == 403
         asset_id = asset.json()["id"]
