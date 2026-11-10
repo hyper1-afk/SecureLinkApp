@@ -1241,16 +1241,21 @@ def test_expired_privileged_mfa_grace_blocks_existing_extension_session(client: 
 
 def test_extension_oauth_rejects_unregistered_redirect_and_bad_pkce(client: TestClient):
     owner = register(client, "extension-invalid-oauth@example.test")
-    payload = {
-        "client_id": "securelink-chrome-extension",
-        "redirect_uri": "https://attacker.example.test/callback",
-        "organization_id": owner["organization_id"],
-        "state": "s" * 43,
-        "code_challenge": _challenge("v" * 43),
-        "code_challenge_method": "S256",
-    }
     headers = {"Authorization": f"Bearer {owner['access_token']}"}
-    assert client.post("/extension/oauth/authorize", headers=headers, json=payload).status_code == 400
+    for redirect_uri in (
+        "https://attacker.example.test/callback",
+        "https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/",
+    ):
+        payload = {
+            "client_id": "securelink-chrome-extension",
+            "redirect_uri": redirect_uri,
+            "organization_id": owner["organization_id"],
+            "state": "s" * 43,
+            "code_challenge": _challenge("v" * 43),
+            "code_challenge_method": "S256",
+        }
+        response = client.post("/extension/oauth/authorize", headers=headers, json=payload)
+        assert response.status_code == 400
 
     code = _authorize_extension(client, owner, "v" * 43)
     invalid_exchange = client.post(

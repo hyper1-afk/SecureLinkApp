@@ -133,7 +133,9 @@ class Settings(BaseSettings):
             problems.append("SMTP_PASSWORD is required when SMTP_USERNAME is set")
         redirect_uris = [uri.strip() for uri in self.extension_redirect_uris.split(",") if uri.strip()]
         if not redirect_uris:
-            problems.append("EXTENSION_REDIRECT_URIS must contain the published extension redirect URI")
+            problems.append(
+                "EXTENSION_REDIRECT_URIS must contain an exact Chrome extension redirect URI"
+            )
         for uri in redirect_uris:
             parsed = urlsplit(uri)
             if (

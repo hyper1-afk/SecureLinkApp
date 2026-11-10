@@ -37,6 +37,14 @@ def test_deployment_settings_accept_complete_staging_configuration():
     assert settings.app_env == "staging"
 
 
+def test_deployment_settings_accepts_the_exact_staging_extension_callback():
+    callback = "https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/"
+
+    settings = Settings(**deployment_settings(extension_redirect_uris=callback))
+
+    assert settings.extension_redirect_uris == callback
+
+
 @pytest.mark.parametrize(
     ("override", "message"),
     [
