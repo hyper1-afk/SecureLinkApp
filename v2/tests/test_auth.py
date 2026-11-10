@@ -227,6 +227,9 @@ def test_mfa_rotation_preserves_old_factor_until_confirm_then_revokes_sessions(c
     assert started.status_code == 200
     new_secret = started.json()["secret"]
     assert client.get("/auth/mfa", headers=headers).status_code == 200
+    assert client.post("/auth/login", json={
+        "email": "rotate@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(old_secret),
+    }).status_code == 200
 
     confirmed = client.post("/auth/mfa/rotation/confirm", headers=headers, json={
         "code": mfa.totp_code(new_secret),
@@ -274,10 +277,14 @@ def test_mfa_rotation_accepts_recovery_code_and_rejects_bad_password(client: Tes
     assert client.post("/auth/mfa/rotation/confirm", headers=headers, json={
         "code": mfa.totp_code(new_secret),
     }).status_code == 200
-    replay = client.post("/auth/mfa/rotation", headers=headers, json={
-        "password": "a-long-test-password", "code": recovery_codes[0],
+    fresh_login = client.post("/auth/login", json={
+        "email": "rotate-recovery@example.test", "password": "a-long-test-password", "mfa_code": mfa.totp_code(new_secret),
     })
-    assert replay.status_code == 401
+    assert fresh_login.status_code == 200
+    fresh_headers = {"Authorization": f"Bearer {fresh_login.json()['access_token']}"}
+    assert client.post("/auth/mfa/rotation", headers=fresh_headers, json={
+        "password": "a-long-test-password", "code": recovery_codes[0],
+    }).status_code == 400
 
 
 def test_privileged_mfa_grace_expires_and_enrolled_admin_cannot_disable(client: TestClient):
