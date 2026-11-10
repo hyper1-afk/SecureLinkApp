@@ -65,7 +65,11 @@ def process_one() -> bool:
         user = session.get(User, row.user_id)
         case = session.get(IncidentCase, row.case_id)
         organization = session.get(Organization, row.organization_id)
-        scan = session.get(UrlScan, case.scan_id) if case is not None else None
+        scan = (
+            session.get(UrlScan, case.scan_id)
+            if case is not None and case.scan_id is not None
+            else None
+        )
         subject = scan.hostname if scan is not None else None
         if case is not None and subject is None:
             subject = session.scalar(
