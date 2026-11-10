@@ -1,0 +1,5 @@
+{
+  "name": "securelink-browser-extension",
+  "private": true,
+  "type": "module"
+}

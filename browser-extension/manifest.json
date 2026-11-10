@@ -10,6 +10,7 @@
     "contextMenus",
     "windows"
   ],
+  "optional_permissions": ["identity"],
   "host_permissions": [
     "<all_urls>"
   ],
@@ -29,7 +30,8 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {

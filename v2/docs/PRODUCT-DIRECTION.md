@@ -79,7 +79,7 @@ Prove backup restore, alert delivery, incident response, capacity limits, securi
 
 ## Current position
 
-The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a local Compose environment, DNS ownership verification for domain assets, an evidence-backed case lifecycle for scan findings, a dashboard connecting those features, and a separate unpacked Chrome extension preview using PKCE and a scan-only session. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, automated investigation, approval workflows, billing, or integration of the preview client into the published extension. It is not production-ready.
+The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a local Compose environment, DNS ownership verification for domain assets, an evidence-backed case lifecycle for scan findings, a dashboard connecting those features, and a PKCE scan-only extension integration in the development branch. The existing extension's automatic legacy scanner remains a separate path, and the integration has not been released to the Web Store. Ownership verification does not itself run monitoring, and case status changes do not take response actions. V2 does not yet implement isolated monitoring jobs, reputation-based threat detection, automated investigation, approval workflows, or billing. It is not production-ready.
 
 ## Feature portfolio: acquisition hypotheses
 

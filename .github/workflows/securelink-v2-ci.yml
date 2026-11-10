@@ -73,6 +73,11 @@ jobs:
           node --check extension/popup.js
           node --check extension/oauth.js
           node --test extension/tests/oauth.test.js
+          node --check ../browser-extension/background.js
+          node --check ../browser-extension/popup.js
+          node --check ../browser-extension/v2-popup.js
+          node --check ../browser-extension/v2-oauth.js
+          node --test ../browser-extension/tests/v2-oauth.test.js
 
       - name: Audit Python dependencies
         run: pip-audit

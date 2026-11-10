@@ -62,6 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (r.status === 'limit') {
             showResult('info', '!', 'Limit Reached', r.message || 'Upgrade for more scans', []);
             chrome.storage.local.remove(['lastScanResult']);
+        } else if (r.status === 'error') {
+            showResult('info', '!', 'Scan unavailable', r.message || 'Legacy scanner could not review this link.', []);
         } else if (r.status === 'done') {
             var score = r.score || 0;
             var threats = r.threats || [];
@@ -126,14 +128,22 @@ document.addEventListener('DOMContentLoaded', () => {
         userPlanEl.textContent  = capitalize(tier) + ' plan - Unlimited scans';
 
         setTierBadge(tier);
-        setStatus('active', 'Full Protection Active');
+        chrome.runtime.sendMessage({ action: 'getLegacyApiState' }, function(apiState) {
+            if (apiState && !apiState.configured) setStatus('warning', 'Legacy scanner disabled in unpacked build');
+            else setStatus('active', 'Full Protection Active');
+        });
     }
 
     function showLoggedOut() {
         loginSection.classList.remove('hidden');
         userSection.classList.add('hidden');
         setTierBadge('free');
-        setStatus('active', 'Protection Active');
+        chrome.runtime.sendMessage({ action: 'getLegacyApiState' }, function(apiState) {
+            const legacyConfigured = !apiState || apiState.configured;
+            loginSection.classList.toggle('hidden', !legacyConfigured);
+            if (!legacyConfigured) setStatus('warning', 'Legacy scanner disabled in unpacked build');
+            else setStatus('active', 'Protection Active');
+        });
     }
 
     function applyServerStatus(status) {
@@ -210,6 +220,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (resp.error) {
+                showResult('info', '!', 'Scan unavailable', resp.message || 'Legacy scanner could not review this link.', []);
+                return;
+            }
+
             var score   = resp.riskScore || 0;
             var threats = (resp.threats || []).concat(resp.warnings || []).slice(0, 5);
 
@@ -278,9 +293,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             chrome.storage.local.set({ customApiUrl: url || '' }, function() {
-                msg.textContent = url ? 'Saved — extension now points to ' + url : 'Reset to default (securelinkapp.com)';
-                msg.className = 'settings-msg';
-                msg.classList.remove('hidden');
+                if (url) {
+                    msg.textContent = 'Saved — extension now points to ' + url;
+                    msg.className = 'settings-msg';
+                    msg.classList.remove('hidden');
+                } else {
+                    chrome.runtime.sendMessage({ action: 'getLegacyApiState' }, function(apiState) {
+                        msg.textContent = apiState && apiState.publishedDefault
+                            ? 'Reset to default (securelinkapp.com)'
+                            : 'Legacy scanner remains disabled in this unpacked build';
+                        msg.className = 'settings-msg';
+                        msg.classList.remove('hidden');
+                    });
+                }
                 setTimeout(function() { msg.classList.add('hidden'); }, 3000);
             });
         });

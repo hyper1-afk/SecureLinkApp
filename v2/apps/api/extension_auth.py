@@ -83,6 +83,12 @@ class ExtensionSessionSummary(BaseModel):
     status: Literal["active", "revoked", "expired", "invalidated"]
 
 
+class CurrentExtensionSession(BaseModel):
+    id: str
+    organization_id: str
+    expires_at: datetime
+
+
 @dataclass(frozen=True)
 class ExtensionPrincipal:
     session_id: str
@@ -406,6 +412,27 @@ def extension_principal(
         session_id=extension_session.id,
         user_id=extension_session.user_id,
         organization_id=extension_session.organization_id,
+    )
+
+
+@router.get(
+    "/extension/oauth/session",
+    response_model=CurrentExtensionSession,
+    dependencies=[Depends(rate_limit("extension_session_check", 60, 60))],
+)
+def get_current_extension_session(
+    response: Response,
+    principal: Annotated[ExtensionPrincipal, Depends(extension_principal)],
+    session: Annotated[Session, Depends(get_session)],
+) -> CurrentExtensionSession:
+    response.headers["Cache-Control"] = "no-store"
+    extension_session = session.get(ExtensionSession, principal.session_id)
+    if extension_session is None:
+        raise HTTPException(status_code=401, detail="Invalid extension authorization")
+    return CurrentExtensionSession(
+        id=extension_session.id,
+        organization_id=extension_session.organization_id,
+        expires_at=_as_utc(extension_session.expires_at),
     )
 
 

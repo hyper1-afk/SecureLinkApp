@@ -467,6 +467,10 @@ def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
         assert auth_code.consumed_at is not None
 
     extension_headers = {"Authorization": f"Bearer {token}"}
+    current_session = client.get("/extension/oauth/session", headers=extension_headers)
+    assert current_session.status_code == 200
+    assert current_session.headers["cache-control"] == "no-store"
+    assert current_session.json()["organization_id"] == owner["organization_id"]
     scan = client.post(
         "/extension/v1/scans",
         headers=extension_headers,
@@ -490,6 +494,7 @@ def test_extension_oauth_pkce_session_is_scoped_short_lived_and_revocable(
         },
     ).status_code == 400
     assert client.post("/extension/oauth/revoke", headers=extension_headers).status_code == 204
+    assert client.get("/extension/oauth/session", headers=extension_headers).status_code == 401
     assert client.post(
         "/extension/v1/scans",
         headers=extension_headers,

@@ -31,6 +31,13 @@
         </div>
         <div class="settings-hint">Point the extension at your self-hosted SecureLink instance. Leave blank to use the default (securelinkapp.com).</div>
         <div class="settings-msg hidden" id="settings-msg"></div>
+        <div class="settings-label v2-origin-label">V2 API origin <span class="settings-self-host-tag">Local or staging</span></div>
+        <div class="settings-row">
+            <input type="url" id="v2-api-url-input" placeholder="https://staging.example.com or http://localhost:8000" autocomplete="off" spellcheck="false">
+            <button class="settings-save-btn" id="v2-api-url-save-btn">Save</button>
+        </div>
+        <div class="settings-hint">V2 access is disabled until you set an API origin. HTTPS is required outside localhost.</div>
+        <div class="settings-msg hidden" id="v2-settings-msg"></div>
     </div>
 
     <!-- Status Bar -->
@@ -84,6 +91,23 @@
         </div>
     </div>
 
+    <section class="v2-section" aria-labelledby="v2-heading">
+        <div class="v2-header">
+            <div>
+                <div class="v2-title" id="v2-heading">SecureLink V2 workspace</div>
+                <div class="v2-status" id="v2-status" role="status">Checking connection…</div>
+            </div>
+            <button class="v2-connect-btn" id="v2-connect-btn" type="button">Connect</button>
+            <button class="v2-disconnect-btn hidden" id="v2-disconnect-btn" type="button">Disconnect</button>
+        </div>
+        <button class="v2-scan-btn hidden" id="v2-scan-btn" type="button">Submit link for V2 review</button>
+        <div class="v2-result hidden" id="v2-result" aria-live="polite">
+            <div id="v2-result-summary"></div>
+            <ul id="v2-findings"></ul>
+        </div>
+        <div class="v2-note">Optional, manual structural review. This does not replace the extension’s existing automatic checks and is not a reputation or malware verdict.</div>
+    </section>
+
     <div class="divider"></div>
 
     <!-- Account Section -->
@@ -125,5 +149,6 @@
     </div>
 
     <script src="popup.js"></script>
+    <script type="module" src="v2-popup.js"></script>
 </body>
 </html>
