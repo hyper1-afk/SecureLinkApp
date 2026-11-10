@@ -1249,7 +1249,8 @@ function renderHealthResults(data) {
     const ssl     = data.ssl_info     || {};
     const headers = data.headers_info || {};
     const ports   = data.port_info    || {};
-    const grade   = data.grade || '?';
+    const partial = data.scan_status === 'partial';
+    const grade   = partial ? 'Partial' : (data.grade || '?');
     const score   = data.score || 0;
     const barColor = score >= 80 ? '' : score >= 60 ? 'amber' : 'red';
 
@@ -1261,7 +1262,7 @@ function renderHealthResults(data) {
         { label: 'HSTS Header',     val: headers.hsts  ? 'Present' : 'Missing', ok: headers.hsts },
         { label: 'X-Frame-Options', val: headers.x_frame_options ? 'Set' : 'Missing', ok: !!headers.x_frame_options },
         { label: 'CSP Header',      val: headers.content_security_policy ? 'Set' : 'Missing', ok: !!headers.content_security_policy },
-        { label: 'Open Ports',      val: (ports.open_ports||[]).join(', ') || 'None', ok: !(ports.open_ports||[]).some(p => ![80,443].includes(p)) },
+        { label: 'Open Ports',      val: ports.scan_available === false ? 'Not scanned' : ((ports.open_ports||[]).join(', ') || 'None'), ok: ports.scan_available !== false && !(ports.open_ports||[]).some(p => ![80,443].includes(p)) },
     ];
 
     return `<div class="results-card">
@@ -1269,11 +1270,12 @@ function renderHealthResults(data) {
             <div class="score-grade ${grade}" style="width:44px;height:44px;font-size:20px">${grade}</div>
             <div>
                 <h3>${escHtml(data.domain || '')}</h3>
-                <span style="font-size:12px;color:var(--muted)">Security Score: ${score}/100</span>
+                <span style="font-size:12px;color:var(--muted)">${partial ? 'Indicative score (partial scan)' : 'Security Score'}: ${score}/100</span>
             </div>
         </div>
         <div class="results-body">
-            <div class="score-bar" style="margin-bottom:18px"><div class="score-bar-fill ${barColor}" style="width:${score}%"></div></div>
+        ${partial ? '<div class="alert alert-warning py-2" role="status">Some checks are unavailable here. This score is partial and does not include a port scan.</div>' : ''}
+        <div class="score-bar" style="margin-bottom:18px"><div class="score-bar-fill ${barColor}" style="width:${score}%"></div></div>
             <div class="check-grid">
                 ${checks.map(c => {
                     const cls = c.ok ? 'chk-ok' : (c.warn ? 'chk-warn' : 'chk-fail');

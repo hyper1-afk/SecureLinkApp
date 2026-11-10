@@ -2157,6 +2157,8 @@ def verify_link():
             resp.set_cookie('sl_anon_id', new_anon_id, max_age=365*24*3600, httponly=True, samesite='Lax')
         return resp
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error verifying link: {e}", exc_info=True)
         return jsonify({'error': 'An internal error occurred'}), 500
@@ -2210,6 +2212,7 @@ def domain_health_check():
         findings = r.get('findings', [])
         resp = jsonify({
             'domain': r.get('domain', domain),
+            'scan_status': r.get('scan_status', 'partial'),
             'score': r.get('score', 0),
             'grade': r.get('grade', 'F'),
             'ssl': {
@@ -2278,6 +2281,7 @@ def health_check_pdf():
     score        = r.get('score', 0)
     grade        = r.get('grade', 'F')
     generated_at = datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')
+    scan_status = r.get('scan_status', 'partial')
 
     grade_colors = {'A+': '#22c55e', 'A': '#22c55e', 'B': '#84cc16',
                     'C': '#f59e0b', 'D': '#f97316', 'F': '#ef4444'}
@@ -2339,6 +2343,10 @@ def health_check_pdf():
     story.append(Paragraph(
         f'Generated {generated_at} &nbsp;&bull;&nbsp; {tier.title()} Plan',
         ParagraphStyle('meta', parent=styles['Normal'], fontSize=9, textColor=muted_c, spaceAfter=8)))
+    if scan_status != 'complete':
+        story.append(Paragraph(
+            '<b>Coverage notice:</b> This report is partial. Port probing is disabled, and some network checks may be unavailable. Interpret the score only alongside the listed checks.',
+            ParagraphStyle('coverage', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#92400e'), backColor=colors.HexColor('#fef3c7'), borderPadding=7, spaceAfter=10)))
     story.append(HRFlowable(width='100%', thickness=2, color=brand_blue, spaceAfter=16))
 
     # ── Score + Grade block ───────────────────────────────────────────────

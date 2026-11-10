@@ -28,6 +28,7 @@ except ImportError:
     WHOIS_AVAILABLE = False
 
 from config import Config
+from network_safety import UnsafeTargetError, connect_public_target, public_http_get
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class SecurityFinding:
 
 @dataclass
 class DomainScanResult:
-    """Complete result of a domain security scan"""
+    """Domain scan result, with incomplete coverage called out explicitly."""
     domain: str
     score: int  # 0-100
     grade: str
@@ -102,6 +103,7 @@ class DomainScanResult:
     port_info: Dict = field(default_factory=dict)
     content_hash: Optional[str] = None
     scan_duration_ms: int = 0
+    scan_status: str = 'partial'
     scanned_at: datetime = field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> Dict:
@@ -118,6 +120,7 @@ class DomainScanResult:
             'technology_info': self.technology_info,
             'breach_info': self.breach_info,
             'port_info': self.port_info,
+            'scan_status': self.scan_status,
             'scan_duration_ms': self.scan_duration_ms,
             'scanned_at': self.scanned_at.isoformat() if self.scanned_at else None
         }
@@ -235,8 +238,6 @@ TECH_FINGERPRINTS = {
 
 # IDS port scanning constants
 DANGEROUS_PORTS = {22, 23, 445, 3306, 3389, 5432, 5900, 6379, 27017}
-IDS_SCAN_PORTS  = [21, 22, 23, 25, 53, 80, 443, 445,
-                   3306, 3389, 5432, 5900, 6379, 8080, 8443, 8888, 27017]
 
 
 class DomainScanner:
@@ -248,11 +249,6 @@ class DomainScanner:
 
     def __init__(self, config: Config = None):
         self.config = config or Config()
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        })
-        self.session.max_redirects = 5
 
     def scan_domain(self, domain: str) -> DomainScanResult:
         """
@@ -346,7 +342,8 @@ class DomainScanner:
             host = domain.split(':')[0]
             context = ssl.create_default_context()
 
-            with socket.create_connection((host, 443), timeout=10) as sock:
+            sock = connect_public_target(host, 443, timeout=10)
+            with sock:
                 with context.wrap_socket(sock, server_hostname=host) as ssock:
                     cert = ssock.getpeercert()
                     raw_cert = ssock.getpeercert(binary_form=True)
@@ -369,6 +366,7 @@ class DomainScanner:
                     info = {
                         'has_ssl': True,
                         'valid': True,
+                        'scan_available': True,
                         'protocol': protocol_version,
                         'cipher': cipher[0] if cipher else None,
                         'cipher_bits': cipher[2] if cipher and len(cipher) > 2 else None,
@@ -432,6 +430,11 @@ class DomainScanner:
                             details={'cipher': cipher[0], 'bits': cipher[2]}
                         ))
 
+        except UnsafeTargetError:
+            info['has_ssl'] = None
+            info['scan_available'] = False
+            info['scan_note'] = 'TLS probe skipped because the target could not be verified as publicly routable.'
+
         except ssl.SSLCertVerificationError as e:
             info['has_ssl'] = True
             info['valid'] = False
@@ -447,6 +450,7 @@ class DomainScanner:
 
         except (socket.timeout, ConnectionRefusedError):
             info['has_ssl'] = False
+            info['scan_available'] = True
             findings.append(SecurityFinding(
                 category=FindingCategory.SSL.value,
                 severity=FindingSeverity.CRITICAL.value,
@@ -457,6 +461,7 @@ class DomainScanner:
 
         except Exception as e:
             info['has_ssl'] = None
+            info['scan_available'] = False
             info['error'] = str(e)[:200]
             logger.warning(f"SSL check error for {domain}: {e}")
 
@@ -473,29 +478,36 @@ class DomainScanner:
         tech = {'detected': []}
 
         try:
-            # Try HTTPS first, fall back to HTTP
+            response = None
+            # Do not follow redirects: each destination must be independently revalidated.
             for scheme in ['https', 'http']:
                 try:
-                    response = self.session.get(
-                        f'{scheme}://{domain}',
-                        timeout=10,
-                        allow_redirects=True,
-                        verify=False  # We check SSL separately
-                    )
+                    response = public_http_get(domain, scheme, timeout=10, max_body_bytes=10000)
                     break
+                except UnsafeTargetError:
+                    info['scan_available'] = False
+                    info['scan_note'] = 'HTTP probe skipped because the target could not be verified as publicly routable.'
+                    return info, findings, tech
                 except Exception:
                     if scheme == 'http':
                         return info, findings, tech
                     continue
 
-            headers = {k.lower(): v for k, v in response.headers.items()}
+            if response is None:
+                return info, findings, tech
+            headers = response.headers
+            info['scan_available'] = True
             info['status_code'] = response.status_code
             info['final_url'] = response.url
             info['headers_present'] = []
             info['headers_missing'] = []
 
             # Check if HTTP redirects to HTTPS
-            if response.url.startswith('https://'):
+            location = headers.get('location', '')
+            redirects_to_https = response.url.startswith('https://') or (
+                300 <= response.status_code < 400 and location.lower().startswith('https://')
+            )
+            if redirects_to_https:
                 info['redirects_to_https'] = True
             else:
                 info['redirects_to_https'] = False
@@ -574,12 +586,15 @@ class DomainScanner:
                     if gen not in tech['detected']:
                         tech['detected'].append(gen)
 
-        except requests.exceptions.Timeout:
+        except UnsafeTargetError:
+            info['scan_available'] = False
+            info['scan_note'] = 'HTTP probe skipped because the target is not publicly routable.'
+        except (TimeoutError, socket.timeout):
             info['error'] = 'Connection timed out'
-        except requests.exceptions.ConnectionError:
-            info['error'] = 'Could not connect to domain'
+            info['scan_available'] = False
         except Exception as e:
             info['error'] = str(e)[:200]
+            info['scan_available'] = False
             logger.warning(f"Headers check error for {domain}: {e}")
 
         return info, findings, tech
@@ -858,34 +873,20 @@ class DomainScanner:
     # ================================================================
 
     def _check_ports(self, domain: str) -> Dict:
-        """Probe IDS_SCAN_PORTS and return list of open ports."""
-        host = domain.split(':')[0]
-
-        def probe(port):
-            try:
-                with socket.create_connection((host, port), timeout=2):
-                    return port
-            except Exception:
-                return None
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
-            results = ex.map(probe, IDS_SCAN_PORTS)
-
-        open_ports = sorted(p for p in results if p is not None)
-        return {'open_ports': open_ports}
+        """Keep port probing out of the shared web process until isolated."""
+        return {
+            'open_ports': None,
+            'scan_available': False,
+            'scan_note': 'Port probing is disabled in the shared web process.',
+        }
 
     def _compute_content_hash(self, domain: str) -> Optional[str]:
         """Hash stable page elements (title, h1, meta description) for defacement detection."""
-        import re
         for scheme in ('https', 'http'):
             try:
-                resp = requests.get(
-                    f'{scheme}://{domain}',
-                    timeout=10,
-                    allow_redirects=True,
-                    headers={'User-Agent': 'SecureLink-IDS/1.0'},
-                    verify=False
-                )
+                resp = public_http_get(domain, scheme, timeout=10, max_body_bytes=10000)
+                if 300 <= resp.status_code < 400:
+                    continue
                 html = resp.text
                 title_m = re.search(r'<title[^>]*>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
                 h1_m    = re.search(r'<h1[^>]*>(.*?)</h1>',    html, re.IGNORECASE | re.DOTALL)

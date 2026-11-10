@@ -25,7 +25,11 @@ README previously advertised MIT and open-source self-hosting while the checked-
 **Priority:** Release blocker for self-hosted distribution until those terms are reviewed.
 
 ### M0-03 — URL scanning boundary / SSRF review
-The URL verifier uses external HTTP provider lookups and URL parsing. Complete a dedicated review of every path that fetches user-supplied URLs, redirect handling, DNS resolution, IPv4/IPv6 private/link-local/loopback/metadata ranges, DNS rebinding, IDNA normalization, ports, schemes, timeouts, response sizes and outbound egress. Do not fetch arbitrary submitted URLs from the API process. Use a restricted scanning worker with egress policy and revalidate every redirect and resolved address.
+The anonymous legacy health-check routes passed user-supplied domains into TLS, HTTP-header, page-content and TCP-port probes. The `securelink-v2` branch now validates and pins public DNS answers for HTTP/TLS probes, rejects private/non-global addresses, disables redirects and bounds HTTP headers and response bodies. TCP port probing is disabled in the shared web process, and the UI/PDF call the resulting score partial. A focused regression suite covers private/mixed DNS results, pinned connections, redirects and response-size bounds.
+
+This is a targeted source-level remediation, not a complete SSRF sign-off. Review all active routes and integrations in a controlled local environment; deploy probes only in an isolated worker with enforceable egress rules; then test metadata, IPv4/IPv6, DNS rebinding, proxy configuration and redirect behavior end to end. V2's current scanner remains passive.
+
+**Status:** Initial code remediation on `securelink-v2`; focused tests pass locally. Full review and isolated-worker/e2e validation remain open.
 
 **Priority:** Critical before exposing URL fetch functionality.
 
@@ -73,7 +77,7 @@ README feature/plan claims and public-facing product claims must be reconciled w
 - Rotate/revoke any committed credentials and complete a full history scan.
 - Resolve license ownership and choose one valid license.
 - Produce route-to-role/tenant authorization matrix and cross-tenant test suite.
-- Complete SSRF/URL-fetch threat model and isolated scanner design.
+- Complete SSRF/URL-fetch threat model and isolated scanner design; validate the legacy remediation end to end.
 - Inventory agent subprocess capabilities and disable unsafe production paths.
 - Review extension permissions/privacy and provider data-sharing behavior.
 - Establish dependency/SBOM scan, secret scanning, SAST and baseline tests.

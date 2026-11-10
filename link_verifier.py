@@ -5,12 +5,11 @@ Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import re
 import ssl
-import socket
 import hashlib
 import logging
-from urllib.parse import urlparse, parse_qs, unquote
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
+from datetime import datetime
+from typing import Dict, List, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -24,6 +23,7 @@ except ImportError:
     WHOIS_AVAILABLE = False
 
 from config import Config
+from network_safety import UnsafeTargetError, connect_public_target
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +116,6 @@ class LinkVerifier:
         Returns:
             VerificationResult with all analysis details
         """
-        logger.info(f"Starting verification for: {url}")
-        
         threats = []
         warnings = []
         details = {}
@@ -126,6 +124,8 @@ class LinkVerifier:
         # Normalize URL
         url = self._normalize_url(url)
         parsed = urlparse(url)
+        host = parsed.hostname
+        logger.info("Starting verification for host: %s", host)
         
         # 1. Basic URL structure analysis
         structure_result = self._analyze_url_structure(url, parsed)
@@ -135,7 +135,7 @@ class LinkVerifier:
         warnings.extend(structure_result['warnings'])
         
         # 2. Domain analysis
-        domain_result = self._analyze_domain(parsed.netloc)
+        domain_result = self._analyze_domain(host)
         details['domain_analysis'] = domain_result['details']
         risk_scores.append(domain_result['score'])
         threats.extend(domain_result['threats'])
@@ -150,7 +150,7 @@ class LinkVerifier:
         
         # 4. SSL/TLS check
         if parsed.scheme == 'https':
-            ssl_result = self._check_ssl_certificate(parsed.netloc)
+            ssl_result = self._check_ssl_certificate(host)
             details['ssl_check'] = ssl_result['details']
             risk_scores.append(ssl_result['score'])
             threats.extend(ssl_result['threats'])
@@ -162,14 +162,14 @@ class LinkVerifier:
         
         # 5. DNS check
         if self.config.ENABLE_DNS_CHECK:
-            dns_result = self._check_dns(parsed.netloc)
+            dns_result = self._check_dns(host)
             details['dns_check'] = dns_result['details']
             risk_scores.append(dns_result['score'])
             threats.extend(dns_result['threats'])
         
         # 6. WHOIS check (if available)
         if self.config.ENABLE_WHOIS_CHECK and WHOIS_AVAILABLE:
-            whois_result = self._check_whois(parsed.netloc)
+            whois_result = self._check_whois(host)
             details['whois_check'] = whois_result['details']
             risk_scores.append(whois_result['score'])
             warnings.extend(whois_result['warnings'])
@@ -215,11 +215,22 @@ class LinkVerifier:
         return result
     
     def _normalize_url(self, url: str) -> str:
-        """Normalize URL for analysis"""
+        """Normalize and validate a web URL without decoding its authority."""
+        if not isinstance(url, str) or len(url) > 4096:
+            raise ValueError("URL is invalid or too long")
         url = url.strip()
-        if not url.startswith(('http://', 'https://')):
+        if not url.lower().startswith(('http://', 'https://')):
             url = 'https://' + url
-        return unquote(url)
+        parsed = urlparse(url)
+        if parsed.scheme not in {'http', 'https'} or not parsed.hostname:
+            raise ValueError("Only HTTP and HTTPS URLs are supported")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("URLs with embedded credentials are not supported")
+        try:
+            parsed.port
+        except ValueError as exc:
+            raise ValueError("URL port is invalid") from exc
+        return url
     
     def _analyze_url_structure(self, url: str, parsed) -> Dict:
         """Analyze URL structure for suspicious patterns"""
@@ -384,13 +395,12 @@ class LinkVerifier:
         warnings = []
         details = {}
         score = 0.0
+        host = domain
         
         try:
-            # Remove port if present
-            host = domain.split(':')[0]
-            
             context = ssl.create_default_context()
-            with socket.create_connection((host, 443), timeout=self.config.REQUEST_TIMEOUT) as sock:
+            sock = connect_public_target(domain, 443, timeout=self.config.REQUEST_TIMEOUT)
+            with sock:
                 with context.wrap_socket(sock, server_hostname=host) as ssock:
                     cert = ssock.getpeercert()
                     
@@ -403,6 +413,7 @@ class LinkVerifier:
                     details['expires'] = not_after.isoformat()
                     details['days_until_expiry'] = days_until_expiry
                     details['valid'] = True
+                    details['scan_available'] = True
                     
                     if days_until_expiry < 0:
                         threats.append("SSL certificate has expired")
@@ -411,6 +422,10 @@ class LinkVerifier:
                         warnings.append("SSL certificate expires soon")
                         score = 0.2
                     
+        except UnsafeTargetError:
+            details['valid'] = None
+            details['scan_available'] = False
+            warnings.append("SSL probe skipped because the target is not publicly routable")
         except ssl.SSLCertVerificationError as e:
             threats.append(f"SSL certificate verification failed: {str(e)[:100]}")
             details['valid'] = False

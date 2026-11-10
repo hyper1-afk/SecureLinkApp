@@ -241,7 +241,12 @@ def scan_domain_now(domain_id, user_data=None):
     return jsonify({
         'scan': result.to_dict(),
         'scan_id': scan_id,
-        'message': f'Scan complete. Score: {result.score}/100 (Grade: {result.grade})'
+        'message': (
+            f'Partial scan. Indicative score: {result.score}/100 (Grade: {result.grade}); '
+            'port probing is disabled in the shared web process.'
+            if result.scan_status == 'partial'
+            else f'Scan complete. Score: {result.score}/100 (Grade: {result.grade})'
+        )
     })
 
 
@@ -258,7 +263,12 @@ def quick_scan(user_data=None):
 
     return jsonify({
         'scan': result.to_dict(),
-        'message': f'Score: {result.score}/100 (Grade: {result.grade})'
+        'message': (
+            f'Partial scan. Indicative score: {result.score}/100 (Grade: {result.grade}); '
+            'port probing is disabled in the shared web process.'
+            if result.scan_status == 'partial'
+            else f'Score: {result.score}/100 (Grade: {result.grade})'
+        )
     })
 
 

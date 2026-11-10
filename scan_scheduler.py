@@ -215,8 +215,9 @@ class ScanScheduler:
 
         # ---- IDS Block 1: New open port ----
         baseline_ports = domain_info.get('baseline_ports')
-        current_ports = (result.port_info or {}).get('open_ports', [])
-        if baseline_ports is not None:
+        port_info = result.port_info or {}
+        current_ports = port_info.get('open_ports')
+        if baseline_ports is not None and port_info.get('scan_available', True) and isinstance(current_ports, list):
             for port in sorted(set(current_ports) - set(baseline_ports)):
                 if self.db.has_recent_ids_alert(domain_id, 'new_port_detected', str(port)):
                     continue
