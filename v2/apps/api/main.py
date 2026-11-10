@@ -113,7 +113,10 @@ def readiness(response: Response) -> HealthResponse:
         checks["postgres"] = "unavailable"
 
     try:
-        client = Redis.from_url(settings.redis_url, socket_connect_timeout=2, socket_timeout=2)
+        redis_options = {"socket_connect_timeout": 2, "socket_timeout": 2}
+        if settings.redis_url.lower().startswith("rediss://"):
+            redis_options.update(ssl_cert_reqs="required", ssl_check_hostname=True)
+        client = Redis.from_url(settings.redis_url, **redis_options)
         try:
             client.ping()
             checks["redis"] = "ok"

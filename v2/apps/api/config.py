@@ -1,7 +1,7 @@
 import ipaddress
 import re
 from functools import lru_cache
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from cryptography.fernet import Fernet
 from pydantic import model_validator
@@ -36,15 +36,27 @@ class Settings(BaseSettings):
 
         problems: list[str] = []
         public_url = urlsplit(self.app_public_url)
+        try:
+            public_port = public_url.port
+        except ValueError:
+            public_port = -1
+        try:
+            public_address = ipaddress.ip_address(public_url.hostname or "")
+        except ValueError:
+            public_address = None
         if (
             public_url.scheme != "https"
             or not public_url.hostname
+            or public_url.hostname.casefold() == "localhost"
+            or (public_address is not None and not public_address.is_global)
             or public_url.username
             or public_url.password
+            or public_url.path not in {"", "/"}
+            or public_port not in {None, 443}
             or public_url.query
             or public_url.fragment
         ):
-            problems.append("APP_PUBLIC_URL must use HTTPS")
+            problems.append("APP_PUBLIC_URL must be an HTTPS origin without credentials or extra path")
         if not self.app_secret_key or len(self.app_secret_key.encode("utf-8")) < 32:
             problems.append("APP_SECRET_KEY must contain at least 32 bytes")
         if self.app_secret_key and "replace-with" in self.app_secret_key:
@@ -56,6 +68,8 @@ class Settings(BaseSettings):
             problems.append("DATABASE_URL must not use the local example credential")
         if not database.host or database.host in {"localhost", "127.0.0.1", "::1"}:
             problems.append("DATABASE_URL must point to the deployment database")
+        if not database.username or not database.password:
+            problems.append("DATABASE_URL must include a database username and password")
         if database.query.get("sslmode") not in {"require", "verify-ca", "verify-full"}:
             problems.append("DATABASE_URL must require TLS for PostgreSQL")
         redis = urlsplit(self.redis_url)
@@ -63,6 +77,17 @@ class Settings(BaseSettings):
             problems.append("REDIS_URL must use TLS")
         if not redis.hostname or redis.hostname in {"localhost", "127.0.0.1", "::1"}:
             problems.append("REDIS_URL must point to the deployment Redis service")
+        if not redis.password:
+            problems.append("REDIS_URL must include a Redis password")
+        redis_options = parse_qs(redis.query, keep_blank_values=True)
+        cert_reqs = [value.casefold() for value in redis_options.get("ssl_cert_reqs", [])]
+        hostname_checks = [
+            value.casefold() for value in redis_options.get("ssl_check_hostname", [])
+        ]
+        if any(value != "required" for value in cert_reqs) or any(
+            value not in {"1", "true", "yes", "on"} for value in hostname_checks
+        ):
+            problems.append("REDIS_URL must verify the TLS certificate and hostname")
         if not self.email_outbox_encryption_key or "replace-with" in self.email_outbox_encryption_key:
             problems.append("EMAIL_OUTBOX_ENCRYPTION_KEY must be set to a unique secret")
         else:
@@ -87,9 +112,19 @@ class Settings(BaseSettings):
         else:
             try:
                 for resolver in resolvers:
-                    ipaddress.ip_address(resolver)
+                    address = ipaddress.ip_address(resolver)
+                    if address.is_unspecified or address.is_loopback or address.is_multicast:
+                        raise ValueError("DNS resolver address is not usable")
             except ValueError:
-                problems.append("DOMAIN_DNS_RESOLVERS must contain numeric IP addresses only")
+                problems.append("DOMAIN_DNS_RESOLVERS must contain usable numeric unicast IP addresses")
+        proxy_cidrs = [item.strip() for item in self.trusted_proxy_cidrs.split(",") if item.strip()]
+        try:
+            networks = [ipaddress.ip_network(value, strict=False) for value in proxy_cidrs]
+        except ValueError:
+            problems.append("TRUSTED_PROXY_CIDRS must contain valid IP networks")
+        else:
+            if any(network.prefixlen == 0 for network in networks):
+                problems.append("TRUSTED_PROXY_CIDRS must not trust a default route")
         if not all((self.smtp_host, self.smtp_from_email)):
             problems.append("SMTP host and sender must be configured")
         if self.smtp_username and not self.smtp_password:

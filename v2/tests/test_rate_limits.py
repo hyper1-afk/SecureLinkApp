@@ -92,3 +92,23 @@ def test_dynamic_route_parameters_do_not_create_new_redis_keys(monkeypatch):
     dependency(make_request("198.51.100.8", path="/organizations/org-two/scans"))
 
     assert redis.keys == [redis.keys[0], redis.keys[0]]
+
+
+def test_rate_limit_client_enforces_redis_tls_verification(monkeypatch):
+    settings = Settings(redis_url="rediss://securelink:unique@redis.example.test:6379/0")
+    monkeypatch.setattr(rate_limits, "get_settings", lambda: settings)
+    observed = {}
+
+    class FakeRedisClient:
+        @staticmethod
+        def from_url(url, **kwargs):
+            observed["url"] = url
+            observed.update(kwargs)
+            return object()
+
+    monkeypatch.setattr(rate_limits, "Redis", FakeRedisClient)
+
+    rate_limits.get_rate_limit_client()
+
+    assert observed["ssl_cert_reqs"] == "required"
+    assert observed["ssl_check_hostname"] is True

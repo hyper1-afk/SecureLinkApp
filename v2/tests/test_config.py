@@ -14,7 +14,7 @@ def deployment_settings(**overrides):
             "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
             "?sslmode=require"
         ),
-        "redis_url": "rediss://redis.internal:6379/0",
+        "redis_url": "rediss://:unique@redis.internal:6379/0",
         "app_secret_key": "s" * 48,
         "email_outbox_encryption_key": base64.urlsafe_b64encode(b"e" * 32).decode(),
         "mfa_encryption_key": base64.urlsafe_b64encode(b"m" * 32).decode(),
@@ -40,7 +40,22 @@ def test_deployment_settings_accept_complete_staging_configuration():
 @pytest.mark.parametrize(
     ("override", "message"),
     [
-        ({"app_public_url": "http://staging.example.test"}, "APP_PUBLIC_URL must use HTTPS"),
+        (
+            {"app_public_url": "http://staging.example.test"},
+            "APP_PUBLIC_URL must be an HTTPS origin",
+        ),
+        (
+            {"app_public_url": "https://staging.example.test/dashboard"},
+            "APP_PUBLIC_URL must be an HTTPS origin",
+        ),
+        (
+            {"app_public_url": "https://staging.example.test:8443"},
+            "APP_PUBLIC_URL must be an HTTPS origin",
+        ),
+        (
+            {"app_public_url": "https://127.0.0.1"},
+            "APP_PUBLIC_URL must be an HTTPS origin",
+        ),
         ({"app_secret_key": "short"}, "APP_SECRET_KEY must contain at least 32 bytes"),
         (
             {
@@ -69,8 +84,32 @@ def test_deployment_settings_accept_complete_staging_configuration():
             "REDIS_URL must use TLS",
         ),
         (
+            {"redis_url": "rediss://redis.internal:6379/0"},
+            "REDIS_URL must include a Redis password",
+        ),
+        (
+            {"redis_url": "rediss://redis.internal:6379/0?ssl_cert_reqs=none"},
+            "REDIS_URL must verify the TLS certificate and hostname",
+        ),
+        (
+            {"redis_url": "rediss://redis.internal:6379/0?ssl_check_hostname=false"},
+            "REDIS_URL must verify the TLS certificate and hostname",
+        ),
+        (
             {"database_url": "sqlite:///./not-production.db"},
             "DATABASE_URL must use PostgreSQL",
+        ),
+        (
+            {"database_url": "postgresql+psycopg://@postgres.internal:5432/securelink?sslmode=require"},
+            "DATABASE_URL must include a database username and password",
+        ),
+        (
+            {"trusted_proxy_cidrs": "not-a-cidr"},
+            "TRUSTED_PROXY_CIDRS must contain valid IP networks",
+        ),
+        (
+            {"trusted_proxy_cidrs": "0.0.0.0/0"},
+            "TRUSTED_PROXY_CIDRS must not trust a default route",
         ),
         (
             {
@@ -110,7 +149,10 @@ def test_development_settings_keep_local_defaults():
     assert settings.database_url.endswith("@localhost:5432/securelink")
 
 
-@pytest.mark.parametrize("resolvers", ["", "resolver.example.test", "1.1.1.1,not-an-ip"])
+@pytest.mark.parametrize(
+    "resolvers",
+    ["", "resolver.example.test", "1.1.1.1,not-an-ip", "127.0.0.1", "0.0.0.0", "224.0.0.1"],
+)
 def test_deployment_requires_numeric_dns_resolvers(resolvers):
     with pytest.raises(ValidationError, match="DOMAIN_DNS_RESOLVERS"):
         Settings(**deployment_settings(domain_dns_resolvers=resolvers))

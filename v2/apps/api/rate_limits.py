@@ -21,11 +21,11 @@ return {count, redis.call('TTL', KEYS[1])}
 
 
 def get_rate_limit_client() -> Redis:
-    return Redis.from_url(
-        get_settings().redis_url,
-        socket_connect_timeout=2,
-        socket_timeout=2,
-    )
+    redis_url = get_settings().redis_url
+    redis_options = {"socket_connect_timeout": 2, "socket_timeout": 2}
+    if redis_url.lower().startswith("rediss://"):
+        redis_options.update(ssl_cert_reqs="required", ssl_check_hostname=True)
+    return Redis.from_url(redis_url, **redis_options)
 
 
 @lru_cache(maxsize=32)
