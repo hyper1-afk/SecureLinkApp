@@ -1,20 +1,8 @@
 const CLIENT_ID = "securelink-chrome-extension";
 
-export function validateApiOrigin(value) {
-  let api;
-  try {
-    api = new URL(value);
-  } catch {
-    throw new Error("Enter a valid V2 API origin.");
-  }
-  if (api.username || api.password || api.search || api.hash || api.pathname !== "/") {
-    throw new Error("Enter only the V2 API origin, without a path or credentials.");
-  }
-  if (api.protocol !== "https:" && !(api.protocol === "http:" && api.hostname === "localhost")) {
-    throw new Error("V2 requires HTTPS outside localhost.");
-  }
-  return api;
-}
+import { validateApiOrigin } from "./api-origin.js";
+
+export { validateApiOrigin };
 
 export function randomBase64Url(byteLength = 32, cryptoApi = globalThis.crypto) {
   const bytes = cryptoApi.getRandomValues(new Uint8Array(byteLength));

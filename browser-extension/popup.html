@@ -29,14 +29,14 @@
             <input type="url" id="api-url-input" placeholder="https://securelinkapp.com" autocomplete="off" spellcheck="false">
             <button class="settings-save-btn" id="settings-save-btn">Save</button>
         </div>
-        <div class="settings-hint">Point the extension at your self-hosted SecureLink instance. Leave blank to use the default (securelinkapp.com).</div>
+        <div class="settings-hint">Point the extension at a self-hosted instance you trust. HTTPS is required outside localhost because sign-in credentials and session tokens go to this server. Leave blank to use securelinkapp.com.</div>
         <div class="settings-msg hidden" id="settings-msg"></div>
         <div class="settings-label v2-origin-label">V2 API origin <span class="settings-self-host-tag">Local or staging</span></div>
         <div class="settings-row">
             <input type="url" id="v2-api-url-input" placeholder="https://staging.example.com or http://localhost:8000" autocomplete="off" spellcheck="false">
             <button class="settings-save-btn" id="v2-api-url-save-btn">Save</button>
         </div>
-        <div class="settings-hint">V2 access is disabled until you set an API origin. HTTPS is required outside localhost.</div>
+        <div class="settings-hint">V2 access is disabled until you set an API origin. HTTPS is required outside localhost. Your manual review data and session token go to this server, so configure only an instance you trust.</div>
         <div class="settings-msg hidden" id="v2-settings-msg"></div>
     </div>
 
@@ -150,7 +150,7 @@
         <span>v1.3.0</span>
     </div>
 
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
     <script type="module" src="v2-popup.js"></script>
 </body>
 </html>

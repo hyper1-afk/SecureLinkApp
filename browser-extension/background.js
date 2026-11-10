@@ -6,8 +6,8 @@ import {
     createPkcePair,
     randomBase64Url,
     readAuthorizationCallback,
-    validateApiOrigin
 } from './v2-oauth.js';
+import { configuredApiOrigin, validateApiOrigin } from './api-origin.js';
 import { legacyScanFailure, normalizeLegacyScan } from './legacy-scan.js';
 import { redactUrlForSubmission } from './url-privacy.js';
 import {
@@ -24,13 +24,19 @@ let API_BASE = IS_PUBLISHED_EXTENSION ? DEFAULT_API_BASE : '';
 
 // Load custom API URL (set via extension settings panel)
 chrome.storage.local.get(['customApiUrl'], (result) => {
-    API_BASE = result.customApiUrl || (IS_PUBLISHED_EXTENSION ? DEFAULT_API_BASE : '');
+    API_BASE = configuredApiOrigin(
+        result.customApiUrl,
+        IS_PUBLISHED_EXTENSION ? DEFAULT_API_BASE : ''
+    );
 });
 
 // Update API_BASE whenever user changes it in the settings panel
 chrome.storage.onChanged.addListener((changes) => {
     if (changes.customApiUrl !== undefined) {
-        API_BASE = changes.customApiUrl.newValue || (IS_PUBLISHED_EXTENSION ? DEFAULT_API_BASE : '');
+        API_BASE = configuredApiOrigin(
+            changes.customApiUrl.newValue,
+            IS_PUBLISHED_EXTENSION ? DEFAULT_API_BASE : ''
+        );
     }
 });
 

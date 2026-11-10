@@ -102,6 +102,7 @@ jobs:
           node --test extension/tests/url-privacy.test.js
           node --check ../browser-extension/background.js
           node --check ../browser-extension/popup.js
+          node --check ../browser-extension/api-origin.js
           node --check ../browser-extension/v2-popup.js
           node --check ../browser-extension/v2-oauth.js
           node --check ../browser-extension/url-privacy.js
@@ -109,6 +110,7 @@ jobs:
           node --check ../browser-extension/warning.js
           node --check ../browser-extension/warning-state.js
           node --test ../browser-extension/tests/v2-oauth.test.js
+          node --test ../browser-extension/tests/api-origin.test.js
           node --test ../browser-extension/tests/url-privacy.test.js
           node --check ../static/js/password-exposure-check.mjs
           node --test ../browser-extension/tests/password-exposure.test.mjs

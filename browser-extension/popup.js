@@ -1,5 +1,7 @@
 // SecureLink Popup Script
 
+import { validateApiOrigin } from './api-origin.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const urlInput      = document.getElementById('url-input');
     const checkBtn      = document.getElementById('check-btn');
@@ -291,9 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Save URL
         saveBtn.addEventListener('click', function() {
-            var url = apiUrlInput.value.trim().replace(/\/$/, '');
-            if (url && !url.startsWith('http')) {
-                msg.textContent = 'URL must start with http:// or https://';
+            var rawUrl = apiUrlInput.value.trim();
+            var url = '';
+            try {
+                if (rawUrl) url = validateApiOrigin(rawUrl).origin;
+            } catch (error) {
+                msg.textContent = error instanceof Error ? error.message : 'Enter a valid API origin.';
                 msg.className = 'settings-msg error';
                 msg.classList.remove('hidden');
                 return;
