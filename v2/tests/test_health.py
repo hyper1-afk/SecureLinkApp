@@ -44,6 +44,15 @@ def test_liveness_is_independent_of_dependencies():
     assert response.json()["status"] == "ok"
 
 
+def test_api_responses_include_baseline_security_headers():
+    response = client.get("/health/live")
+
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["permissions-policy"] == "camera=(), microphone=(), geolocation=()"
+
+
 def test_oversized_request_body_is_rejected_before_route_processing():
     response = client.post(
         "/auth/register",
