@@ -15,6 +15,17 @@ permissions:
   contents: read
 
 jobs:
+  secret-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Guard full history against exposed Google API keys
+        run: python v2/scripts/audit_repo_history.py
+
   api:
     runs-on: ubuntu-latest
     services:
@@ -51,9 +62,6 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-
-      - name: Guard full history against exposed Google API keys
-        run: python v2/scripts/audit_repo_history.py
 
       - name: Scan repository history for secrets
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
