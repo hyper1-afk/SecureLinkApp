@@ -29,14 +29,14 @@
             <input type="url" id="api-url-input" placeholder="https://securelinkapp.com" autocomplete="off" spellcheck="false">
             <button class="settings-save-btn" id="settings-save-btn">Save</button>
         </div>
-        <div class="settings-hint">Point the extension at a self-hosted instance you trust. HTTPS is required outside localhost because sign-in credentials and session tokens go to this server. Leave blank to use securelinkapp.com.</div>
+        <div class="settings-hint">Point the extension at a self-hosted instance you trust. HTTPS is required outside localhost because sign-in credentials and session tokens go to this server. Saving a custom origin asks Chrome for access to that origin. Leave blank to use securelinkapp.com.</div>
         <div class="settings-msg hidden" id="settings-msg"></div>
         <div class="settings-label v2-origin-label">V2 API origin <span class="settings-self-host-tag">Local or staging</span></div>
         <div class="settings-row">
             <input type="url" id="v2-api-url-input" placeholder="https://staging.example.com or http://localhost:8000" autocomplete="off" spellcheck="false">
             <button class="settings-save-btn" id="v2-api-url-save-btn">Save</button>
         </div>
-        <div class="settings-hint">V2 access is disabled until you set an API origin. HTTPS is required outside localhost. Your manual review data and session token go to this server, so configure only an instance you trust.</div>
+        <div class="settings-hint">V2 access is disabled until you set an API origin. HTTPS is required outside localhost. Saving an origin asks Chrome for access to that origin. Your manual review data and session token go to this server, so configure only an instance you trust.</div>
         <div class="settings-msg hidden" id="v2-settings-msg"></div>
     </div>
 
@@ -46,7 +46,7 @@
         <span class="status-text" id="status-text">Protection Active</span>
     </div>
 
-    <div class="scan-privacy-note" role="note">Automatic checks send the URL scheme, host, port, path, and query parameter names to the configured scanner. Credentials and fragments are removed and query values are redacted. These remaining URL parts can still identify you; page contents are not read.</div>
+    <div class="scan-privacy-note" role="note">Automatic checks send only the current destination URL to the configured scanner, with credentials and fragments removed and query values redacted. Page-link checks run only after you click Scan links on this page, and inspect at most 25 external link URLs.</div>
 
     <!-- Stats Row -->
     <div class="stats-row">
@@ -81,6 +81,8 @@
                 Scan
             </button>
         </div>
+        <button class="check-btn page-scan-btn" id="scan-page-btn" type="button">Scan links on this page</button>
+        <div class="settings-hint">Page scanning starts only when you click this button. It checks up to 25 external links and sends their redacted URLs to your configured scanner.</div>
         <div class="result hidden" id="result">
             <div class="result-header">
                 <span class="result-icon-large" id="result-icon"></span>

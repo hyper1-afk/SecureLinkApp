@@ -1,4 +1,5 @@
 import { validateApiOrigin } from "./v2-oauth.js";
+import { requestApiOriginPermission } from "./api-origin.js";
 
 const byId = (id) => document.getElementById(id);
 const V2_TOKEN_KEY = "v2ExtensionAccessToken";
@@ -62,6 +63,9 @@ function initializeV2Settings() {
     let newOrigin = "";
     try {
       if (value) newOrigin = validateApiOrigin(value).origin;
+      if (newOrigin && !(await requestApiOriginPermission(newOrigin))) {
+        throw new Error("Chrome did not grant access to this V2 API origin.");
+      }
       const session = await chrome.storage.session.get([V2_TOKEN_KEY, V2_ORIGIN_KEY]);
       if (session[V2_TOKEN_KEY] && newOrigin !== session[V2_ORIGIN_KEY]) {
         throw new Error("Disconnect the current V2 session before changing its API origin.");

@@ -1,8 +1,11 @@
 // SecureLink Browser Extension - Content Script
 
+(function secureLinkPageScanner() {
 const MAX_PAGE_LINK_SCANS = 25;
 
-// Listen for messages from popup and background
+// Listen for one user-initiated page scan at a time, even if the popup is opened repeatedly.
+if (!globalThis.__secureLinkPageScanListenerAttached) {
+globalThis.__secureLinkPageScanListenerAttached = true;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'scanLinks') {
         scanPageLinks();
@@ -12,6 +15,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         showToast(message.message, message.type || 'info');
     }
 });
+}
 
 // Scan all links on the page
 async function scanPageLinks() {
@@ -217,35 +221,4 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Add hover listener for link checking
-document.addEventListener('mouseover', async (e) => {
-    const link = e.target.closest('a[href]');
-    if (!link || !link.href.startsWith('http')) return;
-
-    // Check if already processed
-    if (link.dataset.securelinkChecked) return;
-
-    // Get user settings
-    chrome.storage.sync.get(['hoverCheck'], async (settings) => {
-        if (!settings.hoverCheck) return;
-
-        link.dataset.securelinkChecked = 'pending';
-
-        try {
-            const data = await requestBackgroundScan(link.href);
-
-            if (data.limitReached) {
-                link.dataset.securelinkChecked = 'unavailable';
-                return;
-            }
-            
-            link.dataset.securelinkChecked = 'done';
-            markLinks(link.href, data.risk_score);
-
-        } catch (error) {
-            link.dataset.securelinkChecked = '';
-        }
-    });
-});
-
-console.log('SecureLink content script loaded');
+})();

@@ -22,3 +22,11 @@ export function configuredApiOrigin(value, fallback = "") {
     return "";
   }
 }
+
+export function requestApiOriginPermission(origin) {
+  return new Promise((resolve) => {
+    chrome.permissions.request({ origins: [`${origin}/*`] }, (granted) => {
+      resolve(Boolean(granted) && !chrome.runtime.lastError);
+    });
+  });
+}

@@ -1,10 +1,11 @@
 // SecureLink Popup Script
 
-import { validateApiOrigin } from './api-origin.js';
+import { requestApiOriginPermission, validateApiOrigin } from './api-origin.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlInput      = document.getElementById('url-input');
     const checkBtn      = document.getElementById('check-btn');
+    const pageScanBtn   = document.getElementById('scan-page-btn');
     const resultEl      = document.getElementById('result');
     const resultIcon    = document.getElementById('result-icon');
     const resultText    = document.getElementById('result-text');
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginPassword.addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
     logoutBtn.addEventListener('click', handleLogout);
     checkBtn.addEventListener('click', runScan);
+    pageScanBtn.addEventListener('click', scanCurrentPageLinks);
     urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') runScan(); });
 
     function loadLastScanResult() {
@@ -248,6 +250,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function scanCurrentPageLinks() {
+        pageScanBtn.disabled = true;
+        pageScanBtn.textContent = 'Starting page scan…';
+        chrome.runtime.sendMessage({ action: 'scanCurrentPage' }, function(response) {
+            pageScanBtn.disabled = false;
+            pageScanBtn.textContent = 'Scan links on this page';
+            if (chrome.runtime.lastError || response?.error) {
+                showResult('info', '!', 'Page scan unavailable', response?.error || 'Open a regular web page and try again.', []);
+                return;
+            }
+            showResult('scanning', '…', 'Page scan started', response?.message || 'Results will appear on the page.', []);
+        });
+    }
+
     function showResult(type, icon, text, score, threats) {
         resultEl.className      = 'result ' + type;
         resultIcon.textContent  = type === 'safe'     ? '✅' :
@@ -303,9 +319,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg.classList.remove('hidden');
                 return;
             }
-            chrome.storage.local.set({ customApiUrl: url || '' }, function() {
-                if (url) {
-                    msg.textContent = 'Saved — extension now points to ' + url;
+            if (url) {
+                requestApiOriginPermission(url).then(function(granted) {
+                    if (!granted) {
+                        msg.textContent = 'Chrome did not grant access to this API origin.';
+                        msg.className = 'settings-msg error';
+                        msg.classList.remove('hidden');
+                        return;
+                    }
+                    persistApiOrigin(url);
+                });
+                return;
+            }
+            persistApiOrigin('');
+
+            function persistApiOrigin(origin) {
+            chrome.storage.local.set({ customApiUrl: origin }, function() {
+                if (origin) {
+                    msg.textContent = 'Saved — extension now points to ' + origin;
                     msg.className = 'settings-msg';
                     msg.classList.remove('hidden');
                 } else {
@@ -319,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 setTimeout(function() { msg.classList.add('hidden'); }, 3000);
             });
+            }
         });
 
         apiUrlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveBtn.click(); });

@@ -514,8 +514,31 @@ async function scanWithV2(url) {
     return response.json();
 }
 
+async function scanCurrentPage() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !/^https?:\/\//i.test(tab.url || '')) {
+        throw new Error('Page scanning is available on regular HTTP or HTTPS pages.');
+    }
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    await chrome.tabs.sendMessage(tab.id, { action: 'scanLinks' });
+    return { started: true, message: 'Up to 25 external links are being reviewed on the current page.' };
+}
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'scanCurrentPage') {
+        if (!extensionPageSender(sender)) {
+            sendResponse({ error: 'Page scanning must be started from the SecureLink popup.' });
+            return false;
+        }
+        scanCurrentPage().then(
+            result => sendResponse(result),
+            error => sendResponse({ error: error instanceof Error ? error.message : 'Could not scan this page.' })
+        );
+        return true;
+    }
+
     if (['v2Connect', 'v2Disconnect', 'v2Status', 'v2Scan'].includes(message.action)) {
         if (!extensionPageSender(sender)) {
             sendResponse({ error: 'V2 actions are available only from the SecureLink extension popup.' });

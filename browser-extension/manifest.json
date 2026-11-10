@@ -8,11 +8,17 @@
     "webNavigation",
     "storage",
     "contextMenus",
-    "windows"
+    "windows",
+    "activeTab",
+    "scripting"
   ],
   "optional_permissions": ["identity"],
   "host_permissions": [
-    "<all_urls>"
+    "https://securelinkapp.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -33,21 +39,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
-    }
-  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self'"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["warning.html", "warning.js", "warning.css", "upgrade.html", "upgrade.js", "upgrade.css"],
-      "matches": ["http://*/*", "https://*/*"]
-    }
-  ]
+  }
 }

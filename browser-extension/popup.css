@@ -210,6 +210,8 @@ body {
 .check-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .check-btn:active { transform: translateY(0); }
 .check-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.page-scan-btn { width: 100%; justify-content: center; margin-top: 8px; }
+.check-section > .settings-hint { margin-top: 5px; }
 
 /* Result */
 .result {
