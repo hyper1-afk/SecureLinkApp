@@ -646,7 +646,6 @@ def disable_mfa(
     user.mfa_enabled = False
     user.mfa_secret_ciphertext = None
     user.mfa_enrollment_expires_at = None
-    user.privileged_mfa_grace_expires_at = None
     user.token_version += 1
     session.execute(
         update(MFARecoveryCode)
