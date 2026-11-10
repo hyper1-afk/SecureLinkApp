@@ -6,6 +6,7 @@ Copyright (c) 2026 SecureLink. All rights reserved.
 This software is proprietary and confidential.
 """
 import logging
+import re
 from logging.handlers import RotatingFileHandler
 from functools import wraps
 from datetime import datetime, timedelta
@@ -34,7 +35,7 @@ from agent_routes import agent_bp, init_agent_routes
 from scan_scheduler import get_scan_scheduler
 from domain_scanner import DomainScanner
 from features import (
-    get_ai_threat_explanation, check_password_breach, check_email_breach,
+    get_ai_threat_explanation, check_email_breach,
     send_slack_notification, send_discord_notification, send_teams_notification,
     get_threat_location, generate_demo_threat_events
 )
@@ -1672,19 +1673,20 @@ def resolve_dark_web_alert(alert_id):
 
 
 @app.route('/api/dark-web/password-check', methods=['POST'])
+@app.route('/api/breach/password', methods=['POST'])
 @limiter.limit("10 per minute")
 @require_pro
-def check_password_dark_web():
-    """Check if a password has appeared in data breaches (Pro and Enterprise only)"""
-    data = request.get_json() or {}
-    password = data.get('password', '')
-    if not password:
-        return jsonify({'error': 'Password is required'}), 400
-    
-    count, error = dark_web_monitor.check_password_pwned(password)
+def check_password_hash_range():
+    """Return a password hash range; plaintext passwords and full hashes stay client-side."""
+    data = request.get_json(silent=True) or {}
+    prefix = data.get('prefix')
+    if not isinstance(prefix, str) or not re.fullmatch(r"[A-Fa-f0-9]{5}", prefix):
+        return jsonify({'error': 'A valid five-character hash prefix is required.'}), 400
+
+    suffixes, error = dark_web_monitor.get_password_hash_range(prefix)
     if error:
-        return jsonify({'error': error}), 500
-    return jsonify({'count': count, 'is_compromised': count > 0})
+        return jsonify({'error': error}), 503
+    return jsonify({'hash_suffixes': suffixes})
 
 
 # ============== Subscription Routes ==============
@@ -4021,21 +4023,6 @@ def customer_ticket_respond(ticket_id):
 # ============================================================================
 # PASSWORD BREACH CHECKER ROUTES
 # ============================================================================
-
-@app.route('/api/breach/password', methods=['POST'])
-@limiter.limit("10 per minute")
-@require_pro
-def check_password_breach_route():
-    """Check if a password has been exposed in data breaches (requires Pro)"""
-    data = request.get_json()
-    password = data.get('password', '')
-    
-    if not password:
-        return jsonify({'error': 'Password is required'}), 400
-    
-    result = check_password_breach(password)
-    return jsonify(result)
-
 
 @app.route('/api/breach/email', methods=['POST'])
 @limiter.limit("10 per minute")

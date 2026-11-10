@@ -504,7 +504,7 @@
                     <p>Email, domain, and paste breach monitoring is unavailable. Signed-in users can review alert records saved before monitoring was discontinued.</p>
                     <p><a href="/dark-web-monitor">Open Saved Breach Alert History</a></p>
                     <h3>Password Exposure Checks</h3>
-                    <p>Password exposure checks are separate. The password is sent to SecureLink server so it can be hashed; the lookup provider receives only the first five characters of the SHA-1 hash.</p>
+                    <p>Password exposure checks are separate. The browser hashes the password locally. Only the first five SHA-1 hash characters go to SecureLink to retrieve the matching range; the complete password and hash stay in the browser.</p>
                     <p><a href="/breach-checker">Open Password Exposure Checker</a></p>
                 </section>
 

@@ -199,7 +199,7 @@
                 <h1 class="fw-bold mb-3" style="font-size: 2.25rem;">Password Exposure Checker</h1>
                 <p style="color: var(--text-muted); font-size: 1.125rem; max-width: 42rem; margin: 0 auto;">
                     Check if your password has been exposed in known data breaches.
-                    The password is sent to SecureLink server for checking. SecureLink sends only a partial password hash to the lookup provider.
+                    Your browser hashes the password locally. SecureLink receives only the first five characters of the SHA-1 hash to retrieve the matching range; the complete password and hash stay in your browser.
                 </p>
             </div>
 
@@ -231,8 +231,9 @@
                 <div class="info-box">
                     <p>
                         <i class="bi bi-info-circle me-2"></i>
-                        <strong>How this check works:</strong> SecureLink server receives the password, hashes it, then sends only the first five characters of the hash to the lookup provider. Do not enter a password you still use if you are uncomfortable sharing it with SecureLink.
+                        <strong>How this check works:</strong> Your browser sends only the first five characters of the SHA-1 hash to SecureLink. The complete password and hash stay in your browser.
                     </p>
+                    <p class="small mb-0">Lookup data: <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer">Have I Been Pwned Pwned Passwords</a>.</p>
                 </div>
             </div>
 
@@ -303,34 +304,25 @@
         }
 
         async function checkPassword() {
-            const password = document.getElementById('passwordInput').value;
+            const input = document.getElementById('passwordInput');
+            let password = input.value;
             if (!password) {
                 alert('Please enter a password to check');
                 return;
             }
 
             const resultDiv = document.getElementById('passwordResult');
-            resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--primary-color);" role="status"></span><p class="mt-2">Checking securely...</p></div>';
+            input.value = '';
+            resultDiv.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm" style="width:2rem;height:2rem;color:var(--primary-color);" role="status"></span><p class="mt-2">Checking password exposure...</p></div>';
             resultDiv.classList.remove('hidden');
 
             try {
-                const response = await fetch('/api/breach/password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok || data.error) {
-                    resultDiv.innerHTML = `
-                        <div class="error-box" role="alert">
-                            <i class="bi bi-exclamation-circle-fill me-2"></i>
-                            ${escapeHtml(data.error || 'Password check is unavailable. Please try again later.')}
-                        </div>
-                    `;
-                    return;
-                }
+                const { checkPasswordExposure } = await import('/static/js/password-exposure-check.mjs');
+                const token = localStorage.getItem('auth_token');
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                const resultPromise = checkPasswordExposure(password, '/api/breach/password', headers);
+                password = '';
+                const data = await resultPromise;
 
                 if (data.breached) {
                     resultDiv.innerHTML = `
@@ -338,16 +330,12 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-exclamation-triangle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
-                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Password Compromised!</h3>
-                                    <p class="mb-0" style="font-size:1.1rem;">Found in <strong>${data.count.toLocaleString()}</strong> data breaches</p>
+                                    <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Password Compromised</h3>
+                                    <p class="mb-0" style="font-size:1.1rem;">Found <strong>${data.count.toLocaleString()}</strong> times in known breaches</p>
                                 </div>
                             </div>
-                            <p class="mt-3 mb-0">
-                                <i class="bi bi-arrow-right me-2"></i>
-                                You should change this password immediately on all sites where you use it.
-                            </p>
-                        </div>
-                    `;
+                            <p class="mt-3 mb-0"><i class="bi bi-arrow-right me-2"></i>Change this password anywhere you use it.</p>
+                        </div>`;
                 } else {
                     resultDiv.innerHTML = `
                         <div class="breach-safe rounded-3 p-4">
@@ -355,23 +343,21 @@
                                 <i class="bi bi-check-circle-fill me-3" style="font-size:2.5rem;"></i>
                                 <div>
                                     <h3 class="fw-bold mb-1" style="font-size:1.25rem;">Password Not Found</h3>
-                                    <p class="mb-0">This password hasn't appeared in any known data breaches.</p>
+                                    <p class="mb-0">This password was not found in the checked dataset.</p>
                                 </div>
                             </div>
                             <p class="mt-3 mb-0" style="font-size:0.875rem;opacity:0.8;">
-                                <i class="bi bi-info-circle me-2"></i>
-                                This doesn't guarantee it's a strong password - just that it hasn't been leaked yet.
+                                <i class="bi bi-info-circle me-2"></i>This is not a measure of password strength.
                             </p>
-                        </div>
-                    `;
+                        </div>`;
                 }
             } catch (error) {
+                password = '';
                 resultDiv.innerHTML = `
-                    <div class="error-box">
+                    <div class="error-box" role="alert">
                         <i class="bi bi-exclamation-circle-fill me-2"></i>
-                        Error checking password. Please try again.
-                    </div>
-                `;
+                        ${escapeHtml(error instanceof Error ? error.message : 'Password lookup is unavailable. Please try again.')}
+                    </div>`;
             }
         }
 

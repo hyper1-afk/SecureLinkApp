@@ -8,7 +8,6 @@ Copyright (c) 2026 SecureLink. All rights reserved.
 Unauthorized copying, modification, or distribution of this software is strictly prohibited.
 """
 import re
-import hashlib
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -132,40 +131,40 @@ class DarkWebMonitor:
         del email
         return [], "Paste monitoring is unavailable; SecureLink does not make paid paste-search API requests."
 
-    def check_password_pwned(self, password: str) -> Tuple[int, Optional[str]]:
-        """
-        Check if a password has been seen in data breaches using k-Anonymity.
-        Only sends first 5 chars of SHA-1 hash — password never leaves the client.
+    def get_password_hash_range(self, prefix: str) -> Tuple[List[Dict[str, int | str]], Optional[str]]:
+        """Fetch a padded k-anonymity range using a five-character SHA-1 prefix."""
+        if not isinstance(prefix, str) or not re.fullmatch(r"[A-Fa-f0-9]{5}", prefix):
+            return [], "A valid five-character hash prefix is required."
 
-        Args:
-            password: Password to check
-
-        Returns:
-            Tuple of (count of times seen, error message or None)
-        """
         try:
-            sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
-            prefix = sha1[:5]
-            suffix = sha1[5:]
-
             response = requests.get(
-                f"{self.PWNED_PASSWORDS_API}/range/{prefix}",
-                headers={'User-Agent': self.USER_AGENT},
-                timeout=10
+                f"{self.PWNED_PASSWORDS_API}/range/{prefix.upper()}",
+                headers={"User-Agent": self.USER_AGENT, "Add-Padding": "true"},
+                timeout=10,
+                allow_redirects=False,
             )
+            if response.status_code != 200:
+                logger.warning("Pwned Passwords range lookup returned HTTP %s", response.status_code)
+                return [], "Password lookup is temporarily unavailable."
 
-            if response.status_code == 200:
-                for line in response.text.splitlines():
-                    hash_suffix, count = line.split(':')
-                    if hash_suffix.strip() == suffix:
-                        return int(count.strip()), None
-                return 0, None
-
-            return 0, f"Password API error: {response.status_code}"
-
-        except Exception as e:
-            logger.error(f"Error checking password: {e}")
-            return 0, str(e)
+            suffixes = []
+            for line in response.text.splitlines():
+                suffix, separator, count = line.strip().partition(":")
+                if not separator or not re.fullmatch(r"[A-Fa-f0-9]{35}", suffix):
+                    continue
+                try:
+                    prevalence = int(count)
+                except ValueError:
+                    continue
+                if prevalence >= 0:
+                    suffixes.append({"suffix": suffix.upper(), "count": prevalence})
+            if not suffixes:
+                logger.warning("Pwned Passwords range lookup returned no valid records")
+                return [], "Password lookup returned invalid data."
+            return suffixes, None
+        except requests.RequestException:
+            logger.warning("Pwned Passwords range lookup failed")
+            return [], "Password lookup is temporarily unavailable."
 
     def check_domain_breaches(self, domain: str) -> Tuple[List[BreachRecord], Optional[str]]:
         del domain

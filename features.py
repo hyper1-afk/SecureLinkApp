@@ -8,7 +8,6 @@ Advanced Features Module for SecureLink
 Copyright (c) 2026 SecureLink. All rights reserved.
 """
 import os
-import hashlib
 import logging
 import httpx
 import random
@@ -67,50 +66,6 @@ Provide a concise explanation for a non-technical user."""
     except Exception as e:
         logger.error(f"AI explanation error: {e}")
         return None
-
-
-# ============== Password Breach Checker ==============
-
-
-def check_password_breach(password: str) -> Dict:
-    """Check if a password has been exposed in data breaches using k-Anonymity"""
-    try:
-        import requests
-        # Hash the password with SHA-1 (HaveIBeenPwned uses SHA-1)
-        sha1_hash = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
-        prefix = sha1_hash[:5]
-        suffix = sha1_hash[5:]
-
-        # Query the API with just the prefix (k-Anonymity)
-        response = requests.get(
-            f"https://api.pwnedpasswords.com/range/{prefix}",
-            headers={"User-Agent": "SecureLink-BreachChecker"}
-        )
-
-        if response.status_code != 200:
-            return {'error': 'Unable to check breach database'}
-
-        # Search for our hash suffix in the response
-        hashes = response.text.split('\r\n')
-        for line in hashes:
-            parts = line.split(':')
-            if len(parts) == 2:
-                hash_suffix, count = parts
-                if hash_suffix == suffix:
-                    return {
-                        'breached': True,
-                        'count': int(count),
-                        'message': f'This password has been seen {int(count):,} times in data breaches!'
-                    }
-
-        return {
-            'breached': False,
-            'count': 0,
-            'message': 'This password has not been found in known data breaches.'
-        }
-    except Exception as e:
-        logger.error(f"Breach check error: {e}")
-        return {'error': str(e)}
 
 
 def check_email_breach(email: str) -> Dict:

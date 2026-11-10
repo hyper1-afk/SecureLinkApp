@@ -724,7 +724,7 @@
                         <div class="quick-card-icon" style="background:rgba(245,158,11,.12);color:var(--amber)"><i class="bi bi-key"></i></div>
                         <div>
                             <h4>Password Checker</h4>
-                            <p>SecureLink server receives the password; the lookup provider receives only a partial hash</p>
+                            <p>The browser hashes the password locally; SecureLink receives only the first five SHA-1 hash characters</p>
                         </div>
                     </div>
                 </div>
@@ -906,7 +906,7 @@ const TOOLS = {
     'password-check': {
         name: 'Password Checker', cat: 'Breach & OSINT', icon: 'bi-key',
         color: '#f59e0b', bg: 'rgba(245,158,11,.12)',
-        desc: 'Check a password using k-anonymity. SecureLink server receives it for hashing; the lookup provider receives only a partial hash.',
+        desc: 'Check a password using Have I Been Pwned Pwned Passwords k-anonymity. The browser sends only a partial SHA-1 hash to SecureLink.',
         status: 'live', inputType: 'password', inputLabel: 'PASSWORD TO CHECK',
         placeholder: '••••••••',
         run: (t) => passwordCheckApi(t),
@@ -1148,13 +1148,8 @@ async function urlScanApi(url) {
 }
 
 async function passwordCheckApi(password) {
-    const res = await fetch('/api/dark-web/password-check', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ password })
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const { checkPasswordExposure } = await import('/static/js/password-exposure-check.mjs');
+    return checkPasswordExposure(password, '/api/dark-web/password-check', authHeaders());
 }
 
 // ── RUN ──
@@ -1365,8 +1360,8 @@ function renderPasswordResults(data) {
     return `<div class="results-card">
         <div class="results-body" style="text-align:center;padding:28px">
             <div class="pwned-count" style="color:${color}">${pwned ? `Seen ${seen.toLocaleString()}×` : 'Not found'}</div>
-            <div class="breach-meta" style="margin-top:6px">${pwned ? 'This password has been exposed in data breaches. Change it immediately.' : 'This password has not appeared in any known breach database.'}</div>
-            <div style="margin-top:12px;font-size:11px;color:var(--dim)">SecureLink server received the password for hashing; the lookup provider received only the first five characters of its SHA-1 hash.</div>
+            <div class="breach-meta" style="margin-top:6px">${pwned ? 'This password appears in the Pwned Passwords dataset. Change it anywhere you use it.' : 'This password was not found in the Pwned Passwords dataset.'}</div>
+            <div style="margin-top:12px;font-size:11px;color:var(--dim)">The browser hashed the password locally; SecureLink received only the first five characters of its SHA-1 hash.</div>
         </div>
     </div>`;
 }

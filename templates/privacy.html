@@ -186,10 +186,13 @@
             <li>Extension version and browser type</li>
         </ul>
 
-        <h3>2.4 Payment Information</h3>
+        <h3>2.4 Password Exposure Checks</h3>
+        <p>When you choose to check a password, your browser computes its SHA-1 hash locally. SecureLink receives only the first five hash characters, uses them to request a matching range from Have I Been Pwned's Pwned Passwords service, and returns that range to your browser for comparison. The complete password and full hash stay in your browser and are not stored by SecureLink. The provider receives the five-character prefix through SecureLink's request.</p>
+
+        <h3>2.5 Payment Information</h3>
         <p>For paid subscriptions, payment is processed by Stripe. We do not store your credit card numbers. Stripe's privacy policy applies to payment processing.</p>
 
-        <h3>2.5 Attack Surface Monitoring Data (Enterprise)</h3>
+        <h3>2.6 Attack Surface Monitoring Data (Enterprise)</h3>
         <p>If you subscribe to our Enterprise plan and use Attack Surface Monitoring, we collect and store the following for domains you register:</p>
         <ul>
             <li><strong>DNS Records:</strong> A, AAAA, MX, TXT, NS, and CNAME records for your domains</li>

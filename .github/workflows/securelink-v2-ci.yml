@@ -110,6 +110,8 @@ jobs:
           node --check ../browser-extension/warning-state.js
           node --test ../browser-extension/tests/v2-oauth.test.js
           node --test ../browser-extension/tests/url-privacy.test.js
+          node --check ../static/js/password-exposure-check.mjs
+          node --test ../browser-extension/tests/password-exposure.test.mjs
           node --test ../browser-extension/tests/legacy-scan.test.js
           node --test ../browser-extension/tests/warning-state.test.js
 
