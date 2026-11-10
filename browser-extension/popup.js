@@ -47,23 +47,28 @@ document.addEventListener('DOMContentLoaded', () => {
     urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') runScan(); });
 
     function loadLastScanResult() {
-        chrome.storage.local.get(['lastScanResult'], function(data) {
+        chrome.storage.session.get(['lastScanResult'], function(data) {
             if (!data.lastScanResult) return;
             applyLastScanResult(data.lastScanResult);
         });
     }
 
     function applyLastScanResult(r) {
-        if (!r || Date.now() - r.timestamp > 5 * 60 * 1000) return;
+        if (!r) return;
+        if (Date.now() - r.timestamp > 5 * 60 * 1000) {
+            chrome.storage.session.remove(['lastScanResult']);
+            return;
+        }
         urlInput.value = r.url || '';
 
         if (r.status === 'scanning') {
             showResult('scanning', '…', 'Scanning', r.url, []);
         } else if (r.status === 'limit') {
             showResult('info', '!', 'Limit Reached', r.message || 'Upgrade for more scans', []);
-            chrome.storage.local.remove(['lastScanResult']);
+            chrome.storage.session.remove(['lastScanResult']);
         } else if (r.status === 'error') {
             showResult('info', '!', 'Scan unavailable', r.message || 'Legacy scanner could not review this link.', []);
+            chrome.storage.session.remove(['lastScanResult']);
         } else if (r.status === 'done') {
             var score = r.score || 0;
             var threats = r.threats || [];
@@ -75,12 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 showResult('danger', '✕', 'Threat Detected', 'Risk score: ' + score + '/100 — do not visit', threats);
             }
             loadStats();
-            chrome.storage.local.remove(['lastScanResult']);
+            chrome.storage.session.remove(['lastScanResult']);
         }
     }
 
     // Live update when background finishes a right-click scan
-    chrome.storage.onChanged.addListener(function(changes) {
+    chrome.storage.onChanged.addListener(function(changes, areaName) {
+        if (areaName !== 'session') return;
         if (changes.lastScanResult && changes.lastScanResult.newValue) {
             applyLastScanResult(changes.lastScanResult.newValue);
         }

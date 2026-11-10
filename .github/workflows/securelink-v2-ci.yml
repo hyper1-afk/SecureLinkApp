@@ -81,9 +81,12 @@ jobs:
           node --check ../browser-extension/v2-oauth.js
           node --check ../browser-extension/url-privacy.js
           node --check ../browser-extension/legacy-scan.js
+          node --check ../browser-extension/warning.js
+          node --check ../browser-extension/warning-state.js
           node --test ../browser-extension/tests/v2-oauth.test.js
           node --test ../browser-extension/tests/url-privacy.test.js
           node --test ../browser-extension/tests/legacy-scan.test.js
+          node --test ../browser-extension/tests/warning-state.test.js
 
       - name: Audit Python dependencies
         run: pip-audit

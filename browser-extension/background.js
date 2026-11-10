@@ -10,6 +10,12 @@ import {
 } from './v2-oauth.js';
 import { legacyScanFailure, normalizeLegacyScan } from './legacy-scan.js';
 import { redactUrlForSubmission } from './url-privacy.js';
+import {
+    createWarningPageUrl,
+    matchesTabBypass,
+    warningBypassKey,
+    warningIncidentKey
+} from './warning-state.js';
 
 const DEFAULT_API_BASE = 'https://securelinkapp.com';
 const PUBLISHED_EXTENSION_ID = 'dpegeipjmofhdikcbniodhohpckoeole';
@@ -31,7 +37,15 @@ chrome.storage.onChanged.addListener((changes) => {
 // Track checked URLs to avoid re-checking
 const checkedUrls = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours - saves scans on revisited sites
+const MAX_CACHED_URLS = 500;
 const pendingChecks = new Set(); // URLs currently being checked
+
+// Remove raw warning-bypass keys and context-menu results created by older versions.
+chrome.storage.local.get(null, (stored) => {
+    const staleKeys = Object.keys(stored || {}).filter((key) => key.startsWith('bypass_'));
+    if (stored?.lastScanResult) staleKeys.push('lastScanResult');
+    if (staleKeys.length) chrome.storage.local.remove(staleKeys);
+});
 
 // User session
 let userSession = null;
@@ -183,6 +197,18 @@ function incrementScanned() {
     chrome.storage.local.set({ totalScannedCount });
 }
 
+function cacheScan(url, result) {
+    checkedUrls.delete(url);
+    checkedUrls.set(url, {
+        timestamp: Date.now(),
+        dangerous: result.riskScore >= 50,
+        data: result
+    });
+    if (checkedUrls.size > MAX_CACHED_URLS) {
+        checkedUrls.delete(checkedUrls.keys().next().value);
+    }
+}
+
 // Right-click context menu for scanning links
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
@@ -199,7 +225,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (!url) return;
 
     // Store scanning state and open popup immediately
-    chrome.storage.local.set({ lastScanResult: { status: 'scanning', url, timestamp: Date.now() } });
+    chrome.storage.session.set({ lastScanResult: { status: 'scanning', url, timestamp: Date.now() } });
 
     // Open popup so user can see the scan happening
     chrome.windows.getCurrent({ populate: false }, (win) => {
@@ -211,12 +237,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const result = await checkUrl(url);
 
     if (result.error) {
-        chrome.storage.local.set({ lastScanResult: { status: 'error', url, message: result.message, timestamp: Date.now() } });
+        chrome.storage.session.set({ lastScanResult: { status: 'error', url, message: result.message, timestamp: Date.now() } });
         return;
     }
 
     if (result.limitReached) {
-        chrome.storage.local.set({ lastScanResult: { status: 'limit', url, message: result.message, timestamp: Date.now() } });
+        chrome.storage.session.set({ lastScanResult: { status: 'limit', url, message: result.message, timestamp: Date.now() } });
         return;
     }
 
@@ -227,7 +253,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (score >= 50) incrementBadge();
 
     // Store final result — popup listening for this change will update automatically
-    chrome.storage.local.set({ lastScanResult: { status: 'done', url, score, threats, timestamp: Date.now() } });
+    chrome.storage.session.set({ lastScanResult: { status: 'done', url, score, threats, timestamp: Date.now() } });
 });
 
 // Use webNavigation.onBeforeNavigate to intercept BEFORE page loads
@@ -246,9 +272,14 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     // Skip extension pages
     if (url.includes('warning.html') || url.includes('upgrade.html')) return;
 
-    // Skip URLs the user has explicitly chosen to proceed through (bypass valid for 5 minutes)
-    const bypassEntry = await chrome.storage.local.get(`bypass_${url}`);
-    if (bypassEntry[`bypass_${url}`] && Date.now() - bypassEntry[`bypass_${url}`] < 5 * 60 * 1000) return;
+    // Consume a short-lived, tab-scoped exception once, only for its exact destination.
+    const bypassKey = warningBypassKey(tabId);
+    const bypassEntry = await chrome.storage.session.get(bypassKey);
+    const bypass = bypassEntry[bypassKey];
+    if (bypass) {
+        await chrome.storage.session.remove(bypassKey);
+        if (matchesTabBypass(bypass, url)) return;
+    }
 
     try {
         const urlObj = new URL(url);
@@ -263,7 +294,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         // Check cache first
         const cached = checkedUrls.get(url);
         if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-            if (cached.dangerous) showWarning(tabId, url, cached.data);
+            if (cached.dangerous) await showWarning(tabId, url, cached.data);
             return;
         }
 
@@ -282,17 +313,13 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         }
         
         // Cache the result
-        checkedUrls.set(url, {
-            timestamp: Date.now(),
-            dangerous: result.riskScore >= 50,
-            data: result
-        });
+        cacheScan(url, result);
 
         incrementScanned();
 
         if (result.riskScore >= 50) {
             incrementBadge();
-            showWarning(tabId, url, result);
+            await showWarning(tabId, url, result);
         }
         
     } catch (_) {
@@ -340,17 +367,29 @@ async function checkUrl(url) {
 }
 
 // Show warning page
-function showWarning(tabId, url, result) {
-    // Combine threats and warnings
-    const allThreats = [...(result.threats || []), ...(result.warnings || [])];
-    
-    const warningUrl = chrome.runtime.getURL('warning.html') + 
-        `?url=${encodeURIComponent(url)}` +
-        `&score=${result.riskScore}` +
-        `&threats=${encodeURIComponent(JSON.stringify(allThreats))}`;
-    
-    // Redirect to warning page
-    chrome.tabs.update(tabId, { url: warningUrl });
+async function showWarning(tabId, url, result) {
+    const incidentId = crypto.randomUUID();
+    const storageKey = warningIncidentKey(incidentId);
+    const allThreats = [...(result.threats || []), ...(result.warnings || [])]
+        .filter((item) => typeof item === 'string')
+        .slice(0, 20)
+        .map((item) => item.slice(0, 240));
+    await chrome.storage.session.set({
+        [storageKey]: {
+            url,
+            score: Math.max(0, Math.min(100, Number(result.riskScore) || 0)),
+            threats: allThreats,
+            expiresAt: Date.now() + 5 * 60 * 1000
+        }
+    });
+    try {
+        await chrome.tabs.update(tabId, {
+            url: createWarningPageUrl(chrome.runtime.getURL(''), incidentId)
+        });
+    } catch (error) {
+        await chrome.storage.session.remove(storageKey);
+        throw error;
+    }
 }
 
 // Show upgrade prompt when rate limited — only open one tab

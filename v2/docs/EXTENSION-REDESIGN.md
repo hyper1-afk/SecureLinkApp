@@ -20,10 +20,10 @@ Keep privileged network and storage operations in the service worker. Validate e
 
 1. Replace `http://*/*` and `https://*/*` host permissions with the production API origin. Request narrowly scoped optional host permission only for local development. Remove `tabs` if the final implementation does not need tab metadata.
 2. Remove the large hard-coded `SAFE_DOMAINS` bypass list. It creates blind spots for compromised or lookalike paths on otherwise popular domains. Only skip browser-internal schemes and the extension's own pages; let server policy decide reputation.
-3. Do not put the visited URL or threat detail in `warning.html?url=...`. The current warning page carries them in browser history. Store a short-lived incident under a random ID in `chrome.storage.session` and pass only that ID to the extension page.
+3. Do not put the visited URL or threat detail in the warning page URL. The current warning flow now stores those details for five minutes in `chrome.storage.session` under a random incident ID and passes only that ID in `warning.html?incident=...`. Missing or expired details render an unknown warning state, never a safe result.
 4. Redact credentials, fragments, and sensitive query keys (tokens, codes, sessions, email) before sending URLs. Make full-query scanning an explicit, explained opt-in because query values may contain private data.
 5. Keep only bounded, expiring cache entries. Avoid storing full URLs or auth tokens in `chrome.storage.local`; expose only session status and account display fields to popup code.
-6. Fix warning bypass. `warning.js` currently writes `bypass_<url>`, but `background.js` never reads it, so proceeding can trigger the warning again. Use a one-use, tab-scoped, short-expiry bypass and clear it on the next navigation.
+6. Warning bypass now uses a one-use, tab-scoped, ten-second exception in `chrome.storage.session`; the service worker consumes it only for the exact destination URL. Continue testing navigation redirects and service-worker restarts.
 7. Treat network errors as “could not verify,” not “safe.” Surface stale/unknown verdicts distinctly and keep the user in control.
 8. The `onBeforeNavigate` fetch-and-redirect path is best-effort: the destination request can begin before the verdict returns. Do not promise pre-load blocking unless the replacement design proves it. Use local declarative rules for known blocked destinations and clearly label cloud checks as navigation-time checks.
 9. Add privacy controls for scan history, opt-out/pause controls, and a clear explanation of which URL parts are sent and retained.
@@ -38,7 +38,7 @@ The consent page authenticates on the SecureLink origin. Account passwords are n
 
 Use PKCE for this same-browser extension flow. The OAuth device-code flow is intended for constrained/cross-device use; current cross-device security guidance says not to use cross-device flows for same-device scenarios and highlights user-code phishing risks. [RFC 7636](https://www.rfc-editor.org/rfc/rfc7636.html), [RFC 10027](https://www.rfc-editor.org/rfc/rfc10027.html).
 
-The legacy extension has not been switched to this API. The OAuth redirect is configured only for the published Chrome Web Store item; confirm the extension ID and staging host before testing the real extension. Edge support and the extension-side PKCE implementation remain to be completed and tested before publication.
+The existing extension's legacy automatic scanner remains enabled separately from the optional V2 manual-review connector. The V2 OAuth redirect is configured only for the published Chrome Web Store item; confirm the extension ID and staging host before testing the real extension. Edge support and complete extension-side behavior remain to be tested before publication.
 
 Do not put a long-lived API secret in the extension package. The extension is a public client; all entitlements and scan quotas must be enforced by the server.
 
