@@ -41,4 +41,3 @@ target-version = "py312"
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "packages"]
-known-third-party = ["yaml"]
