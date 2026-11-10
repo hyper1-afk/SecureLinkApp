@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from apps.api.db import get_session
 from apps.api.rate_limits import rate_limit
 from packages.security_core.models import (
     AuditEvent,
+    CaseApproval,
     CaseFinding,
     CaseNote,
     CaseSignal,
@@ -30,8 +31,8 @@ router = APIRouter()
 SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4}
 CASE_TRANSITIONS = {
     "open": {"investigating", "resolved", "false_positive"},
-    "investigating": {"open", "awaiting_approval", "resolved", "false_positive"},
-    "awaiting_approval": {"open", "investigating", "resolved", "false_positive"},
+    "investigating": {"open", "resolved", "false_positive"},
+    "awaiting_approval": set(),
     "resolved": {"investigating"},
     "false_positive": {"investigating"},
 }
@@ -43,6 +44,34 @@ class CaseStatusUpdate(BaseModel):
 
 class CaseNoteCreate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+
+
+class CaseApprovalCreate(BaseModel):
+    action: Literal[
+        "disable_domain_monitoring",
+        "disable_threat_indicator",
+        "revoke_extension_sessions",
+    ]
+    rationale: str = Field(min_length=1, max_length=1000)
+
+
+class CaseApprovalDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class CaseApprovalResponse(BaseModel):
+    id: str
+    case_id: str
+    action: str
+    rationale: str
+    status: str
+    requester_user_id: str
+    reviewer_user_id: str | None
+    decision_note: str | None
+    expires_at: datetime
+    decided_at: datetime | None
+    created_at: datetime
 
 
 class CaseNoteResponse(BaseModel):
@@ -91,6 +120,23 @@ class CaseResponse(BaseModel):
 def _require_analyst(membership: Membership) -> None:
     if membership.role not in {"owner", "admin", "analyst"}:
         raise HTTPException(status_code=403, detail="Analyst role or higher is required")
+
+
+def _expire_approval(session: Session, approval: CaseApproval, case: IncidentCase, now: datetime) -> None:
+    approval.status = "expired"
+    approval.decided_at = now
+    if case.status == "awaiting_approval":
+        case.status = "investigating"
+        case.updated_at = now
+    session.add(AuditEvent(
+        organization_id=approval.organization_id,
+        actor_user_id=None,
+        actor_type="system",
+        action="case.approval_expired",
+        target_type="case_approval",
+        target_id=approval.id,
+        details=json.dumps({"case_id": case.id}, separators=(",", ":")),
+    ))
 
 
 def _case_response(
@@ -641,3 +687,172 @@ def update_case_status(
         )
         session.commit()
     return _case_response_for_session(session, case)
+
+
+@router.post(
+    "/organizations/{organization_id}/cases/{case_id}/approvals",
+    response_model=CaseApprovalResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("case_approval_request", 10, 60))],
+)
+def request_case_approval(
+    case_id: UUID,
+    payload: CaseApprovalCreate,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> CaseApprovalResponse:
+    _require_analyst(membership)
+    rationale = payload.rationale.strip()
+    if not rationale:
+        raise HTTPException(status_code=422, detail="Rationale cannot be blank")
+    case = session.scalar(
+        select(IncidentCase)
+        .where(
+            IncidentCase.id == str(case_id),
+            IncidentCase.organization_id == membership.organization_id,
+        )
+        .with_for_update()
+    )
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+    now = datetime.now(UTC)
+    if case.status == "awaiting_approval":
+        pending_approval = session.scalar(
+            select(CaseApproval)
+            .where(
+                CaseApproval.case_id == case.id,
+                CaseApproval.organization_id == membership.organization_id,
+                CaseApproval.status == "pending",
+            )
+            .with_for_update()
+        )
+        if pending_approval is not None and pending_approval.expires_at <= now:
+            _expire_approval(session, pending_approval, case, now)
+            session.flush()
+    if case.status != "investigating":
+        raise HTTPException(status_code=409, detail="Case must be under investigation")
+    approval = CaseApproval(
+        organization_id=membership.organization_id,
+        case_id=case.id,
+        action=payload.action,
+        rationale=rationale,
+        requester_user_id=membership.user_id,
+        expires_at=now + timedelta(hours=24),
+    )
+    case.status = "awaiting_approval"
+    case.updated_at = now
+    session.add(approval)
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action="case.approval_requested",
+        target_type="case_approval",
+        target_id=approval.id,
+        details=json.dumps({"case_id": case.id, "action": approval.action}, separators=(",", ":")),
+    ))
+    try:
+        session.flush()
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="A pending approval already exists for this case") from exc
+    return CaseApprovalResponse.model_validate(approval, from_attributes=True)
+
+
+@router.post(
+    "/organizations/{organization_id}/cases/{case_id}/approvals/{approval_id}/decision",
+    response_model=CaseApprovalResponse,
+    dependencies=[Depends(rate_limit("case_approval_decision", 10, 60))],
+)
+def decide_case_approval(
+    case_id: UUID,
+    approval_id: UUID,
+    payload: CaseApprovalDecision,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> CaseApprovalResponse:
+    if membership.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Owner or admin role is required to review approvals")
+    case = session.scalar(
+        select(IncidentCase)
+        .where(
+            IncidentCase.id == str(case_id),
+            IncidentCase.organization_id == membership.organization_id,
+        )
+        .with_for_update()
+    )
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+    approval = session.scalar(
+        select(CaseApproval)
+        .where(
+            CaseApproval.id == str(approval_id),
+            CaseApproval.case_id == case.id,
+            CaseApproval.organization_id == membership.organization_id,
+        )
+        .with_for_update()
+    )
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    if approval.requester_user_id == membership.user_id:
+        raise HTTPException(status_code=403, detail="The requester cannot review their own approval")
+    if approval.status != "pending":
+        raise HTTPException(status_code=409, detail="Approval is no longer pending")
+    now = datetime.now(UTC)
+    if approval.expires_at <= now:
+        _expire_approval(session, approval, case, now)
+        session.commit()
+        raise HTTPException(status_code=409, detail="Approval expired")
+    if case.status != "awaiting_approval":
+        raise HTTPException(status_code=409, detail="Case is no longer awaiting approval")
+    approval.status = payload.decision
+    approval.reviewer_user_id = membership.user_id
+    approval.decision_note = payload.note.strip() if payload.note and payload.note.strip() else None
+    approval.decided_at = now
+    case.status = "investigating"
+    case.updated_at = now
+    session.add(AuditEvent(
+        organization_id=membership.organization_id,
+        actor_user_id=membership.user_id,
+        actor_type="user",
+        action=f"case.approval_{payload.decision}",
+        target_type="case_approval",
+        target_id=approval.id,
+        details=json.dumps({"case_id": case.id, "action": approval.action}, separators=(",", ":")),
+    ))
+    session.commit()
+    return CaseApprovalResponse.model_validate(approval, from_attributes=True)
+
+
+@router.get(
+    "/organizations/{organization_id}/cases/{case_id}/approvals",
+    response_model=list[CaseApprovalResponse],
+)
+def list_case_approvals(
+    case_id: UUID,
+    membership: Annotated[Membership, Depends(organization_membership)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[CaseApprovalResponse]:
+    case = session.scalar(
+        select(IncidentCase)
+        .where(IncidentCase.id == str(case_id), IncidentCase.organization_id == membership.organization_id)
+        .with_for_update()
+    )
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+    approvals = session.scalars(
+        select(CaseApproval)
+        .where(CaseApproval.case_id == str(case_id), CaseApproval.organization_id == membership.organization_id)
+        .order_by(CaseApproval.created_at.desc(), CaseApproval.id)
+        .with_for_update()
+    ).all()
+    now = datetime.now(UTC)
+    expired_any = False
+    for approval in approvals:
+        if approval.status == "pending" and approval.expires_at <= now:
+            _expire_approval(session, approval, case, now)
+            expired_any = True
+    if expired_any:
+        session.commit()
+    return [CaseApprovalResponse.model_validate(item, from_attributes=True) for item in approvals]

@@ -174,3 +174,57 @@ def test_postgres_security_signals_reject_update_and_delete():
                 transaction.rollback()
     finally:
         engine.dispose()
+
+
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="PostgreSQL CI service is not configured")
+def test_postgres_case_approval_allows_one_decision_then_rejects_mutation():
+    engine = create_engine(os.environ["DATABASE_URL"])
+    organization_id, requester_id, reviewer_id, case_id, approval_id = (str(uuid4()) for _ in range(5))
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("INSERT INTO organizations (id, name, created_at) VALUES (:id, 'Approval test', now())"),
+                {"id": organization_id},
+            )
+            for user_id, email in ((requester_id, "requester@test.invalid"), (reviewer_id, "reviewer@test.invalid")):
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, email, email_normalized, password_hash, is_active, created_at) "
+                        "VALUES (:id, :email, :email, 'test-hash', true, now())"
+                    ),
+                    {"id": user_id, "email": email},
+                )
+            connection.execute(
+                text(
+                    "INSERT INTO incident_cases (id, organization_id, scan_id, status, severity, title, summary) "
+                    "VALUES (:id, :org_id, NULL, 'awaiting_approval', 'high', 'Test approval', 'Approval fixture')"
+                ),
+                {"id": case_id, "org_id": organization_id},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO case_approvals "
+                    "(id, organization_id, case_id, action, rationale, status, requester_user_id, expires_at) "
+                    "VALUES (:id, :org_id, :case_id, 'revoke_extension_sessions', 'Contain incident', "
+                    "'pending', :requester_id, now() + interval '1 hour')"
+                ),
+                {"id": approval_id, "org_id": organization_id, "case_id": case_id, "requester_id": requester_id},
+            )
+            connection.execute(
+                text(
+                    "UPDATE case_approvals SET status = 'approved', reviewer_user_id = :reviewer_id, "
+                    "decided_at = now() WHERE id = :id"
+                ),
+                {"reviewer_id": reviewer_id, "id": approval_id},
+            )
+        for statement in (
+            "UPDATE case_approvals SET rationale = 'tampered' WHERE id = :id",
+            "DELETE FROM case_approvals WHERE id = :id",
+        ):
+            with engine.connect() as connection:
+                transaction = connection.begin()
+                with pytest.raises(DBAPIError):
+                    connection.execute(text(statement), {"id": approval_id})
+                transaction.rollback()
+    finally:
+        engine.dispose()

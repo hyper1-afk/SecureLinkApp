@@ -4,8 +4,8 @@ const byId = (id) => document.getElementById(id);
 let apiBase = organizationId ? `/organizations/${encodeURIComponent(organizationId)}` : "";
 const caseTransitions = {
   open: ["investigating", "resolved", "false_positive"],
-  investigating: ["open", "awaiting_approval", "resolved", "false_positive"],
-  awaiting_approval: ["open", "investigating", "resolved", "false_positive"],
+  investigating: ["open", "resolved", "false_positive"],
+  awaiting_approval: [],
   resolved: ["investigating"],
   false_positive: ["investigating"],
 };

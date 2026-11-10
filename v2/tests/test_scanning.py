@@ -28,6 +28,7 @@ from apps.api.db import get_session
 from packages.security_core.models import (
     AuditEvent,
     Base,
+    CaseApproval,
     CaseFinding,
     CaseSignal,
     DomainAsset,
@@ -682,7 +683,7 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
         json={"status": "awaiting_approval"},
     )
     assert invalid_transition.status_code == 409
-    for next_status in ("investigating", "awaiting_approval", "resolved"):
+    for next_status in ("investigating", "resolved"):
         updated = client.patch(
             f"/organizations/{owner['organization_id']}/cases/{case['id']}/status",
             headers=owner_headers,
@@ -703,7 +704,7 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
         assert stored.status == "resolved"
         assert stored.created_by_user_id is None
         assert len(links) == len(scan["findings"])
-        assert sum(event.action == "case.status_changed" for event in events) == 3
+        assert sum(event.action == "case.status_changed" for event in events) == 2
         assert any(
             event.action == "case.auto_created_from_scan" and event.actor_type == "system"
             for event in events
@@ -777,6 +778,58 @@ def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient
     assert client.get(case_url, headers=other_headers).status_code == 404
     assert client.get(scan_url, headers=other_headers).status_code == 404
     assert client.get(organization_url + "/signals", headers=other_headers).status_code == 404
+
+
+def test_case_approval_requires_separate_owner_review_and_never_executes_action(client: TestClient):
+    owner = register(client, "approval-owner@example.test")
+    analyst = register(client, "approval-analyst@example.test")
+    org_url = f"/organizations/{owner['organization_id']}"
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    analyst_headers = {"Authorization": f"Bearer {analyst['access_token']}"}
+    with client.app.state.test_session_factory() as session:
+        analyst_user = session.scalar(select(User).where(User.email_normalized == "approval-analyst@example.test"))
+        assert analyst_user is not None
+        session.add(Membership(organization_id=owner["organization_id"], user_id=analyst_user.id, role="analyst"))
+        session.commit()
+
+    scan = client.post(
+        org_url + "/scans",
+        headers=owner_headers,
+        json={"url": "https://alice:secret@example.com/private?token=private"},
+    )
+    assert scan.status_code == 201
+    case = client.get(org_url + "/cases", headers=owner_headers).json()[0]
+    case_url = org_url + f"/cases/{case['id']}"
+    assert client.patch(case_url + "/status", headers=analyst_headers, json={"status": "investigating"}).status_code == 200
+    request = client.post(
+        case_url + "/approvals",
+        headers=analyst_headers,
+        json={"action": "revoke_extension_sessions", "rationale": "Contain suspected account compromise."},
+    )
+    assert request.status_code == 201
+    approval = request.json()
+    assert approval["status"] == "pending"
+    assert client.get(case_url, headers=owner_headers).json()["status"] == "awaiting_approval"
+    assert client.post(
+        case_url + f"/approvals/{approval['id']}/decision",
+        headers=analyst_headers,
+        json={"decision": "approved"},
+    ).status_code == 403
+    decision = client.post(
+        case_url + f"/approvals/{approval['id']}/decision",
+        headers=owner_headers,
+        json={"decision": "approved", "note": "Reviewed incident evidence."},
+    )
+    assert decision.status_code == 200
+    assert decision.json()["status"] == "approved"
+    assert client.get(case_url, headers=owner_headers).json()["status"] == "investigating"
+    assert client.get(case_url + "/approvals", headers=owner_headers).json()[0]["id"] == approval["id"]
+    with client.app.state.test_session_factory() as session:
+        stored = session.get(CaseApproval, approval["id"])
+        assert stored is not None and stored.reviewer_user_id != stored.requester_user_id
+        assert session.scalar(select(AuditEvent).where(
+            AuditEvent.action == "case.approval_approved", AuditEvent.target_id == approval["id"],
+        )) is not None
 
 
 def test_generic_monitor_signal_can_open_a_tenant_scoped_case(client: TestClient):

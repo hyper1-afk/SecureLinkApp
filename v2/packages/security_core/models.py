@@ -529,6 +529,51 @@ class CaseNote(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class CaseApproval(Base):
+    """Approval record for a future response playbook; this never executes an action."""
+
+    __tablename__ = "case_approvals"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["case_id", "organization_id"],
+            ["incident_cases.id", "incident_cases.organization_id"],
+            name="fk_case_approvals_case_organization",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "action IN ('disable_domain_monitoring', 'disable_threat_indicator', 'revoke_extension_sessions')",
+            name="ck_case_approvals_action",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'expired')",
+            name="ck_case_approvals_status",
+        ),
+        CheckConstraint("requester_user_id <> reviewer_user_id", name="ck_case_approvals_no_self_review"),
+        Index(
+            "uq_case_approvals_one_pending_per_case",
+            "case_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+            sqlite_where=text("status = 'pending'"),
+        ),
+        Index("ix_case_approvals_case_created", "case_id", "created_at"),
+        Index("ix_case_approvals_org_status_created", "organization_id", "status", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    case_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    rationale: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(String(12), default="pending", server_default="pending", nullable=False)
+    requester_user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    reviewer_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class CaseFinding(Base):
     __tablename__ = "case_findings"
     __table_args__ = (
