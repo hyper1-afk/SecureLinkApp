@@ -12,7 +12,7 @@ def deployment_settings(**overrides):
         "app_public_url": "https://staging.example.test",
         "database_url": (
             "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
-            "?sslmode=require"
+            "?sslmode=verify-full&sslrootcert=system"
         ),
         "redis_url": "rediss://:unique@redis.internal:6379/0",
         "app_secret_key": "s" * 48,
@@ -70,7 +70,7 @@ def test_deployment_settings_accept_complete_staging_configuration():
             {
                 "database_url": (
                     "postgresql+psycopg://securelink:unique@localhost:5432/securelink"
-                    "?sslmode=require"
+                    "?sslmode=verify-full&sslrootcert=system"
                 )
             },
             "DATABASE_URL must point to the deployment database",
@@ -100,7 +100,12 @@ def test_deployment_settings_accept_complete_staging_configuration():
             "DATABASE_URL must use PostgreSQL",
         ),
         (
-            {"database_url": "postgresql+psycopg://@postgres.internal:5432/securelink?sslmode=require"},
+            {
+                "database_url": (
+                    "postgresql+psycopg://@postgres.internal:5432/securelink"
+                    "?sslmode=verify-full&sslrootcert=system"
+                )
+            },
             "DATABASE_URL must include a database username and password",
         ),
         (
@@ -117,7 +122,25 @@ def test_deployment_settings_accept_complete_staging_configuration():
                     "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
                 )
             },
-            "DATABASE_URL must require TLS for PostgreSQL",
+            "DATABASE_URL must verify the PostgreSQL certificate and hostname",
+        ),
+        (
+            {
+                "database_url": (
+                    "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
+                    "?sslmode=require"
+                )
+            },
+            "DATABASE_URL must verify the PostgreSQL certificate and hostname",
+        ),
+        (
+            {
+                "database_url": (
+                    "postgresql+psycopg://securelink:unique@postgres.internal:5432/securelink"
+                    "?sslmode=verify-full"
+                )
+            },
+            "DATABASE_URL must verify the PostgreSQL certificate and hostname",
         ),
         ({"email_outbox_encryption_key": None}, "EMAIL_OUTBOX_ENCRYPTION_KEY must be set"),
         ({"mfa_encryption_key": None}, "MFA_ENCRYPTION_KEY must be set"),

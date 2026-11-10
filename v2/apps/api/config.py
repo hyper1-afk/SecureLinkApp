@@ -70,8 +70,10 @@ class Settings(BaseSettings):
             problems.append("DATABASE_URL must point to the deployment database")
         if not database.username or not database.password:
             problems.append("DATABASE_URL must include a database username and password")
-        if database.query.get("sslmode") not in {"require", "verify-ca", "verify-full"}:
-            problems.append("DATABASE_URL must require TLS for PostgreSQL")
+        if database.query.get("sslmode") != "verify-full" or not database.query.get("sslrootcert"):
+            problems.append(
+                "DATABASE_URL must verify the PostgreSQL certificate and hostname with a trusted CA"
+            )
         redis = urlsplit(self.redis_url)
         if redis.scheme != "rediss":
             problems.append("REDIS_URL must use TLS")
