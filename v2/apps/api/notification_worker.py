@@ -31,15 +31,21 @@ def process_one() -> bool:
     factory = get_session_factory()
     with factory() as session, session.begin():
         row = session.scalar(
-                select(SecurityNotificationOutbox).where(
-                    or_(
-                        (SecurityNotificationOutbox.delivery_state == "pending")
-                        & (SecurityNotificationOutbox.next_delivery_at <= now),
-                        (SecurityNotificationOutbox.delivery_state == "sending")
-                        & (SecurityNotificationOutbox.delivery_lease_until < now),
-                    )
-                ).order_by(SecurityNotificationOutbox.next_delivery_at,
-                           SecurityNotificationOutbox.created_at).with_for_update(skip_locked=True).limit(1)
+            select(SecurityNotificationOutbox)
+            .where(
+                or_(
+                    (SecurityNotificationOutbox.delivery_state == "pending")
+                    & (SecurityNotificationOutbox.next_delivery_at <= now),
+                    (SecurityNotificationOutbox.delivery_state == "sending")
+                    & (SecurityNotificationOutbox.delivery_lease_until < now),
+                )
+            )
+            .order_by(
+                SecurityNotificationOutbox.next_delivery_at,
+                SecurityNotificationOutbox.created_at,
+            )
+            .with_for_update(skip_locked=True)
+            .limit(1)
         )
         if row is None:
             return False
@@ -48,19 +54,28 @@ def process_one() -> bool:
             row.delivery_lease_until = None
             row.last_delivery_error = "attempt_limit_reached"
             return True
-        member = session.scalar(select(Membership).where(
+        member = session.scalar(
+            select(Membership).where(
                 Membership.organization_id == row.organization_id,
                 Membership.user_id == row.user_id,
-            ))
+            )
+        )
         user = session.get(User, row.user_id)
         case = session.get(IncidentCase, row.case_id)
         organization = session.get(Organization, row.organization_id)
         scan = session.get(UrlScan, case.scan_id) if case is not None else None
-        if (member is None or member.role not in {"owner", "admin"}
-                or not member.priority_email_enabled or user is None
-                or not user.is_active or not user.email_verified
-                or case is None or case.severity not in {"critical", "high"}
-                or organization is None or scan is None):
+        if (
+            member is None
+            or member.role not in {"owner", "admin"}
+            or not member.priority_email_enabled
+            or user is None
+            or not user.is_active
+            or not user.email_verified
+            or case is None
+            or case.severity not in {"critical", "high"}
+            or organization is None
+            or scan is None
+        ):
             row.delivery_state = "cancelled"
             row.delivery_lease_until = None
             return True

@@ -38,6 +38,7 @@ from packages.security_core.models import (
     Membership,
     MFARecoveryCode,
     Organization,
+    SecurityNotificationOutbox,
     User,
 )
 
@@ -1127,3 +1128,45 @@ def update_notification_preferences(
     session.commit()
     response.headers["Cache-Control"] = "no-store"
     return NotificationPreferenceResponse(priority_email_enabled=current.priority_email_enabled)
+
+
+class NotificationDeliveryStatus(BaseModel):
+    pending_count: int
+    failed_count: int
+    oldest_pending_at: datetime | None
+
+
+@router.get(
+    "/organizations/{organization_id}/notification-status",
+    response_model=NotificationDeliveryStatus,
+)
+def get_notification_delivery_status(
+    membership: Annotated[Membership, Depends(require_org_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    response: Response,
+) -> NotificationDeliveryStatus:
+    pending_states = ("pending", "sending")
+    pending_count = session.scalar(
+        select(func.count()).select_from(SecurityNotificationOutbox).where(
+            SecurityNotificationOutbox.organization_id == membership.organization_id,
+            SecurityNotificationOutbox.delivery_state.in_(pending_states),
+        )
+    ) or 0
+    failed_count = session.scalar(
+        select(func.count()).select_from(SecurityNotificationOutbox).where(
+            SecurityNotificationOutbox.organization_id == membership.organization_id,
+            SecurityNotificationOutbox.delivery_state == "failed",
+        )
+    ) or 0
+    oldest_pending_at = session.scalar(
+        select(func.min(SecurityNotificationOutbox.created_at)).where(
+            SecurityNotificationOutbox.organization_id == membership.organization_id,
+            SecurityNotificationOutbox.delivery_state.in_(pending_states),
+        )
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return NotificationDeliveryStatus(
+        pending_count=pending_count,
+        failed_count=failed_count,
+        oldest_pending_at=oldest_pending_at,
+    )

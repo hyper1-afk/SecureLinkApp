@@ -210,6 +210,7 @@ class SecurityNotificationOutbox(Base):
             ondelete="CASCADE",
         ),
         Index("ix_security_notification_delivery", "delivery_state", "next_delivery_at"),
+        Index("ix_security_notification_org_state_created", "organization_id", "delivery_state", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))

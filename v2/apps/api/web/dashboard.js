@@ -258,6 +258,20 @@ async function loadOrganization() {
   } else {
     setStatus("notification-preference-status", "Email alert preferences could not be loaded.");
   }
+  const deliveryStatus = byId("notification-delivery-status");
+  deliveryStatus.hidden = !canManageAssets;
+  if (canManageAssets) {
+    const deliveryResponse = await request(`${apiBase}/notification-status`);
+    if (deliveryResponse.ok) {
+      const delivery = await deliveryResponse.json();
+      deliveryStatus.textContent = `${delivery.pending_count} pending, ${delivery.failed_count} failed alert email(s).`;
+      if (delivery.oldest_pending_at) {
+        deliveryStatus.textContent += ` Oldest pending since ${new Date(delivery.oldest_pending_at).toLocaleString()}.`;
+      }
+    } else {
+      deliveryStatus.textContent = "Alert delivery status is unavailable.";
+    }
+  }
   return true;
 }
 

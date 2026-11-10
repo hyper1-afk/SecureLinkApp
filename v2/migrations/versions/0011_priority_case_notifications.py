@@ -50,9 +50,15 @@ def upgrade() -> None:
         "security_notification_outbox",
         ["delivery_state", "next_delivery_at"],
     )
+    op.create_index(
+        "ix_security_notification_org_state_created",
+        "security_notification_outbox",
+        ["organization_id", "delivery_state", "created_at"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_security_notification_org_state_created", table_name="security_notification_outbox")
     op.drop_index("ix_security_notification_delivery", table_name="security_notification_outbox")
     op.drop_table("security_notification_outbox")
     op.drop_column("memberships", "priority_email_enabled")

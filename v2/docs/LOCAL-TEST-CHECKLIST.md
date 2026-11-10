@@ -14,6 +14,7 @@ This checklist exercises the local V2 website, API, email queue, and unpacked ex
 2. Submit `https://demo-user:demo-password@example.com/private?token=demo-value` in **Inspect a link**.
 3. Confirm the result displays only `https://example.com/[path and query omitted]`, and that a high-priority case appears in **Cases** without manually opening it.
 4. Confirm an alert email is captured in Mailpit. It should identify the organization, severity, hostname, case ID, and dashboard link. It must not contain `demo-user`, `demo-password`, `/private`, or `demo-value`.
+   The dashboard's **Priority email alerts** panel should show zero pending and zero failed after Mailpit accepts the message.
 5. Turn off **Email me about high-priority cases**, submit another URL with a fake credential or sensitive query indicator, and confirm no new alert arrives for that account. The preference change should be reflected after reloading the dashboard.
 6. A viewer/analyst can change their own preference but should not receive organization priority alerts. Only verified, active owners/admins are eligible.
 

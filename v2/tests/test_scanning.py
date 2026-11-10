@@ -305,7 +305,7 @@ def test_domain_asset_creation_is_admin_only(client: TestClient):
 def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
     owner = register(client, "case-owner@example.test")
     other = register(client, "case-other@example.test")
-    register(client, "case-analyst@example.test")
+    analyst = register(client, "case-analyst@example.test")
     owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
     other_headers = {"Authorization": f"Bearer {other['access_token']}"}
     with client.app.state.test_session_factory() as session, session.begin():
@@ -330,6 +330,17 @@ def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(c
     assert len(automatic_cases.json()) == 1
     assert automatic_cases.json()[0]["severity"] == "high"
     assert "not a safety verdict" in automatic_cases.json()[0]["summary"]
+    delivery_status = client.get(
+        f"/organizations/{owner['organization_id']}/notification-status", headers=owner_headers
+    )
+    assert delivery_status.status_code == 200
+    assert delivery_status.json()["pending_count"] == 1
+    assert delivery_status.json()["failed_count"] == 0
+    assert delivery_status.json()["oldest_pending_at"] is not None
+    assert client.get(
+        f"/organizations/{owner['organization_id']}/notification-status",
+        headers={"Authorization": f"Bearer {analyst['access_token']}"},
+    ).status_code == 403
 
     case_response = client.post(
         f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
@@ -419,6 +430,10 @@ def test_priority_notification_worker_sends_hostname_only(client: TestClient, mo
     ).json()[0]["id"])
     assert "secret" not in repr(sent)
     assert notification_worker.process_one() is False
+    status = client.get(
+        f"/organizations/{owner['organization_id']}/notification-status", headers=headers
+    )
+    assert status.json() == {"pending_count": 0, "failed_count": 0, "oldest_pending_at": None}
 
 
 def test_clean_scan_cannot_open_empty_case(client: TestClient):
