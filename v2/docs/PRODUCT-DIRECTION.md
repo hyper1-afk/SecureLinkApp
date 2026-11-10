@@ -78,3 +78,34 @@ Prove backup restore, alert delivery, incident response, capacity limits, securi
 ## Current position
 
 The current V2 has account and email flows, organization roles, audit events, a passive URL hygiene API, a basic scan dashboard, and a local Compose environment. It does not yet implement verified asset monitoring, reputation-based threat detection, the full customer dashboard, billing, or V2 extension integration. It is not production-ready.
+
+## Feature portfolio: acquisition hypotheses
+
+These are directional scores for the chance a capability helps attract the intended customer, not measured conversion probabilities. Public threat-prevalence data is not a substitute for SecureLink signup, activation, retention, or payment data. Confidence is low until customer interviews and pilots validate the assumptions.
+
+| Capability | Relative acquisition score | Confidence | V2 decision |
+| --- | ---: | --- | --- |
+| Link and phishing checks, including a browser extension | 5/5 | Medium | Keep as a clear entry point. Make the result fast, explainable, privacy-conscious, and honest about its limits. |
+| Continuous verified-domain and external exposure monitoring | 4/5 | Medium | Core paid SMB value. Build after ownership verification and isolated, read-only checks. |
+| Email inbox scanning | 4/5 | Low | Defer. Phishing is a clear pain, but mailbox OAuth scopes, data handling, and false positives create a high trust and support burden. |
+| Domain health (TLS, SPF, DKIM, DMARC) | 3/5 | Low | Bundle into monitoring; weak as a standalone product. |
+| Breach lookup with concrete response guidance | 3/5 | Low | Consider a partner-backed add-on only if it can show specific, safe next steps. Never accept or store plaintext passwords. |
+| Compliance reporting | 3/5 | Low | Defer until a specific buyer segment and framework are validated; keeping mappings current is costly. |
+| Alerting and concise digests | 3/5 for acquisition; 5/5 for retention | Low | Build with monitoring. Prioritize signal quality and customer-configurable thresholds over alert volume. |
+| AI analyst | 2/5 standalone | Low | Treat as an evidence-grounded workflow assistant, not the product promise or an autonomous remediation agent. |
+| Dark-web monitoring | 2/5 standalone | Medium | Remove from the V2 core and new V2 marketing. Revisit only as a partner-backed, actionable add-on after paid-customer validation. |
+| PDF reports | 2/5 | Low | Defer; export findings after customers demonstrate a reporting need. |
+| Security-news feed | 1/5 | Low | Remove from the V2 core; it is easy to copy and does not directly reduce a customer's risk. |
+| Link shortener | 1/5 | Low | Remove from the V2 core; it adds abuse, reputation, and operational risks without strengthening the security-monitoring value proposition. |
+
+### Why these choices
+
+The UK Government's 2025/26 survey reports that 43% of businesses experienced a breach or attack, phishing affected 38% of businesses and was the most disruptive reported attack type, while 32% used security-monitoring tools. This indicates a material problem and a monitoring gap, but does not prove willingness to buy SecureLink. [Cyber Security Breaches Survey 2025/2026](https://www.gov.uk/government/statistics/cyber-security-breaches-survey-20252026/cyber-security-breaches-survey-20252026)
+
+Verizon's 2026 DBIR reports that vulnerability exploitation was the initial entry point in 31% of breaches in its dataset. That supports prioritizing exposure and vulnerability workflows for SMB buyers after the safe asset-monitoring foundation exists. [Verizon 2026 DBIR summary](https://www.verizon.com/about/news/breach-industry-wide-dbir-finds)
+
+Dark-web alerts have a specific actionability problem: Google ended its Dark Web Report in 2026 and said user feedback showed that general reports did not give helpful next steps. This is a useful warning against selling alarming findings without clear response guidance; it is not proof that every breach-monitoring product lacks demand. [Google's discontinuation notice](https://support.google.com/websearch/answer/15191033?hl=en)
+
+### Validation before investing further
+
+Track landing-page conversion, account verification, first useful scan, repeat weekly use, paid conversion, churn, alert dismissals, and support time. Interview SMB operators and MSPs separately; consumer extension installs and B2B subscription demand are different markets. Change these rankings when SecureLink's own evidence contradicts the hypotheses.
