@@ -11,6 +11,7 @@ const caseTransitions = {
 };
 let canScan = false;
 let canManageAssets = false;
+let canTransferOwnership = false;
 let caseScanIds = new Set();
 
 function setStatus(id, message) {
@@ -176,6 +177,49 @@ function renderAssets(assets) {
   }
 }
 
+function renderMembers(members) {
+  const list = byId("member-list");
+  const target = byId("owner-transfer-target");
+  list.replaceChildren();
+  target.replaceChildren();
+  const admins = [];
+  for (const member of members) {
+    const item = document.createElement("li");
+    item.className = "data-card";
+    const identity = document.createElement("h3");
+    identity.textContent = member.email;
+    const role = document.createElement("p");
+    role.className = "muted";
+    role.textContent = `Role: ${member.role}`;
+    item.append(identity, role);
+    list.append(item);
+    if (member.role === "admin") admins.push(member);
+  }
+  for (const admin of admins) {
+    const option = document.createElement("option");
+    option.value = admin.membership_id;
+    option.textContent = admin.email;
+    target.append(option);
+  }
+  byId("owner-transfer-panel").hidden = !canTransferOwnership || admins.length === 0;
+  if (canTransferOwnership && admins.length === 0) {
+    setStatus("owner-transfer-status", "Promote an existing teammate to admin before transferring ownership.");
+  }
+  setStatus("member-status", `${members.length} organization member(s).`);
+}
+
+async function loadMembers() {
+  if (!canManageAssets) return;
+  setStatus("member-status", "Loading organization members…");
+  const response = await request(`${apiBase}/members`);
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("member-status", "Organization members could not be loaded.");
+    return;
+  }
+  renderMembers(await response.json());
+}
+
 function showChallenge(asset) {
   byId("challenge-name").textContent = asset.dns_name;
   byId("challenge-value").textContent = asset.dns_value;
@@ -198,6 +242,8 @@ async function loadOrganization() {
   byId("organization-role").textContent = `Role: ${organization.role}`;
   canScan = ["owner", "admin", "analyst"].includes(organization.role);
   canManageAssets = ["owner", "admin"].includes(organization.role);
+  canTransferOwnership = organization.role === "owner";
+  byId("team-panel").hidden = !canManageAssets;
   byId("scan-submit").disabled = !canScan;
   byId("asset-submit").disabled = !canManageAssets;
   if (!canScan) setStatus("scan-status", "Your viewer role can review results but cannot scan or update cases.");
@@ -335,7 +381,7 @@ async function revokeExtensionSession(sessionId) {
 }
 
 async function refreshAll() {
-  await Promise.all([loadCases(), loadAssets(), loadExtensionSessions()]);
+  await Promise.all([loadCases(), loadAssets(), loadExtensionSessions(), loadMembers()]);
   await loadScans();
 }
 
@@ -476,8 +522,46 @@ byId("asset-form").addEventListener("submit", async (event) => {
 
 byId("refresh-cases").addEventListener("click", loadCases);
 byId("refresh-assets").addEventListener("click", loadAssets);
+byId("refresh-members").addEventListener("click", loadMembers);
 byId("refresh-scans").addEventListener("click", loadScans);
 byId("refresh-extension-sessions").addEventListener("click", loadExtensionSessions);
+byId("owner-transfer-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const select = byId("owner-transfer-target");
+  const selectedAdmin = select.options[select.selectedIndex];
+  if (!selectedAdmin || !window.confirm(`Transfer ownership to ${selectedAdmin.textContent}? You will become an admin.`)) return;
+  const button = event.submitter;
+  button.disabled = true;
+  setStatus("owner-transfer-status", "Verifying and transferring ownership…");
+  try {
+    const response = await request(`${apiBase}/owner-transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target_membership_id: select.value,
+        password: byId("owner-transfer-password").value,
+        mfa_code: byId("owner-transfer-code").value,
+      }),
+    });
+    byId("owner-transfer-password").value = "";
+    byId("owner-transfer-code").value = "";
+    if (response.status === 401) return clearSession();
+    if (!response.ok) {
+      setStatus("owner-transfer-status", response.status === 403
+        ? "Enable MFA before transferring ownership, then try again."
+        : "Transfer failed. Check your password, authentication code, and selected admin.");
+      return;
+    }
+    setStatus("owner-transfer-status", "Ownership transferred. Refreshing your organization role…");
+    window.location.reload();
+  } catch {
+    byId("owner-transfer-password").value = "";
+    byId("owner-transfer-code").value = "";
+    setStatus("owner-transfer-status", "SecureLink could not be reached; ownership was not transferred.");
+  } finally {
+    button.disabled = false;
+  }
+});
 byId("sign-out").addEventListener("click", async () => {
   if (token) {
     try {

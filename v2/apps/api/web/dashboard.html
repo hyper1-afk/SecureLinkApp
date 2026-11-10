@@ -81,6 +81,32 @@
       <ol id="asset-list" class="card-list"></ol>
     </section>
 
+    <section class="panel" id="team-panel" aria-labelledby="team-title" hidden>
+      <div class="section-heading">
+        <div>
+          <h2 id="team-title">Team access</h2>
+          <p class="muted">Organization members and roles.</p>
+        </div>
+        <button id="refresh-members" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <p id="member-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="member-list" class="card-list"></ol>
+      <div id="owner-transfer-panel" hidden>
+        <h3>Transfer organization ownership</h3>
+        <p class="notice">Transfer is permanent until the new owner transfers it back. The current owner becomes an admin.</p>
+        <form id="owner-transfer-form">
+          <label for="owner-transfer-target">Transfer to an existing admin</label>
+          <select id="owner-transfer-target" required></select>
+          <label for="owner-transfer-password">Current password</label>
+          <input id="owner-transfer-password" type="password" autocomplete="current-password" required>
+          <label for="owner-transfer-code">Authenticator or unused recovery code</label>
+          <input id="owner-transfer-code" autocomplete="one-time-code" required>
+          <button type="submit" class="button-danger">Transfer ownership</button>
+        </form>
+        <p id="owner-transfer-status" class="status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="history-title">
       <div class="section-heading">
         <div>
