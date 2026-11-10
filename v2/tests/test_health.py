@@ -54,6 +54,20 @@ def test_oversized_request_body_is_rejected_before_route_processing():
     assert response.status_code == 413
 
 
+def test_oversized_chunked_request_body_is_rejected():
+    def chunks():
+        yield b"x" * MAX_REQUEST_BODY_BYTES
+        yield b"x"
+
+    response = client.post(
+        "/auth/register",
+        content=chunks(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 413
+
+
 def test_readiness_reports_healthy_dependencies(monkeypatch):
     monkeypatch.setattr(main, "create_engine", lambda *args, **kwargs: FakeEngine())
     monkeypatch.setattr(main, "Redis", FakeRedis)
