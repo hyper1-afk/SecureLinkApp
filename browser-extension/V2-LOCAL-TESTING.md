@@ -23,6 +23,12 @@ Chrome Web Store.
    does not claim that the URL is malicious or safe. Disconnect from the panel
    or revoke the session from the V2 dashboard.
 
+The V2 connector removes URL credentials and fragments and masks values for
+sensitive query keys before sending the manual review. Other query values,
+the path, and the hostname are sent to the configured V2 API. The legacy
+automatic scanner remains a separate existing service and is not changed by
+this manual V2 review.
+
 When loaded unpacked with a different ID, the legacy automatic scanner does not
 send page URLs to the live legacy API by default. Its panel reports that the
 legacy scanner is disabled. The published Chrome Web Store installation retains

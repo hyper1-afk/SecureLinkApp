@@ -9,6 +9,7 @@ import {
     validateApiOrigin
 } from './v2-oauth.js';
 import { legacyScanFailure, normalizeLegacyScan } from './legacy-scan.js';
+import { redactUrlForSubmission } from './url-privacy.js';
 
 const DEFAULT_API_BASE = 'https://securelinkapp.com';
 const PUBLISHED_EXTENSION_ID = 'dpegeipjmofhdikcbniodhohpckoeole';
@@ -557,13 +558,14 @@ async function disconnectV2() {
 async function scanWithV2(url) {
     const values = await v2Session();
     if (!values) throw new Error('Connect a V2 workspace before submitting a manual review.');
+    const sanitized = redactUrlForSubmission(url);
     const response = await fetch(new URL('/extension/v1/scans', values[V2_ORIGIN_KEY]), {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${values[V2_TOKEN_KEY]}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: sanitized.url, redactions: sanitized.redactions }),
         cache: 'no-store',
         credentials: 'omit',
         referrerPolicy: 'no-referrer'
