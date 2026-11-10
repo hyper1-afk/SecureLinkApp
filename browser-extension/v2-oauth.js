@@ -10,7 +10,7 @@ export function validateApiOrigin(value) {
   if (api.username || api.password || api.search || api.hash || api.pathname !== "/") {
     throw new Error("Enter only the V2 API origin, without a path or credentials.");
   }
-  if (api.protocol !== "https:" && api.hostname !== "localhost") {
+  if (api.protocol !== "https:" && !(api.protocol === "http:" && api.hostname === "localhost")) {
     throw new Error("V2 requires HTTPS outside localhost.");
   }
   return api;

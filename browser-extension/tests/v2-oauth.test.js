@@ -25,6 +25,8 @@ test("accepts HTTPS origins and localhost while rejecting unsafe API bases", () 
   assert.equal(validateApiOrigin("https://staging.example.test").origin, "https://staging.example.test");
   assert.equal(validateApiOrigin("http://localhost:8000").port, "8000");
   assert.throws(() => validateApiOrigin("http://staging.example.test"), /requires HTTPS/);
+  assert.throws(() => validateApiOrigin("ftp://localhost"), /requires HTTPS/);
+  assert.throws(() => validateApiOrigin("file://localhost"), /requires HTTPS/);
   assert.throws(() => validateApiOrigin("https://user:pass@example.test"), /without a path/);
   assert.throws(() => validateApiOrigin("https://example.test/api"), /without a path/);
 });
