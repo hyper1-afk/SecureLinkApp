@@ -28,7 +28,9 @@ async function refreshV2Status() {
   try {
     const status = await sendV2("v2Status");
     if (status?.error) showV2Status(status.error);
-    else showV2Status(status?.connected ? "Connected — manual reviews only" : "Not connected");
+    else showV2Status(status?.connected
+      ? "Connected — manual reviews only"
+      : configuredV2ApiOrigin ? "Not connected" : "Set the V2 API origin in Settings to connect.");
     byId("v2-connect-btn").classList.toggle("hidden", status?.connected);
     byId("v2-disconnect-btn").classList.toggle("hidden", !status?.connected);
     byId("v2-scan-btn").classList.toggle("hidden", !status?.connected);
@@ -48,6 +50,10 @@ function initializeV2Settings() {
       configuredV2ApiOrigin = "";
       input.value = stored.v2ApiBase || "";
     }
+    byId("v2-api-display").textContent = configuredV2ApiOrigin
+      ? `API: ${configuredV2ApiOrigin}`
+      : "Set an API origin in Settings to connect.";
+    refreshV2Status();
   });
 
   byId("v2-api-url-save-btn").addEventListener("click", async () => {
@@ -63,8 +69,12 @@ function initializeV2Settings() {
       await chrome.storage.local.set({ v2ApiBase: newOrigin });
       configuredV2ApiOrigin = newOrigin;
       input.value = newOrigin;
+      byId("v2-api-display").textContent = newOrigin
+        ? `API: ${newOrigin}`
+        : "Set an API origin in Settings to connect.";
       message.textContent = newOrigin ? "V2 API origin saved." : "V2 connection disabled.";
       message.className = "settings-msg";
+      refreshV2Status();
     } catch (error) {
       message.textContent = error instanceof Error ? error.message : "Could not save the V2 API origin.";
       message.className = "settings-msg error";
@@ -102,14 +112,16 @@ function disconnectV2FromClick() {
   const button = byId("v2-disconnect-btn");
   button.disabled = true;
   sendV2("v2Disconnect").then((result) => {
+    byId("v2-connect-btn").classList.remove("hidden");
+    byId("v2-disconnect-btn").classList.add("hidden");
+    byId("v2-scan-btn").classList.add("hidden");
     showV2Status(result?.serverRevoked
       ? "V2 session disconnected and revoked."
-      : "Disconnected here. If the API was offline, revoke the session from your account dashboard.");
+      : "V2 token cleared here. If its account session is still active, revoke it from the dashboard.");
   }, (error) => {
     showV2Status(error instanceof Error ? error.message : "Could not disconnect V2.");
   }).finally(() => {
     button.disabled = false;
-    refreshV2Status();
   });
 }
 
@@ -157,7 +169,6 @@ function submitManualV2Review() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeV2Settings();
-  refreshV2Status();
   byId("v2-connect-btn").addEventListener("click", connectV2FromClick);
   byId("v2-disconnect-btn").addEventListener("click", disconnectV2FromClick);
   byId("v2-scan-btn").addEventListener("click", submitManualV2Review);
