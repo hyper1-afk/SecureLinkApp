@@ -1246,22 +1246,32 @@ function renderRecentScans() {
 // ── RESULT RENDERERS ──
 function renderHealthResults(data) {
     if (data.error) return `<div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i>${escHtml(data.error)}</div>`;
-    const ssl     = data.ssl_info     || {};
-    const headers = data.headers_info || {};
+    const ssl     = data.ssl_info     || data.ssl || {};
+    const dns     = data.dns_info     || data.dns || {};
+    const headers = data.headers_info || data.headers || {};
     const ports   = data.port_info    || {};
+    const missingHeaders = headers.headers_missing || headers.missing || [];
+    const presentHeaders = headers.headers_present || [];
+    const headerCheck = (name, fallback) => {
+        if (headers.scan_available === false) return null;
+        if (typeof headers[fallback] === 'boolean') return headers[fallback];
+        if (presentHeaders.includes(name)) return true;
+        if (missingHeaders.includes(name)) return false;
+        return null;
+    };
     const partial = data.scan_status === 'partial';
     const grade   = partial ? 'Partial' : (data.grade || '?');
     const score   = data.score || 0;
     const barColor = score >= 80 ? '' : score >= 60 ? 'amber' : 'red';
 
     const checks = [
-        { label: 'SSL Certificate', val: ssl.valid ? 'Valid' : 'Invalid', ok: ssl.valid },
-        { label: `Expires in`, val: ssl.days_until_expiry != null ? `${ssl.days_until_expiry} days` : 'Unknown', ok: (ssl.days_until_expiry||0) > 30, warn: (ssl.days_until_expiry||0) > 0 && (ssl.days_until_expiry||0) <= 30 },
-        { label: 'SPF Record',      val: data.spf?.valid  ? 'Pass' : (data.spf?.record ? 'Fail' : 'Missing'), ok: data.spf?.valid },
-        { label: 'DMARC Policy',    val: data.dmarc?.valid ? data.dmarc?.policy || 'Set' : 'Missing', ok: data.dmarc?.valid },
-        { label: 'HSTS Header',     val: headers.hsts  ? 'Present' : 'Missing', ok: headers.hsts },
-        { label: 'X-Frame-Options', val: headers.x_frame_options ? 'Set' : 'Missing', ok: !!headers.x_frame_options },
-        { label: 'CSP Header',      val: headers.content_security_policy ? 'Set' : 'Missing', ok: !!headers.content_security_policy },
+        { label: 'SSL Certificate', val: ssl.valid == null ? 'Not checked' : (ssl.valid ? 'Valid' : 'Invalid'), ok: !!ssl.valid, warn: ssl.valid == null },
+        { label: 'Expires in', val: (ssl.days_until_expiry ?? ssl.days_remaining) != null ? `${ssl.days_until_expiry ?? ssl.days_remaining} days` : 'Unknown', ok: (ssl.days_until_expiry ?? ssl.days_remaining ?? 0) > 30, warn: ssl.valid == null || ((ssl.days_until_expiry ?? ssl.days_remaining ?? 0) > 0 && (ssl.days_until_expiry ?? ssl.days_remaining) <= 30) },
+        { label: 'SPF Record', val: dns.has_spf ? 'Configured' : 'Missing', ok: !!dns.has_spf },
+        { label: 'DMARC Policy', val: dns.has_dmarc ? 'Configured' : 'Missing', ok: !!dns.has_dmarc },
+        { label: 'HSTS Header', val: headerCheck('Strict-Transport-Security', 'hsts') == null ? 'Not checked' : (headerCheck('Strict-Transport-Security', 'hsts') ? 'Present' : 'Missing'), ok: headerCheck('Strict-Transport-Security', 'hsts') === true, warn: headerCheck('Strict-Transport-Security', 'hsts') == null },
+        { label: 'X-Frame-Options', val: headerCheck('X-Frame-Options', 'x_frame_options') == null ? 'Not checked' : (headerCheck('X-Frame-Options', 'x_frame_options') ? 'Set' : 'Missing'), ok: headerCheck('X-Frame-Options', 'x_frame_options') === true, warn: headerCheck('X-Frame-Options', 'x_frame_options') == null },
+        { label: 'CSP Header', val: headerCheck('Content-Security-Policy', 'content_security_policy') == null ? 'Not checked' : (headerCheck('Content-Security-Policy', 'content_security_policy') ? 'Set' : 'Missing'), ok: headerCheck('Content-Security-Policy', 'content_security_policy') === true, warn: headerCheck('Content-Security-Policy', 'content_security_policy') == null },
         { label: 'Open Ports',      val: ports.scan_available === false ? 'Not scanned' : ((ports.open_ports||[]).join(', ') || 'None'), ok: ports.scan_available !== false && !(ports.open_ports||[]).some(p => ![80,443].includes(p)) },
     ];
 

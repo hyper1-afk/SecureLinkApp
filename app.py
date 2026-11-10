@@ -2215,6 +2215,10 @@ def domain_health_check():
             'scan_status': r.get('scan_status', 'partial'),
             'score': r.get('score', 0),
             'grade': r.get('grade', 'F'),
+            'ssl_info': ssl,
+            'dns_info': dns,
+            'headers_info': headers,
+            'port_info': r.get('port_info', {}),
             'ssl': {
                 'valid': ssl.get('valid'),
                 'issuer': ssl.get('issuer'),
@@ -2228,6 +2232,7 @@ def domain_health_check():
             },
             'headers': {
                 'missing': headers.get('headers_missing', []),
+                'scan_available': headers.get('scan_available'),
             },
             'findings_count': {
                 'critical': len([f for f in findings if f.get('severity') == 'critical']),
