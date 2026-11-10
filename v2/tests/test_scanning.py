@@ -398,6 +398,7 @@ def test_dashboard_page_uses_private_headers_and_discloses_scan_limits(client: T
     assert "not a safety verdict" in response.text
     assert "Authorized domains" in response.text
     assert "Cases" in response.text
+    assert "Browser extension sessions" in response.text
 
 
 def _challenge(verifier: str) -> str:
@@ -575,6 +576,17 @@ def test_password_reset_token_version_invalidates_extension_session(client: Test
         user.token_version += 1
         session.commit()
 
+    relogin = client.post(
+        "/auth/login",
+        json={"email": "extension-revoked-by-reset@example.test", "password": "a-long-scan-test-password"},
+    )
+    assert relogin.status_code == 200
+    sessions = client.get(
+        "/extension/oauth/sessions",
+        headers={"Authorization": f"Bearer {relogin.json()['access_token']}"},
+    )
+    assert sessions.json()[0]["status"] == "invalidated"
+
     assert client.post(
         "/extension/v1/scans",
         headers=headers,
@@ -608,12 +620,14 @@ def test_extension_sessions_can_be_revoked_only_by_the_owning_account(client: Te
     assert len(sessions.json()) == 1
     session_id = sessions.json()[0]["id"]
     assert sessions.json()[0]["organization_id"] == owner["organization_id"]
+    assert sessions.json()[0]["status"] == "active"
     assert client.delete(
         f"/extension/oauth/sessions/{session_id}", headers=other_headers
     ).status_code == 404
     assert client.delete(
         f"/extension/oauth/sessions/{session_id}", headers=owner_headers
     ).status_code == 204
+    assert client.get("/extension/oauth/sessions", headers=owner_headers).json()[0]["status"] == "revoked"
     assert client.post(
         "/extension/v1/scans",
         headers={"Authorization": f"Bearer {extension_token}"},

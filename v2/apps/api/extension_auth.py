@@ -80,7 +80,7 @@ class ExtensionSessionSummary(BaseModel):
     organization_name: str
     created_at: datetime
     expires_at: datetime
-    revoked_at: datetime | None
+    status: Literal["active", "revoked", "expired", "invalidated"]
 
 
 @dataclass(frozen=True)
@@ -101,6 +101,10 @@ def _allowed_redirect(uri: str) -> bool:
 
 def _hash_secret(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
 def _pkce_challenge(verifier: str) -> str:
@@ -293,9 +297,22 @@ def list_extension_sessions(
     session: Annotated[Session, Depends(get_session)],
 ) -> list[ExtensionSessionSummary]:
     response.headers["Cache-Control"] = "no-store"
+    now = datetime.now(UTC)
     rows = session.execute(
-        select(ExtensionSession, Organization.name)
+        select(
+            ExtensionSession,
+            Organization.name,
+            User.token_version,
+            User.is_active,
+            Membership.role,
+        )
         .join(Organization, Organization.id == ExtensionSession.organization_id)
+        .join(User, User.id == ExtensionSession.user_id)
+        .outerjoin(
+            Membership,
+            (Membership.organization_id == ExtensionSession.organization_id)
+            & (Membership.user_id == ExtensionSession.user_id),
+        )
         .where(ExtensionSession.user_id == principal.user_id)
         .order_by(ExtensionSession.created_at.desc(), ExtensionSession.id)
     ).all()
@@ -304,11 +321,23 @@ def list_extension_sessions(
             id=extension_session.id,
             organization_id=extension_session.organization_id,
             organization_name=organization_name,
-            created_at=extension_session.created_at,
-            expires_at=extension_session.expires_at,
-            revoked_at=extension_session.revoked_at,
+            created_at=_as_utc(extension_session.created_at),
+            expires_at=_as_utc(extension_session.expires_at),
+            status=(
+                "revoked"
+                if extension_session.revoked_at is not None
+                else "expired"
+                if _as_utc(extension_session.expires_at) <= now
+                else "invalidated"
+                if (
+                    not is_active
+                    or extension_session.token_version != current_token_version
+                    or role not in {"owner", "admin", "analyst"}
+                )
+                else "active"
+            ),
         )
-        for extension_session, organization_name in rows
+        for extension_session, organization_name, current_token_version, is_active, role in rows
     ]
 
 

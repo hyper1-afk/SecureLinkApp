@@ -88,7 +88,18 @@
       <p id="history-status" class="status" role="status" aria-live="polite"></p>
       <ol id="scan-history" class="card-list"></ol>
     </section>
-    <footer><p>Sessions expire after 15 minutes. <a href="/">Manage account</a></p></footer>
+    <section class="panel" aria-labelledby="extension-sessions-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="extension-sessions-title">Browser extension sessions</h2>
+          <p class="muted">Review and disconnect extensions authorized for your organizations.</p>
+        </div>
+        <button id="refresh-extension-sessions" type="button" class="button-secondary">Refresh</button>
+      </div>
+      <p id="extension-session-status" class="status" role="status" aria-live="polite"></p>
+      <ol id="extension-session-list" class="card-list"></ol>
+    </section>
+    <footer><p>Web sessions expire after 15 minutes; extension sessions expire after 12 hours. <a href="/">Manage account</a></p></footer>
   </main>
   <script src="/assets/dashboard.js" defer></script>
 </body>

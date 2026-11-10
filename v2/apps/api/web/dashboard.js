@@ -237,8 +237,74 @@ async function loadScans() {
   renderScans(await response.json());
 }
 
+function renderExtensionSessions(sessions) {
+  const list = byId("extension-session-list");
+  list.replaceChildren();
+  if (!sessions.length) {
+    setStatus("extension-session-status", "No browser extension sessions are connected to this account.");
+    return;
+  }
+  for (const extensionSession of sessions) {
+    const item = document.createElement("li");
+    item.className = "data-card";
+    const heading = document.createElement("h3");
+    heading.textContent = "SecureLink Chrome extension";
+    const organization = document.createElement("p");
+    organization.textContent = `Organization: ${extensionSession.organization_name}`;
+    const expiry = document.createElement("p");
+    expiry.className = "muted";
+    expiry.textContent = `Connected ${new Date(extensionSession.created_at).toLocaleString()} · Expires ${new Date(extensionSession.expires_at).toLocaleString()}`;
+    const active = extensionSession.status === "active";
+    const state = document.createElement("p");
+    state.className = active ? "state-verified" : "state-pending";
+    const labels = {
+      active: "Connected",
+      revoked: "Disconnected",
+      expired: "Expired",
+      invalidated: "No longer authorized",
+    };
+    state.textContent = labels[extensionSession.status] || "Status unavailable";
+    item.append(heading, organization, expiry, state);
+    if (active) {
+      item.append(makeButton(
+        "Disconnect",
+        () => revokeExtensionSession(extensionSession.id),
+        "button-danger",
+        "extension-session-status",
+      ));
+    }
+    list.append(item);
+  }
+  setStatus("extension-session-status", `${sessions.length} extension session(s).`);
+}
+
+async function loadExtensionSessions() {
+  setStatus("extension-session-status", "Loading browser extension sessions…");
+  const response = await request("/extension/oauth/sessions");
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("extension-session-status", "Browser extension sessions could not be loaded.");
+    return;
+  }
+  renderExtensionSessions(await response.json());
+}
+
+async function revokeExtensionSession(sessionId) {
+  if (!window.confirm("Disconnect this SecureLink browser extension session?")) return;
+  const response = await request(`/extension/oauth/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+  });
+  if (response.status === 401) return clearSession();
+  if (!response.ok) {
+    setStatus("extension-session-status", "This extension session could not be disconnected.");
+    return;
+  }
+  setStatus("extension-session-status", "Browser extension disconnected.");
+  await loadExtensionSessions();
+}
+
 async function refreshAll() {
-  await Promise.all([loadCases(), loadAssets()]);
+  await Promise.all([loadCases(), loadAssets(), loadExtensionSessions()]);
   await loadScans();
 }
 
@@ -380,6 +446,7 @@ byId("asset-form").addEventListener("submit", async (event) => {
 byId("refresh-cases").addEventListener("click", loadCases);
 byId("refresh-assets").addEventListener("click", loadAssets);
 byId("refresh-scans").addEventListener("click", loadScans);
+byId("refresh-extension-sessions").addEventListener("click", loadExtensionSessions);
 byId("sign-out").addEventListener("click", async () => {
   if (token) {
     try {
