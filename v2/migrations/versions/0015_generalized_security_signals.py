@@ -5,7 +5,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0015_generalized_security_signals"
+revision: str = "0015_security_signals"
 down_revision: Union[str, None] = "0014_mfa_totp_replay"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
