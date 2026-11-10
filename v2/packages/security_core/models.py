@@ -42,6 +42,9 @@ class User(Base):
     email_verified: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
     )
+    invitation_setup_required: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
+    )
     token_version: Mapped[int] = mapped_column(
         Integer, default=0, server_default=text("0"), nullable=False
     )

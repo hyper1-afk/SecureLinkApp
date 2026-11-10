@@ -486,6 +486,63 @@ def test_invitation_requires_verified_account_and_accepts_once(client: TestClien
     assert audit_count == 2
 
 
+def test_invitation_onboards_new_user_and_requires_password_setup(client: TestClient):
+    owner = register(client, "new-invite-owner@example.test")
+    headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    response = client.post(
+        f"/organizations/{owner['organization_id']}/invitations",
+        headers=headers,
+        json={"email": "new-teammate@example.test", "role": "analyst"},
+    )
+    assert response.status_code == 202
+
+    with client.app.state.test_session_factory() as session:
+        invited_user = session.scalar(
+            select(User).where(User.email_normalized == "new-teammate@example.test")
+        )
+        assert invited_user is not None
+        assert invited_user.invitation_setup_required is True
+        assert invited_user.email_verified is False
+        action = session.scalar(
+            select(EmailActionToken).where(
+                EmailActionToken.user_id == invited_user.id,
+                EmailActionToken.purpose == "invite_member",
+                EmailActionToken.organization_id == owner["organization_id"],
+            )
+        )
+        assert action is not None and action.delivery_ciphertext is not None
+        invitation_token = emailer.decrypt_action_token(action.delivery_ciphertext)
+
+    missing_password = client.post(
+        "/auth/invitations/accept", json={"token": invitation_token}
+    )
+    assert missing_password.status_code == 400
+
+    accepted = client.post(
+        "/auth/invitations/accept",
+        json={"token": invitation_token, "password": "correct horse battery staple"},
+    )
+    assert accepted.status_code == 200
+    login = client.post(
+        "/auth/login",
+        json={"email": "new-teammate@example.test", "password": "correct horse battery staple"},
+    )
+    assert login.status_code == 200
+    assert login.json()["organization_id"] == owner["organization_id"]
+
+    replay = client.post(
+        "/auth/invitations/accept",
+        json={"token": invitation_token, "password": "correct horse battery staple"},
+    )
+    assert replay.status_code == 400
+    with client.app.state.test_session_factory() as session:
+        invited_user = session.scalar(
+            select(User).where(User.email_normalized == "new-teammate@example.test")
+        )
+        assert invited_user.email_verified is True
+        assert invited_user.invitation_setup_required is False
+
+
 def test_admin_cannot_invite_owner_or_admin(client: TestClient):
     owner = register(client, "invite-org-owner@example.test")
     admin = register(client, "invite-org-admin@example.test")

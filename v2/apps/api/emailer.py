@@ -66,6 +66,8 @@ def send_action_email(purpose: str, recipient: str, token: str) -> None:
     message.set_content(
         f"Use this link to {action}. The link expires shortly and can only be used once.\n\n"
         f"{action_url}\n\n"
+        "If this is your first SecureLink account, choose a password on the invitation page. "
+        "Existing account passwords are not changed.\n\n"
         "If you did not request this, you can ignore this message."
     )
 

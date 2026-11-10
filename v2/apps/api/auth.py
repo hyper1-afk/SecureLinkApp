@@ -62,6 +62,10 @@ class ActionTokenRequest(BaseModel):
     token: str = Field(min_length=32, max_length=256)
 
 
+class InvitationAcceptRequest(ActionTokenRequest):
+    password: str | None = Field(default=None, min_length=12, max_length=128)
+
+
 class PasswordResetRequest(ActionTokenRequest):
     new_password: str = Field(min_length=12, max_length=128)
 
@@ -623,7 +627,24 @@ def invite_organization_member(
         select(User).where(User.email_normalized == email.casefold())
     )
     response = MessageResponse(message="If the account is eligible, an invitation will be sent.")
-    if invited_user is None or not invited_user.is_active or not invited_user.email_verified:
+    if invited_user is None:
+        invited_user = User(
+            email=email,
+            email_normalized=email.casefold(),
+            password_hash=password_hash.hash(secrets.token_urlsafe(48)),
+            email_verified=False,
+            invitation_setup_required=True,
+        )
+        session.add(invited_user)
+        try:
+            session.flush()
+        except IntegrityError:
+            session.rollback()
+            return response
+    elif (
+        not invited_user.is_active
+        or (not invited_user.email_verified and not invited_user.invitation_setup_required)
+    ):
         return response
     existing = session.scalar(
         select(Membership.id).where(
@@ -680,7 +701,7 @@ def invite_organization_member(
     dependencies=[Depends(rate_limit("invitation_accept", 10, 3600))],
 )
 def accept_organization_invitation(
-    payload: ActionTokenRequest,
+    payload: InvitationAcceptRequest,
     session: Annotated[Session, Depends(get_session)],
 ) -> MessageResponse:
     with session.begin():
@@ -700,7 +721,18 @@ def accept_organization_invitation(
             raise HTTPException(status_code=400, detail="Invalid or expired invitation")
         action_token, user = _consume_action_token(session, payload.token, "invite_member")
         role = action_token.requested_role
-        if action_token.organization_id != organization_id or role is None or not user.email_verified:
+        if action_token.organization_id != organization_id or role is None:
+            raise HTTPException(status_code=400, detail="Invalid or expired invitation")
+        if user.invitation_setup_required:
+            if payload.password is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Choose a password to finish setting up your invited account",
+                )
+            user.password_hash = password_hash.hash(payload.password)
+            user.email_verified = True
+            user.invitation_setup_required = False
+        elif not user.email_verified:
             raise HTTPException(status_code=400, detail="Invalid or expired invitation")
         existing = session.scalar(
             select(Membership.id).where(
