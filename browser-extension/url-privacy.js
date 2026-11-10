@@ -41,3 +41,12 @@ export function redactUrlForSubmission(rawUrl) {
     },
   };
 }
+
+export function redactUrlForAutomaticScan(rawUrl) {
+  const result = redactUrlForSubmission(rawUrl);
+  const url = new URL(result.url);
+  url.search = new URLSearchParams(
+    [...url.searchParams.keys()].map((key) => [key, "[REDACTED]"]),
+  ).toString();
+  return url.href;
+}

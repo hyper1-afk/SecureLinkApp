@@ -8,8 +8,8 @@ import {
     readAuthorizationCallback,
 } from './v2-oauth.js';
 import { configuredApiOrigin, validateApiOrigin } from './api-origin.js';
-import { legacyScanFailure, normalizeLegacyScan } from './legacy-scan.js';
-import { redactUrlForSubmission } from './url-privacy.js';
+import { legacyScanFailure, normalizeLegacyScan, shouldSkipCloudScan } from './legacy-scan.js';
+import { redactUrlForAutomaticScan, redactUrlForSubmission } from './url-privacy.js';
 import {
     createWarningPageUrl,
     matchesTabBypass,
@@ -62,117 +62,6 @@ chrome.storage.local.get(['userSession'], (result) => {
         userSession = result.userSession;
     }
 });
-
-// Skip these URL patterns (internal browser pages, local addresses)
-const SKIP_PATTERNS = [
-    /^chrome/,
-    /^about:/,
-    /^edge:/,
-    /^file:/,
-    /^moz-extension:/,
-    /^chrome-extension:/,
-    /localhost/,
-    /127\.0\.0\.1/,
-    /192\.168\./,
-    /^10\./,
-];
-
-// Known safe domains that don't need checking (saves scans)
-const SAFE_DOMAINS = [
-    // Search engines
-    'google.com', 'www.google.com', 'google.co.uk', 'google.ca', 'google.com.au',
-    'bing.com', 'www.bing.com',
-    'duckduckgo.com', 'www.duckduckgo.com',
-    'yahoo.com', 'www.yahoo.com', 'search.yahoo.com',
-    
-    // Social media
-    'youtube.com', 'www.youtube.com', 'youtu.be',
-    'facebook.com', 'www.facebook.com', 'm.facebook.com',
-    'instagram.com', 'www.instagram.com',
-    'twitter.com', 'www.twitter.com', 'x.com', 'www.x.com',
-    'linkedin.com', 'www.linkedin.com',
-    'reddit.com', 'www.reddit.com', 'old.reddit.com',
-    'tiktok.com', 'www.tiktok.com',
-    'pinterest.com', 'www.pinterest.com',
-    'snapchat.com', 'www.snapchat.com',
-    'discord.com', 'www.discord.com', 'discord.gg',
-    'twitch.tv', 'www.twitch.tv',
-    
-    // Shopping
-    'amazon.com', 'www.amazon.com', 'amazon.co.uk', 'amazon.ca',
-    'ebay.com', 'www.ebay.com',
-    'walmart.com', 'www.walmart.com',
-    'target.com', 'www.target.com',
-    'bestbuy.com', 'www.bestbuy.com',
-    'etsy.com', 'www.etsy.com',
-    'shopify.com', 'www.shopify.com',
-    
-    // Tech giants
-    'microsoft.com', 'www.microsoft.com', 'office.com', 'www.office.com',
-    'outlook.office.com', 'outlook.office365.com', 'outlook.com', 'www.outlook.com',
-    'live.com', 'login.microsoftonline.com', 'login.live.com',
-    'teams.microsoft.com', 'sharepoint.com', 'onedrive.live.com',
-    'apple.com', 'www.apple.com', 'icloud.com',
-    'google.com', 'accounts.google.com', 'mail.google.com', 'drive.google.com', 'docs.google.com',
-    
-    // Development
-    'github.com', 'www.github.com', 'gist.github.com',
-    'gitlab.com', 'www.gitlab.com',
-    'stackoverflow.com', 'www.stackoverflow.com', 'stackexchange.com',
-    'npmjs.com', 'www.npmjs.com',
-    'pypi.org', 'www.pypi.org',
-    
-    // News & Reference
-    'wikipedia.org', 'en.wikipedia.org', 'www.wikipedia.org',
-    'cnn.com', 'www.cnn.com',
-    'bbc.com', 'www.bbc.com', 'bbc.co.uk',
-    'nytimes.com', 'www.nytimes.com',
-    'reuters.com', 'www.reuters.com',
-    
-    // Streaming
-    'netflix.com', 'www.netflix.com',
-    'hulu.com', 'www.hulu.com',
-    'disneyplus.com', 'www.disneyplus.com',
-    'spotify.com', 'www.spotify.com', 'open.spotify.com',
-    'hbomax.com', 'www.hbomax.com', 'max.com',
-    
-    // Financial (major banks)
-    'paypal.com', 'www.paypal.com',
-    'chase.com', 'www.chase.com',
-    'bankofamerica.com', 'www.bankofamerica.com',
-    'wellsfargo.com', 'www.wellsfargo.com',
-    'stripe.com', 'www.stripe.com',
-    
-    // Cloud services
-    'aws.amazon.com', 'console.aws.amazon.com',
-    'azure.microsoft.com', 'portal.azure.com',
-    'cloud.google.com', 'console.cloud.google.com',
-    'digitalocean.com', 'www.digitalocean.com',
-    'cloudflare.com', 'www.cloudflare.com', 'dash.cloudflare.com',
-    'vercel.com', 'www.vercel.com',
-    'heroku.com', 'www.heroku.com',
-    'netlify.com', 'www.netlify.com',
-    
-    // Communication
-    'zoom.us', 'www.zoom.us',
-    'slack.com', 'www.slack.com',
-    'teams.microsoft.com',
-    'meet.google.com',
-    
-    // Other common
-    'dropbox.com', 'www.dropbox.com',
-    'notion.so', 'www.notion.so',
-    'trello.com', 'www.trello.com',
-    'canva.com', 'www.canva.com',
-    'figma.com', 'www.figma.com',
-    'godaddy.com', 'www.godaddy.com',
-    'squarespace.com', 'www.squarespace.com',
-    'wix.com', 'www.wix.com',
-    'wordpress.com', 'www.wordpress.com',
-    
-    // SecureLink
-    'securelinkapp.com', 'www.securelinkapp.com'
-];
 
 // Persistent counters — survive service worker restarts
 let badgeBlockedCount = 0;
@@ -270,13 +159,8 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     const url = details.url;
     const tabId = details.tabId;
 
-    // Skip internal/local URLs
-    for (const pattern of SKIP_PATTERNS) {
-        if (pattern.test(url)) return;
-    }
-    
-    // Skip extension pages
-    if (url.includes('warning.html') || url.includes('upgrade.html')) return;
+    // Never send browser-internal or local/private destinations to the cloud API.
+    if (shouldSkipCloudScan(url)) return;
 
     // Consume a short-lived, tab-scoped exception once, only for its exact destination.
     const bypassKey = warningBypassKey(tabId);
@@ -288,12 +172,6 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     }
 
     try {
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname.replace(/^www\./, '');
-        
-        // Skip known safe domains
-        if (SAFE_DOMAINS.some(d => d === urlObj.hostname || d === hostname)) return;
-
         // Check if already pending
         if (pendingChecks.has(url)) return;
 
@@ -337,6 +215,10 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 async function checkUrl(url) {
     try {
         if (!API_BASE) return legacyScanFailure('Legacy API is not configured in this unpacked build.');
+        if (shouldSkipCloudScan(url)) {
+            return legacyScanFailure('This local or unsupported address was not sent to the cloud scanner.');
+        }
+        const submittedUrl = redactUrlForAutomaticScan(url);
         const headers = { 'Content-Type': 'application/json' };
         
         // Add auth token if logged in
@@ -347,7 +229,7 @@ async function checkUrl(url) {
         const response = await fetch(`${API_BASE}/api/extension/verify`, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({ url })
+            body: JSON.stringify({ url: submittedUrl })
         });
         
         // Handle rate limit
@@ -481,9 +363,18 @@ const V2_EXPIRY_KEY = 'v2TokenExpiresAt';
 
 function extensionPageSender(sender) {
     return sender.id === chrome.runtime.id
-        && typeof sender.url === 'string'
-        && sender.url.startsWith(chrome.runtime.getURL(''))
+        && sender.url === chrome.runtime.getURL('popup.html')
         && !sender.tab;
+}
+
+function extensionContentScriptSender(sender) {
+    if (sender.id !== chrome.runtime.id || !sender.tab || typeof sender.url !== 'string') return false;
+    try {
+        const senderUrl = new URL(sender.url);
+        return senderUrl.protocol === 'http:' || senderUrl.protocol === 'https:';
+    } catch (_) {
+        return false;
+    }
 }
 
 async function getV2ApiOrigin() {
@@ -642,10 +533,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === 'checkUrl') {
+        if (!extensionPageSender(sender) && !extensionContentScriptSender(sender)) {
+            sendResponse({ error: 'URL review requests must come from the SecureLink extension.' });
+            return false;
+        }
+        if (typeof message.url !== 'string' || message.url.length > 4096) {
+            sendResponse({ error: 'The URL is invalid or too long.' });
+            return false;
+        }
         checkUrl(message.url).then(result => {
             sendResponse(result);
         });
         return true;
+    }
+
+    if (['login', 'logout', 'getStatus', 'getSession', 'getLegacyApiState', 'getStats', 'clearBadge'].includes(message.action)
+        && !extensionPageSender(sender)) {
+        sendResponse({ error: 'This action is available only from the SecureLink extension popup.' });
+        return false;
     }
     
     if (message.action === 'login') {

@@ -101,6 +101,7 @@ jobs:
           node --test extension/tests/oauth.test.js
           node --test extension/tests/url-privacy.test.js
           node --check ../browser-extension/background.js
+          node --check ../browser-extension/content.js
           node --check ../browser-extension/popup.js
           node --check ../browser-extension/api-origin.js
           node --check ../browser-extension/v2-popup.js
@@ -115,6 +116,7 @@ jobs:
           node --check ../static/js/password-exposure-check.mjs
           node --test ../browser-extension/tests/password-exposure.test.mjs
           node --test ../browser-extension/tests/legacy-scan.test.js
+          node --test ../browser-extension/tests/content-network-boundary.test.js
           node --test ../browser-extension/tests/warning-state.test.js
 
       - name: Audit Python dependencies

@@ -1,6 +1,6 @@
 // SecureLink Browser Extension - Content Script
 
-const API_BASE = 'https://securelinkapp.com';
+const MAX_PAGE_LINK_SCANS = 25;
 
 // Listen for messages from popup and background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -31,20 +31,28 @@ async function scanPageLinks() {
         return;
     }
 
-    showToast(`Scanning ${uniqueUrls.size} links...`);
+    const urlsToScan = [...uniqueUrls].slice(0, MAX_PAGE_LINK_SCANS);
+    const skippedCount = uniqueUrls.size - urlsToScan.length;
+    showToast(skippedCount > 0
+        ? `Scanning ${urlsToScan.length} links. ${skippedCount} more were left unscanned.`
+        : `Scanning ${urlsToScan.length} links...`);
 
     // Check each link
     let dangerous = 0;
     let suspicious = 0;
+    let completed = 0;
+    let failed = 0;
+    let limited = false;
 
-    for (const url of uniqueUrls) {
+    for (const url of urlsToScan) {
         try {
-            const response = await fetch(`${API_BASE}/api/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
-            const data = await response.json();
+            const data = await requestBackgroundScan(url);
+
+            if (data.limitReached) {
+                limited = true;
+                break;
+            }
+            completed += 1;
             
             // Mark links on the page
             markLinks(url, data.risk_score);
@@ -52,22 +60,48 @@ async function scanPageLinks() {
             if (data.risk_score >= 70) dangerous++;
             else if (data.risk_score >= 30) suspicious++;
 
-        } catch (error) {
-            console.error('Error checking link:', url, error);
+        } catch (_) {
+            // Do not write the URL or other page data to the console.
+            failed += 1;
         }
     }
 
     // Show summary
-    if (dangerous > 0 || suspicious > 0) {
+    const unverified = skippedCount + failed + (limited ? urlsToScan.length - completed - failed : 0);
+    if (unverified > 0) {
+        showToast(`Found ${dangerous} high-risk and ${suspicious} suspicious links; ${unverified} were not checked.`, 'warning');
+    } else if (dangerous > 0 || suspicious > 0) {
         showToast(`⚠️ Found ${dangerous} dangerous and ${suspicious} suspicious links!`, 'warning');
     } else {
-        showToast('✅ All links appear safe!', 'success');
+        showToast(`No risk indicators found in ${completed} checks. This is not a safety guarantee.`, 'success');
     }
+}
+
+function requestBackgroundScan(url) {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ action: 'checkUrl', url }, (response) => {
+            if (chrome.runtime.lastError) {
+                reject(new Error('SecureLink could not reach its scanner.'));
+                return;
+            }
+            if (!response || response.error) {
+                reject(new Error(response?.message || 'SecureLink could not review this link.'));
+                return;
+            }
+            resolve({
+                risk_score: Number(response.riskScore) || 0,
+                threats_detected: Array.isArray(response.threats) ? response.threats : [],
+                warnings: Array.isArray(response.warnings) ? response.warnings : [],
+                limitReached: response.limitReached === true,
+                message: typeof response.message === 'string' ? response.message : '',
+            });
+        });
+    });
 }
 
 // Mark links on the page with indicators
 function markLinks(url, riskScore) {
-    const links = document.querySelectorAll(`a[href="${url}"]`);
+    const links = [...document.querySelectorAll('a[href]')].filter(link => link.href === url);
     
     links.forEach(link => {
         // Remove existing indicator if any
@@ -80,7 +114,7 @@ function markLinks(url, riskScore) {
         
         if (riskScore < 30) {
             indicator.innerHTML = '✅';
-            indicator.title = `SecureLink: Safe (Risk: ${riskScore}/100)`;
+            indicator.title = `SecureLink: No risk indicator found (Risk: ${riskScore}/100). This is not a safety guarantee.`;
             indicator.classList.add('securelink-safe');
         } else if (riskScore < 70) {
             indicator.innerHTML = '⚠️';
@@ -100,7 +134,7 @@ function markLinks(url, riskScore) {
 // Show inline result near hovered link
 function showInlineResult(url, data) {
     // Find the link element
-    const links = document.querySelectorAll(`a[href="${url}"]`);
+    const links = [...document.querySelectorAll('a[href]')].filter(link => link.href === url);
     if (links.length === 0) return;
 
     const link = links[0];
@@ -117,7 +151,7 @@ function showInlineResult(url, data) {
     iconEl.textContent = data.risk_score < 30 ? '✅' : data.risk_score < 70 ? '⚠️' : '🚨';
     const titleEl = document.createElement('span');
     titleEl.className = 'securelink-popup-title';
-    titleEl.textContent = data.risk_score < 30 ? 'Safe' : data.risk_score < 70 ? 'Suspicious' : 'Dangerous';
+    titleEl.textContent = data.risk_score < 30 ? 'No indicator flagged' : data.risk_score < 70 ? 'Suspicious' : 'High risk';
     header.appendChild(iconEl);
     header.appendChild(titleEl);
 
@@ -198,12 +232,12 @@ document.addEventListener('mouseover', async (e) => {
         link.dataset.securelinkChecked = 'pending';
 
         try {
-            const response = await fetch(`${API_BASE}/api/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: link.href })
-            });
-            const data = await response.json();
+            const data = await requestBackgroundScan(link.href);
+
+            if (data.limitReached) {
+                link.dataset.securelinkChecked = 'unavailable';
+                return;
+            }
             
             link.dataset.securelinkChecked = 'done';
             markLinks(link.href, data.risk_score);

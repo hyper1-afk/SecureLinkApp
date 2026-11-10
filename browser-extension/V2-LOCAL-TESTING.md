@@ -36,5 +36,12 @@ its current default endpoint and behavior. The V2 API origin is stored as a
 local extension setting; its short-lived token is stored in Chrome session
 storage and never sent to a different configured origin.
 
+In this development build, the legacy scanner no longer skips popular domains
+using a hard-coded safe list. It skips browser-internal and local/private
+destinations, and its cloud requests remove credentials and fragments and mask
+all query values. URL scheme, hostname, port, path, and query parameter names
+are still sent to the configured scanner and can themselves contain sensitive
+information.
+
 Do not publish this package until the local flow and isolated staging flow pass
 and the Chrome Web Store permission/privacy review is complete.
