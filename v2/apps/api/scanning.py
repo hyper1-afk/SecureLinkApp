@@ -56,6 +56,16 @@ class FindingResponse(BaseModel):
     evidence_id: str
 
 
+class ThreatIntelligenceResponse(BaseModel):
+    source: str
+    source_url: str
+    status: str
+    source_updated_at: datetime | None = None
+    expires_at: datetime | None = None
+    match: dict[str, str] | None = None
+    reason: str | None = None
+
+
 class ScanResponse(BaseModel):
     id: str
     status: str
@@ -64,6 +74,7 @@ class ScanResponse(BaseModel):
     scheme: str
     created_at: datetime
     findings: list[FindingResponse]
+    threat_intelligence: ThreatIntelligenceResponse | None = None
 
 
 def _require_scan_role(membership: Membership) -> None:
@@ -71,7 +82,53 @@ def _require_scan_role(membership: Membership) -> None:
         raise HTTPException(status_code=403, detail="Analyst role or higher is required to scan URLs")
 
 
-def _response(scan: UrlScan, findings: list[Finding]) -> ScanResponse:
+def _response(
+    scan: UrlScan,
+    findings: list[Finding],
+    evidence: ScanEvidence | None = None,
+) -> ScanResponse:
+    threat_intelligence = None
+    if evidence is not None:
+        try:
+            payload = json.loads(evidence.payload)
+        except (TypeError, json.JSONDecodeError):
+            payload = {}
+        raw_intel = payload.get("threat_intelligence") if isinstance(payload, dict) else None
+        if isinstance(raw_intel, dict):
+            expires_at = raw_intel.get("expires_at")
+            try:
+                parsed_expiry = datetime.fromisoformat(expires_at) if isinstance(expires_at, str) else None
+            except ValueError:
+                parsed_expiry = None
+            recorded_current = raw_intel.get("status") == "current"
+            currently_fresh = (
+                parsed_expiry is not None
+                and _utc(parsed_expiry) > datetime.now(UTC)
+            )
+            response_status = (
+                "current" if recorded_current and currently_fresh
+                else "stale" if recorded_current
+                else "unavailable"
+            )
+            raw_match = raw_intel.get("match")
+            match = None
+            if isinstance(raw_match, dict) and isinstance(raw_match.get("cidr"), str) and isinstance(raw_match.get("sblid"), str):
+                match = {"cidr": raw_match["cidr"], "sblid": raw_match["sblid"]}
+            threat_intelligence = ThreatIntelligenceResponse(
+                source="Spamhaus Project DROP",
+                source_url=FEED_SOURCE_URL,
+                status=response_status,
+                source_updated_at=raw_intel.get("source_updated_at"),
+                expires_at=expires_at,
+                match=match,
+                reason=(
+                    "No current feed snapshot is available."
+                    if response_status == "unavailable"
+                    else "The snapshot was current when scanned but has since expired."
+                    if response_status == "stale"
+                    else None
+                ),
+            )
     return ScanResponse(
         id=scan.id,
         status=scan.status,
@@ -79,6 +136,7 @@ def _response(scan: UrlScan, findings: list[Finding]) -> ScanResponse:
         hostname=scan.hostname,
         scheme=scan.scheme,
         created_at=scan.created_at,
+        threat_intelligence=threat_intelligence,
         findings=[
             FindingResponse(
                 id=finding.id,
@@ -398,7 +456,7 @@ async def _create_scan(
         )
     )
     session.commit()
-    return _response(scan, findings)
+    return _response(scan, findings, evidence)
 
 
 @router.get(
@@ -427,10 +485,18 @@ def list_url_scans(
         )
         .order_by(Finding.created_at, Finding.detector_code)
     ).all()
+    evidence_rows = session.scalars(
+        select(ScanEvidence).where(
+            ScanEvidence.organization_id == membership.organization_id,
+            ScanEvidence.scan_id.in_([scan.id for scan in scans]),
+            ScanEvidence.source_type == "passive_url_parser",
+        )
+    ).all()
     by_scan: dict[str, list[Finding]] = {scan.id: [] for scan in scans}
+    evidence_by_scan = {item.scan_id: item for item in evidence_rows}
     for finding in findings:
         by_scan[finding.scan_id].append(finding)
-    return [_response(scan, by_scan[scan.id]) for scan in scans]
+    return [_response(scan, by_scan[scan.id], evidence_by_scan.get(scan.id)) for scan in scans]
 
 
 @router.get(
@@ -459,5 +525,12 @@ def get_url_scan(
         )
         .order_by(Finding.created_at, Finding.detector_code)
     ).all()
-    return _response(scan, findings)
+    evidence = session.scalar(
+        select(ScanEvidence).where(
+            ScanEvidence.scan_id == scan.id,
+            ScanEvidence.organization_id == membership.organization_id,
+            ScanEvidence.source_type == "passive_url_parser",
+        )
+    )
+    return _response(scan, findings, evidence)
 
