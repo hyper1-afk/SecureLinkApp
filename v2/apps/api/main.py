@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,6 +36,7 @@ app = FastAPI(
 )
 app.add_middleware(RequestBodyLimitMiddleware)
 WEB_DIR = Path(__file__).with_name("web")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ACCOUNT_HEADERS = {
     "Cache-Control": "no-store",
     "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self'; connect-src 'self'",
@@ -102,16 +106,35 @@ def liveness() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
+@lru_cache(maxsize=1)
+def _migration_heads() -> frozenset[str]:
+    config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
+    return frozenset(ScriptDirectory.from_config(config).get_heads())
+
+
 @app.get("/health/ready", response_model=HealthResponse, tags=["health"])
 def readiness(response: Response) -> HealthResponse:
     settings = get_settings()
-    checks: dict[str, str] = {}
+    checks: dict[str, str] = {"postgres": "unavailable", "schema": "unavailable", "redis": "unavailable"}
 
     try:
         engine = create_engine(settings.database_url, pool_pre_ping=True)
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
+                try:
+                    applied_heads = frozenset(
+                        connection.execute(text("SELECT version_num FROM alembic_version"))
+                        .scalars()
+                        .all()
+                    )
+                except SQLAlchemyError:
+                    checks["schema"] = "unavailable"
+                else:
+                    checks["schema"] = (
+                        "ok" if applied_heads == _migration_heads() else "migration_required"
+                    )
             checks["postgres"] = "ok"
         finally:
             engine.dispose()
@@ -136,3 +159,4 @@ def readiness(response: Response) -> HealthResponse:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(status="ok" if ready else "not_ready", checks=checks)
+

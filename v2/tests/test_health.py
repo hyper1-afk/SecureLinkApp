@@ -6,20 +6,39 @@ from apps.api.request_limits import MAX_REQUEST_BODY_BYTES
 client = TestClient(main.app)
 
 
+class FakeResult:
+    def __init__(self, schema_revision: str):
+        self.schema_revision = schema_revision
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return [self.schema_revision]
+
+
 class FakeConnection:
+    def __init__(self, schema_revision: str = "test-head"):
+        self.schema_revision = schema_revision
+
     def __enter__(self):
         return self
 
     def __exit__(self, *_args):
         return None
 
-    def execute(self, _statement):
-        return 1
+    def execute(self, statement):
+        if "alembic_version" in str(statement):
+            return FakeResult(self.schema_revision)
+        return FakeResult(self.schema_revision)
 
 
 class FakeEngine:
+    def __init__(self, schema_revision: str = "test-head"):
+        self.schema_revision = schema_revision
+
     def connect(self):
-        return FakeConnection()
+        return FakeConnection(self.schema_revision)
 
     def dispose(self):
         return None
@@ -79,6 +98,7 @@ def test_oversized_chunked_request_body_is_rejected():
 
 def test_readiness_reports_healthy_dependencies(monkeypatch):
     monkeypatch.setattr(main, "create_engine", lambda *args, **kwargs: FakeEngine())
+    monkeypatch.setattr(main, "_migration_heads", lambda: frozenset({"test-head"}))
     monkeypatch.setattr(main, "Redis", FakeRedis)
     main.get_settings.cache_clear()
 
@@ -87,7 +107,22 @@ def test_readiness_reports_healthy_dependencies(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
-        "checks": {"postgres": "ok", "redis": "ok"},
+        "checks": {"postgres": "ok", "schema": "ok", "redis": "ok"},
+    }
+
+
+def test_readiness_fails_closed_when_database_schema_is_behind(monkeypatch):
+    monkeypatch.setattr(main, "create_engine", lambda *args, **kwargs: FakeEngine("old-head"))
+    monkeypatch.setattr(main, "_migration_heads", lambda: frozenset({"test-head"}))
+    monkeypatch.setattr(main, "Redis", FakeRedis)
+    main.get_settings.cache_clear()
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "not_ready"
+    assert response.json()["checks"] == {
+        "postgres": "ok", "schema": "migration_required", "redis": "ok",
     }
 
 
@@ -105,3 +140,4 @@ def test_readiness_fails_closed_when_database_is_unavailable(monkeypatch):
     assert response.json()["status"] == "not_ready"
     assert response.json()["checks"]["postgres"] == "unavailable"
     assert response.json()["checks"]["redis"] == "ok"
+
