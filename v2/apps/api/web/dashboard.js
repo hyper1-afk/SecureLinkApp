@@ -67,8 +67,29 @@ function renderScans(scans) {
     heading.textContent = scan.display_url;
     const meta = document.createElement("p");
     meta.className = "muted";
-    meta.textContent = `Checked ${new Date(scan.created_at).toLocaleString()} · ${scan.status}`;
+    meta.textContent = `Checked ${new Date(scan.created_at).toLocaleString()} Â· ${scan.status}`;
     item.append(heading, meta);
+    const intel = scan.threat_intelligence;
+    if (intel) {
+      const coverage = document.createElement("p");
+      coverage.className = "muted";
+      if (intel.status === "current") {
+        const updated = intel.source_updated_at
+          ? `updated ${new Date(intel.source_updated_at).toLocaleString()}`
+          : "update time unavailable";
+        coverage.textContent = `${intel.source}: current snapshot (${updated}); checks literal public IP addresses only.`;
+      } else if (intel.status === "stale") {
+        coverage.textContent = `${intel.source}: snapshot has expired; checks literal public IP addresses only. No current reputation coverage is available.`;
+      } else {
+        coverage.textContent = `${intel.source}: reputation coverage unavailable; checks literal public IP addresses only.`;
+      }
+      item.append(coverage);
+      if (intel.match) {
+        const match = document.createElement("p");
+        match.textContent = `Listed network match: ${intel.match.cidr} (${intel.match.sblid}). Review this indicator; it is not proof that the page is malicious.`;
+        item.append(match);
+      }
+    }
     if (scan.findings.length === 0) {
       const empty = document.createElement("p");
       empty.textContent = "No URL hygiene indicators were detected. This is not a safety verdict.";
@@ -116,7 +137,7 @@ function renderCases(cases) {
     heading.textContent = incident.title;
     const meta = document.createElement("p");
     meta.className = "case-meta";
-    meta.textContent = `${incident.severity} · ${incident.status.replaceAll("_", " ")} · ${incident.hostname}`;
+    meta.textContent = `${incident.severity} Â· ${incident.status.replaceAll("_", " ")} Â· ${incident.hostname}`;
     const summary = document.createElement("p");
     summary.textContent = incident.summary;
     item.append(heading, meta, summary);
@@ -248,7 +269,7 @@ function renderSignals(signals) {
     heading.textContent = signal.title;
     const meta = document.createElement("p");
     meta.className = "muted";
-    meta.textContent = `${signal.severity} · ${signal.source_type.replaceAll("_", " ")} · ${signal.subject} · ${new Date(signal.observed_at).toLocaleString()}`;
+    meta.textContent = `${signal.severity} Â· ${signal.source_type.replaceAll("_", " ")} Â· ${signal.subject} Â· ${new Date(signal.observed_at).toLocaleString()}`;
     const summary = document.createElement("p");
     summary.textContent = signal.summary;
     item.append(heading, meta, summary);
@@ -373,7 +394,7 @@ function renderMembers(members) {
 
 async function loadMembers() {
   if (!canManageAssets) return;
-  setStatus("member-status", "Loading organization members…");
+  setStatus("member-status", "Loading organization membersâ€¦");
   const response = await request(`${apiBase}/members`);
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -511,7 +532,7 @@ async function loadMyOrganizations() {
 }
 
 async function loadCases() {
-  setStatus("case-status", "Loading cases…");
+  setStatus("case-status", "Loading casesâ€¦");
   const response = await request(`${apiBase}/cases?limit=50`);
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -571,7 +592,7 @@ async function deleteIndicator(id) {
 }
 
 async function loadScans() {
-  setStatus("history-status", "Loading link check history…");
+  setStatus("history-status", "Loading link check historyâ€¦");
   const response = await request(`${apiBase}/scans?limit=50`);
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -582,7 +603,7 @@ async function loadScans() {
 }
 
 async function loadSignals() {
-  setStatus("signal-status", "Loading security signals…");
+  setStatus("signal-status", "Loading security signalsâ€¦");
   const response = await request(`${apiBase}/signals?limit=50`);
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -608,7 +629,7 @@ function renderExtensionSessions(sessions) {
     organization.textContent = `Organization: ${extensionSession.organization_name}`;
     const expiry = document.createElement("p");
     expiry.className = "muted";
-    expiry.textContent = `Connected ${new Date(extensionSession.created_at).toLocaleString()} · Expires ${new Date(extensionSession.expires_at).toLocaleString()}`;
+    expiry.textContent = `Connected ${new Date(extensionSession.created_at).toLocaleString()} Â· Expires ${new Date(extensionSession.expires_at).toLocaleString()}`;
     const active = extensionSession.status === "active";
     const state = document.createElement("p");
     state.className = active ? "state-verified" : "state-pending";
@@ -634,7 +655,7 @@ function renderExtensionSessions(sessions) {
 }
 
 async function loadExtensionSessions() {
-  setStatus("extension-session-status", "Loading browser extension sessions…");
+  setStatus("extension-session-status", "Loading browser extension sessionsâ€¦");
   const response = await request("/extension/oauth/sessions");
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -664,7 +685,7 @@ async function refreshAll() {
 }
 
 async function openCaseFromSignal(signalId) {
-  setStatus("signal-status", "Opening case from signal…");
+  setStatus("signal-status", "Opening case from signalâ€¦");
   const response = await request(`${apiBase}/cases/from-signal/${encodeURIComponent(signalId)}`, { method: "POST" });
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -692,7 +713,7 @@ async function attachSignalToCase(caseId, signalId) {
 }
 
 async function openCase(scanId) {
-  setStatus("case-status", "Opening case…");
+  setStatus("case-status", "Opening caseâ€¦");
   const response = await request(`${apiBase}/cases/from-scan/${encodeURIComponent(scanId)}`, { method: "POST" });
   if (response.status === 401) return clearSession();
   if (!response.ok) {
@@ -723,7 +744,7 @@ async function updateCase(caseId, nextStatus) {
 }
 
 async function requestCaseApproval(caseId, action, rationale) {
-  setStatus("case-status", "Submitting approval request…");
+  setStatus("case-status", "Submitting approval requestâ€¦");
   const response = await request(`${apiBase}/cases/${encodeURIComponent(caseId)}/approvals`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -752,7 +773,7 @@ async function loadCaseApprovals(caseId, list) {
   for (const approval of approvals) {
     const item = document.createElement("li");
     const summary = document.createElement("p");
-    summary.textContent = `${approval.action.replaceAll("_", " ")} — ${approval.status}; expires ${new Date(approval.expires_at).toLocaleString()}`;
+    summary.textContent = `${approval.action.replaceAll("_", " ")} â€” ${approval.status}; expires ${new Date(approval.expires_at).toLocaleString()}`;
     const rationale = document.createElement("p");
     rationale.textContent = approval.rationale;
     item.append(summary, rationale);
@@ -830,7 +851,7 @@ async function renewChallenge(assetId) {
 }
 
 async function verifyAsset(assetId) {
-  setStatus("asset-status", "Checking the domain TXT record…");
+  setStatus("asset-status", "Checking the domain TXT recordâ€¦");
   const response = await request(`${apiBase}/assets/domains/${encodeURIComponent(assetId)}/verify`, { method: "POST" });
   if (response.status === 401) return clearSession();
   if (response.ok) {
@@ -858,7 +879,7 @@ async function deleteAsset(assetId, hostname) {
 }
 
 async function setDomainMonitoring(assetId, enabled) {
-  setStatus("asset-status", enabled ? "Enabling DNS monitoring…" : "Pausing DNS monitoring…");
+  setStatus("asset-status", enabled ? "Enabling DNS monitoringâ€¦" : "Pausing DNS monitoringâ€¦");
   const response = await request(`${apiBase}/assets/domains/${encodeURIComponent(assetId)}/monitoring`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -881,7 +902,7 @@ byId("scan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = byId("scan-submit");
   button.disabled = true;
-  setStatus("scan-status", "Inspecting URL structure…");
+  setStatus("scan-status", "Inspecting URL structureâ€¦");
   try {
     const response = await request(`${apiBase}/scans`, {
       method: "POST",
@@ -915,7 +936,7 @@ byId("asset-form").addEventListener("submit", async (event) => {
   if (!canManageAssets) return;
   const button = byId("asset-submit");
   button.disabled = true;
-  setStatus("asset-status", "Adding domain and preparing a DNS ownership challenge…");
+  setStatus("asset-status", "Adding domain and preparing a DNS ownership challengeâ€¦");
   try {
     const response = await request(`${apiBase}/assets/domains`, {
       method: "POST",
@@ -946,7 +967,7 @@ byId("indicator-form").addEventListener("submit", async (event) => {
   if (!canManageIndicators) return;
   const button = byId("indicator-submit");
   button.disabled = true;
-  setStatus("indicator-status", "Adding organization indicator…");
+  setStatus("indicator-status", "Adding organization indicatorâ€¦");
   try {
     const response = await request(`${apiBase}/threat-indicators`, {
       method: "POST",
@@ -984,7 +1005,7 @@ byId("owner-transfer-form").addEventListener("submit", async (event) => {
   if (!selectedAdmin || !window.confirm(`Transfer ownership to ${selectedAdmin.textContent}? You will become an admin.`)) return;
   const button = event.submitter;
   button.disabled = true;
-  setStatus("owner-transfer-status", "Verifying and transferring ownership…");
+  setStatus("owner-transfer-status", "Verifying and transferring ownershipâ€¦");
   try {
     const response = await request(`${apiBase}/owner-transfer`, {
       method: "POST",
@@ -1004,7 +1025,7 @@ byId("owner-transfer-form").addEventListener("submit", async (event) => {
         : "Transfer failed. Check your password, authentication code, and selected admin.");
       return;
     }
-    setStatus("owner-transfer-status", "Ownership transferred. Refreshing your organization role…");
+    setStatus("owner-transfer-status", "Ownership transferred. Refreshing your organization roleâ€¦");
     window.location.reload();
   } catch {
     byId("owner-transfer-password").value = "";
@@ -1035,3 +1056,4 @@ if (!token) {
     if (ok && await loadOrganization()) await refreshAll();
   }).catch(() => setStatus("scan-status", "SecureLink could not be reached."));
 }
+
