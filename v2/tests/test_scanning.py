@@ -188,6 +188,11 @@ def test_current_spamhaus_drop_match_is_audited_and_opens_review_case(client: Te
     assert "spamhaus_drop_network_match" in {
         item["detector_code"] for item in response.json()["findings"]
     }
+    intelligence = response.json()["threat_intelligence"]
+    assert intelligence["status"] == "current"
+    assert intelligence["source"] == "Spamhaus Project DROP"
+    assert intelligence["match"] == {"cidr": "8.8.8.0/24", "sblid": "SBL12345"}
+    assert "content_hash" not in response.text and "networks" not in response.text
     assert "secret" not in response.text
     with client.app.state.test_session_factory() as session:
         evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == response.json()["id"]))
@@ -202,6 +207,12 @@ def test_current_spamhaus_drop_match_is_audited_and_opens_review_case(client: Te
     )
     assert cases.status_code == 200
     assert len(cases.json()) == 1
+    history = client.get(
+        f"/organizations/{owner['organization_id']}/scans",
+        headers={"Authorization": f"Bearer {owner['access_token']}"},
+    )
+    assert history.status_code == 200
+    assert history.json()[0]["threat_intelligence"] == intelligence
 
 
 def test_expired_spamhaus_drop_snapshot_never_creates_a_match(client: TestClient):
@@ -230,6 +241,8 @@ def test_expired_spamhaus_drop_snapshot_never_creates_a_match(client: TestClient
     )
     assert response.status_code == 201
     assert response.json()["findings"] == []
+    assert response.json()["threat_intelligence"]["status"] == "unavailable"
+    assert response.json()["threat_intelligence"]["match"] is None
     with client.app.state.test_session_factory() as session:
         evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == response.json()["id"]))
         evidence_data = json.loads(evidence.payload)
