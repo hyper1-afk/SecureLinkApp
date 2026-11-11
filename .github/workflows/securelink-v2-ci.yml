@@ -161,6 +161,19 @@ jobs:
             docker compose logs api migrate email-worker domain-monitor-worker threat-feed-worker
             exit 1
           fi
+          api_healthy=0
+          for attempt in $(seq 1 30); do
+            if [ "$(docker compose ps --format '{{.Health}}' api)" = "healthy" ]; then
+              api_healthy=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$api_healthy" -ne 1 ]; then
+            docker compose ps --all
+            docker compose logs api migrate email-worker domain-monitor-worker threat-feed-worker
+            exit 1
+          fi
           docker compose ps --all --format json > "$RUNNER_TEMP/compose-ps.jsonl"
           python - "$RUNNER_TEMP/compose-ps.jsonl" <<'PY'
           import json
