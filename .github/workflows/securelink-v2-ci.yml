@@ -143,13 +143,46 @@ jobs:
         run: |
           trap 'docker compose --profile local-mail down --volumes' EXIT
           docker compose --profile local-mail up --build --detach
+          ready=0
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8000/health/ready; then
-              exit 0
+              ready=1
+              break
             fi
             sleep 2
           done
-          docker compose ps
-          docker compose logs api
-          exit 1
+          if [ "$ready" -ne 1 ]; then
+            docker compose ps --all
+            docker compose logs api migrate email-worker domain-monitor-worker threat-feed-worker
+            exit 1
+          fi
+          docker compose ps --all --format json > "$RUNNER_TEMP/compose-ps.jsonl"
+          python - "$RUNNER_TEMP/compose-ps.jsonl" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          rows = [
+              json.loads(line)
+              for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          services = {row["Service"]: row for row in rows}
+          expected_workers = {"email-worker", "domain-monitor-worker", "threat-feed-worker"}
+          expected_services = expected_workers | {"api", "migrate", "postgres", "redis", "mailpit"}
+          missing = expected_services - services.keys()
+          if missing:
+              raise SystemExit(f"Local Compose services are missing: {sorted(missing)}")
+          if services["migrate"]["State"] != "exited" or services["migrate"]["ExitCode"] != 0:
+              raise SystemExit("The one-shot database migration service did not complete successfully")
+          if services["api"]["State"] != "running" or services["api"]["Health"] != "healthy":
+              raise SystemExit("The V2 API is not healthy")
+          for name in expected_workers:
+              if services[name]["State"] != "running":
+                  raise SystemExit(f"V2 worker {name} is not running")
+          for name in ("postgres", "redis", "mailpit"):
+              if services[name]["State"] != "running" or services[name]["Health"] != "healthy":
+                  raise SystemExit(f"Local dependency {name} is not healthy")
+          print("V2 API, migration, workers, and local dependencies are healthy.")
+          PY
 
