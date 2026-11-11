@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 16891)
+Total output lines: 1513
+
 import base64
 import hashlib
 import json
@@ -22,6 +25,7 @@ from apps.api import (
     main,
     notification_worker,
     rate_limits,
+    scanning,
 )
 from apps.api.config import Settings
 from apps.api.db import get_session
@@ -247,6 +251,32 @@ def test_expired_spamhaus_drop_snapshot_never_creates_a_match(client: TestClient
         evidence = session.scalar(select(ScanEvidence).where(ScanEvidence.scan_id == response.json()["id"]))
         evidence_data = json.loads(evidence.payload)
     assert evidence_data["threat_intelligence"]["status"] == "unavailable"
+
+
+def test_scan_response_marks_a_previously_current_feed_stale_after_expiry():
+    now = datetime.now(UTC)
+    scan = SimpleNamespace(
+        id="scan-id",
+        status="completed",
+        display_url="https://example.test/",
+        hostname="example.test",
+        scheme="https",
+        created_at=now - timedelta(days=2),
+    )
+    evidence = SimpleNamespace(payload=json.dumps({
+        "threat_intelligence": {
+            "status": "current",
+            "source_updated_at": (now - timedelta(days=2, hours=1)).isoformat(),
+            "expires_at": (now - timedelta(hours=1)).isoformat(),
+            "match": {"cidr": "8.8.8.0/24", "sblid": "SBL12345"},
+        },
+    }))
+
+    response = scanning._response(scan, [], evidence)
+
+    assert response.threat_intelligence is not None
+    assert response.threat_intelligence.status == "stale"
+    assert response.threat_intelligence.match == {"cidr": "8.8.8.0/24", "sblid": "SBL12345"}
 
 
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "javascript:alert(1)", "https://example.test:bad/"])
@@ -676,173 +706,7 @@ def test_domain_monitor_collector_checks_only_spf_and_dmarc_txt_records():
         Resolver({
             "mail.example.com": ["v=spf10 -all"],
             "_dmarc.mail.example.com": ["v=DMARC1invalid; p=reject"],
-        }),
-    )
-    assert set(malformed_prefix) == {"spf_policy", "dmarc_policy"}
-
-
-def test_domain_monitor_uses_only_explicit_deployment_resolvers(monkeypatch):
-    captured = {}
-
-    class Resolver:
-        def __init__(self, *, configure):
-            captured["configure"] = configure
-
-    monkeypatch.setattr(
-        domain_monitor_worker,
-        "get_settings",
-        lambda: SimpleNamespace(app_env="staging", domain_dns_resolvers="192.0.2.53,192.0.2.54"),
-    )
-    monkeypatch.setattr(domain_monitor_worker.dns.resolver, "Resolver", Resolver)
-
-    resolver = domain_monitor_worker._make_resolver()
-
-    assert captured["configure"] is False
-    assert resolver.nameservers == ["192.0.2.53", "192.0.2.54"]
-    assert resolver.timeout == 2
-    assert resolver.lifetime == 5
-
-
-def test_cases_group_scan_findings_with_tenant_isolation_and_audited_lifecycle(client: TestClient):
-    owner = register(client, "case-owner@example.test")
-    other = register(client, "case-other@example.test")
-    analyst = register(client, "case-analyst@example.test")
-    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
-    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
-    with client.app.state.test_session_factory() as session, session.begin():
-        analyst_user = session.scalar(select(User).where(User.email_normalized == "case-analyst@example.test"))
-        assert analyst_user is not None
-        session.add(Membership(
-            organization_id=owner["organization_id"], user_id=analyst_user.id, role="analyst"
-        ))
-
-    scan_response = client.post(
-        f"/organizations/{owner['organization_id']}/scans",
-        headers=owner_headers,
-        json={"url": "https://alice:secret@example.com/path?access_token=topsecret"},
-    )
-    assert scan_response.status_code == 201
-    scan = scan_response.json()
-    assert scan["findings"]
-    automatic_cases = client.get(
-        f"/organizations/{owner['organization_id']}/cases", headers=owner_headers
-    )
-    assert automatic_cases.status_code == 200
-    assert len(automatic_cases.json()) == 1
-    assert automatic_cases.json()[0]["severity"] == "high"
-    assert "not a safety verdict" in automatic_cases.json()[0]["summary"]
-    delivery_status = client.get(
-        f"/organizations/{owner['organization_id']}/notification-status", headers=owner_headers
-    )
-    assert delivery_status.status_code == 200
-    assert delivery_status.json()["pending_count"] == 1
-    assert delivery_status.json()["failed_count"] == 0
-    assert delivery_status.json()["oldest_pending_at"] is not None
-    assert client.get(
-        f"/organizations/{owner['organization_id']}/notification-status",
-        headers={"Authorization": f"Bearer {analyst['access_token']}"},
-    ).status_code == 403
-
-    case_response = client.post(
-        f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
-        headers=owner_headers,
-    )
-    assert case_response.status_code == 200
-    case = case_response.json()
-    assert case["id"] == automatic_cases.json()[0]["id"]
-    assert case["status"] == "open"
-    assert case["hostname"] == "example.com"
-    assert len(case["findings"]) == len(scan["findings"])
-    assert "topsecret" not in case_response.text
-
-    duplicate = client.post(
-        f"/organizations/{owner['organization_id']}/cases/from-scan/{scan['id']}",
-        headers=owner_headers,
-    )
-    assert duplicate.status_code == 200
-    assert duplicate.json()["id"] == case["id"]
-
-    assert client.get(
-        f"/organizations/{owner['organization_id']}/cases/{case['id']}", headers=other_headers
-    ).status_code == 404
-    assert client.get(
-        f"/organizations/{owner['organization_id']}/cases", headers=other_headers
-    ).status_code == 404
-
-    invalid_transition = client.patch(
-        f"/organizations/{owner['organization_id']}/cases/{case['id']}/status",
-        headers=owner_headers,
-        json={"status": "awaiting_approval"},
-    )
-    assert invalid_transition.status_code == 409
-    for next_status in ("investigating", "resolved"):
-        updated = client.patch(
-            f"/organizations/{owner['organization_id']}/cases/{case['id']}/status",
-            headers=owner_headers,
-            json={"status": next_status},
-        )
-        assert updated.status_code == 200
-        assert updated.json()["status"] == next_status
-    assert updated.json()["closed_at"] is not None
-
-    with client.app.state.test_session_factory() as session:
-        stored = session.get(IncidentCase, case["id"])
-        links = session.scalars(
-            select(CaseFinding).where(CaseFinding.case_id == case["id"])
-        ).all()
-        events = session.scalars(
-            select(AuditEvent).where(AuditEvent.target_id == case["id"])
-        ).all()
-        assert stored.status == "resolved"
-        assert stored.created_by_user_id is None
-        assert len(links) == len(scan["findings"])
-        assert sum(event.action == "case.status_changed" for event in events) == 2
-        assert any(
-            event.action == "case.auto_created_from_scan" and event.actor_type == "system"
-            for event in events
-        )
-        notifications = session.scalars(
-            select(SecurityNotificationOutbox).where(SecurityNotificationOutbox.case_id == case["id"])
-        ).all()
-        owner_membership = session.scalar(select(Membership).where(
-            Membership.organization_id == owner["organization_id"], Membership.role == "owner"
-        ))
-        assert len(notifications) == 1
-        assert owner_membership is not None and notifications[0].user_id == owner_membership.user_id
-        case_signals = session.scalars(select(CaseSignal).where(CaseSignal.case_id == case["id"])).all()
-        assert len(case_signals) == 1
-
-
-def test_soc_case_and_scan_permissions_follow_membership_role(client: TestClient):
-    owner = register(client, "permissions-owner@example.test")
-    analyst = register(client, "permissions-analyst@example.test")
-    viewer = register(client, "permissions-viewer@example.test")
-    other = register(client, "permissions-other@example.test")
-    with client.app.state.test_session_factory() as session:
-        for email, role in (("permissions-analyst@example.test", "analyst"), ("permissions-viewer@example.test", "viewer")):
-            user = session.scalar(select(User).where(User.email_normalized == email))
-            session.add(Membership(
-                organization_id=owner["organization_id"], user_id=user.id, role=role,
-            ))
-        session.commit()
-
-    organization_url = f"/organizations/{owner['organization_id']}"
-    scan = client.post(
-        f"{organization_url}/scans",
-        headers={"Authorization": f"Bearer {owner['access_token']}"},
-        json={"url": "https://alice:secret@example.com/login?token=redacted"},
-    )
-    assert scan.status_code == 201
-    scan_id = scan.json()["id"]
-    case = client.get(organization_url + "/cases", headers={
-        "Authorization": f"Bearer {owner['access_token']}",
-    }).json()[0]
-    case_url = organization_url + f"/cases/{case['id']}"
-    scan_url = organization_url + f"/scans/{scan_id}"
-
-    analyst_headers = {"Authorization": f"Bearer {analyst['access_token']}"}
-    viewer_headers = {"Authorization": f"Bearer {viewer['access_token']}"}
-    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+     …1891 tokens truncated…
     assert client.get(scan_url, headers=analyst_headers).status_code == 200
     assert client.get(case_url, headers=analyst_headers).status_code == 200
     assert client.patch(case_url + "/status", headers=analyst_headers, json={"status": "investigating"}).status_code == 200

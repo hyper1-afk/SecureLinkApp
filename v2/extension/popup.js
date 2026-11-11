@@ -80,6 +80,11 @@ byId("scan-form").addEventListener("submit", async (event) => {
         ? `updated ${new Date(intel.source_updated_at).toLocaleString()}`
         : "update time unavailable";
       coverage.textContent = `${intel.source}: current snapshot (${updated}); checks literal public IP addresses only.`;
+    } else if (intel?.status === "stale") {
+      const expired = intel.expires_at
+        ? ` expired ${new Date(intel.expires_at).toLocaleString()}`
+        : " expired";
+      coverage.textContent = `${intel.source}${expired}; current reputation coverage is unavailable. Checks literal public IP addresses only.`;
     } else {
       coverage.textContent = `${intel?.source || "Spamhaus DROP"}: reputation coverage unavailable; checks literal public IP addresses only.`;
     }
