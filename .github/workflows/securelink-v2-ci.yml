@@ -141,8 +141,13 @@ jobs:
 
       - name: Start local stack and verify readiness
         run: |
+          unset DATABASE_URL
           trap 'docker compose --profile local-mail down --volumes' EXIT
-          docker compose --profile local-mail up --build --detach
+          if ! docker compose --profile local-mail up --build --detach; then
+            docker compose ps --all
+            docker compose logs api migrate email-worker domain-monitor-worker threat-feed-worker
+            exit 1
+          fi
           ready=0
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8000/health/ready; then
