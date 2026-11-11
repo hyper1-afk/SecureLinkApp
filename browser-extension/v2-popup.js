@@ -30,7 +30,7 @@ async function refreshV2Status() {
     const status = await sendV2("v2Status");
     if (status?.error) showV2Status(status.error);
     else showV2Status(status?.connected
-      ? "Connected — manual reviews only"
+      ? "Connected â€” manual reviews only"
       : configuredV2ApiOrigin ? "Not connected" : "Set the V2 API origin in Settings to connect.");
     byId("v2-connect-btn").classList.toggle("hidden", status?.connected);
     byId("v2-disconnect-btn").classList.toggle("hidden", !status?.connected);
@@ -107,14 +107,14 @@ function connectV2FromClick() {
     return;
   }
   button.disabled = true;
-  showV2Status("Requesting optional Chrome identity permission…");
+  showV2Status("Requesting optional Chrome identity permissionâ€¦");
   chrome.permissions.request({ permissions: ["identity"] }, (granted) => {
     if (chrome.runtime.lastError || !granted) {
       showV2Status("Chrome identity permission was not granted.");
       button.disabled = false;
       return;
     }
-    showV2Status("Opening SecureLink authorization…");
+    showV2Status("Opening SecureLink authorizationâ€¦");
     sendV2("v2Connect").then(
       () => showV2Status("V2 workspace connected."),
       (error) => showV2Status(error instanceof Error ? error.message : "Could not connect to V2."),
@@ -162,17 +162,31 @@ function submitManualV2Review() {
   const result = byId("v2-result");
   button.disabled = true;
   result.classList.add("hidden");
-  showV2Status("Submitting manual V2 review…");
+  showV2Status("Submitting manual V2 reviewâ€¦");
   sendV2("v2Scan", { url }).then((scan) => {
     const findings = Array.isArray(scan.findings) ? scan.findings : [];
     byId("v2-result-summary").textContent =
       `Structural review of ${scan.hostname || "the submitted host"}: `
       + `${findings.length} finding${findings.length === 1 ? "" : "s"}.`;
+    const coverage = document.createElement("p");
+    const intel = scan.threat_intelligence;
+    if (intel?.status === "current") {
+      const updated = intel.source_updated_at
+        ? `updated ${new Date(intel.source_updated_at).toLocaleString()}`
+        : "update time unavailable";
+      coverage.textContent = `${intel.source}: current snapshot (${updated}); checks literal public IP addresses only.`;
+    } else {
+      coverage.textContent = `${intel?.source || "Spamhaus DROP"}: reputation coverage unavailable; checks literal public IP addresses only.`;
+    }
+    if (intel?.match) {
+      coverage.textContent += ` Listed network match: ${intel.match.cidr} (${intel.match.sblid}); review this indicator, it is not proof the page is malicious.`;
+    }
+    byId("v2-result-coverage").replaceChildren(coverage);
     const list = byId("v2-findings");
     list.replaceChildren();
     for (const finding of findings) {
       const item = document.createElement("li");
-      item.textContent = `${finding.severity}: ${finding.title} — ${finding.description}`;
+      item.textContent = `${finding.severity}: ${finding.title} â€” ${finding.description}`;
       list.append(item);
     }
     result.classList.remove("hidden");
@@ -190,3 +204,4 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("v2-disconnect-btn").addEventListener("click", disconnectV2FromClick);
   byId("v2-scan-btn").addEventListener("click", submitManualV2Review);
 });
+

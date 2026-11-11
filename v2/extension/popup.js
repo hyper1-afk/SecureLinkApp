@@ -21,7 +21,7 @@ async function refreshConnection() {
 
 connectButton.addEventListener("click", async () => {
   connectButton.disabled = true;
-  status.textContent = "Requesting Chrome identity access…";
+  status.textContent = "Requesting Chrome identity accessâ€¦";
   try {
     const granted = await new Promise((resolve) => {
       chrome.permissions.request({ permissions: ["identity"] }, resolve);
@@ -29,7 +29,7 @@ connectButton.addEventListener("click", async () => {
     if (chrome.runtime.lastError || !granted) {
       throw new Error("Chrome identity access was not granted.");
     }
-    status.textContent = "Opening SecureLink authorization…";
+    status.textContent = "Opening SecureLink authorizationâ€¦";
     await send({ type: "connect" });
     status.textContent = "Account connected.";
   } catch (error) {
@@ -63,7 +63,7 @@ byId("scan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = byId("scan");
   button.disabled = true;
-  status.textContent = "Submitting link…";
+  status.textContent = "Submitting linkâ€¦";
   byId("result").hidden = true;
   try {
     const result = await send({ type: "scan", url: byId("url").value.trim() });
@@ -72,11 +72,26 @@ byId("scan-form").addEventListener("submit", async (event) => {
       `${result.status === "completed" ? "Scan recorded" : "Scan status: " + result.status}`
       + ` for ${result.hostname || "the submitted host"}. `
       + `${findings.length} structural finding${findings.length === 1 ? "" : "s"}.`;
+    const coverage = document.createElement("p");
+    coverage.className = "note";
+    const intel = result.threat_intelligence;
+    if (intel?.status === "current") {
+      const updated = intel.source_updated_at
+        ? `updated ${new Date(intel.source_updated_at).toLocaleString()}`
+        : "update time unavailable";
+      coverage.textContent = `${intel.source}: current snapshot (${updated}); checks literal public IP addresses only.`;
+    } else {
+      coverage.textContent = `${intel?.source || "Spamhaus DROP"}: reputation coverage unavailable; checks literal public IP addresses only.`;
+    }
+    if (intel?.match) {
+      coverage.textContent += ` Listed network match: ${intel.match.cidr} (${intel.match.sblid}); review this indicator, it is not proof the page is malicious.`;
+    }
+    byId("result-coverage").replaceChildren(coverage);
     const list = byId("finding-list");
     list.replaceChildren();
     for (const finding of findings) {
       const item = document.createElement("li");
-      item.textContent = `${finding.severity}: ${finding.title} — ${finding.description}`;
+      item.textContent = `${finding.severity}: ${finding.title} â€” ${finding.description}`;
       list.append(item);
     }
     byId("result").hidden = false;
@@ -91,3 +106,4 @@ byId("scan-form").addEventListener("submit", async (event) => {
 refreshConnection().catch(() => {
   connection.textContent = "Could not read SecureLink session.";
 });
+

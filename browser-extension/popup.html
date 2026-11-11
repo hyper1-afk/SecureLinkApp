@@ -51,22 +51,22 @@
     <!-- Stats Row -->
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-icon">🔍</div>
+            <div class="stat-icon">ðŸ”</div>
             <div class="stat-value" id="checked-count">0</div>
             <div class="stat-label">Scanned</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-card">
-            <div class="stat-icon">🚫</div>
+            <div class="stat-icon">ðŸš«</div>
             <div class="stat-value danger" id="blocked-count">0</div>
             <div class="stat-label-row">
                 <span class="stat-label">Blocked</span>
-                <button class="clear-badge-btn" id="clear-badge-btn" title="Clear blocked count">✕</button>
+                <button class="clear-badge-btn" id="clear-badge-btn" title="Clear blocked count">âœ•</button>
             </div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-card">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon">âœ…</div>
             <div class="stat-value safe" id="safe-count">0</div>
                 <div class="stat-label">Not blocked</div>
         </div>
@@ -100,7 +100,7 @@
             <div>
                 <div class="v2-title" id="v2-heading">SecureLink V2 workspace</div>
                 <div class="v2-api-display" id="v2-api-display">Set an API origin in Settings to connect.</div>
-                <div class="v2-status" id="v2-status" role="status">Checking connection…</div>
+                <div class="v2-status" id="v2-status" role="status">Checking connectionâ€¦</div>
             </div>
             <button class="v2-connect-btn" id="v2-connect-btn" type="button">Connect</button>
             <button class="v2-disconnect-btn hidden" id="v2-disconnect-btn" type="button">Disconnect</button>
@@ -109,9 +109,10 @@
         <div class="v2-note">Before submission, V2 removes URL credentials, fragments, and values for sensitive query parameters. Other query values, the path, and the host are sent for passive review.</div>
         <div class="v2-result hidden" id="v2-result" aria-live="polite">
             <div id="v2-result-summary"></div>
+            <div id="v2-result-coverage"></div>
             <ul id="v2-findings"></ul>
         </div>
-        <div class="v2-note">Optional, manual structural review. This does not replace the extension’s existing automatic checks and is not a reputation or malware verdict.</div>
+        <div class="v2-note">Optional manual review. It checks URL structure and literal public IPs against a current local Spamhaus DROP snapshot when available. It does not replace the extensionâ€™s existing checks or certify a link as safe.</div>
     </section>
 
     <div class="divider"></div>
@@ -129,7 +130,7 @@
         <div class="login-error hidden" id="login-error"></div>
         <div class="login-links">
             <a href="https://securelinkapp.com/login?tab=register" target="_blank">Create free account</a>
-            <span>·</span>
+            <span>Â·</span>
             <a href="https://securelinkapp.com/pricing" target="_blank">View plans</a>
         </div>
     </div>
@@ -140,7 +141,7 @@
             <div class="user-avatar" id="user-avatar">U</div>
             <div class="user-info">
                 <div class="user-email" id="user-email">user@example.com</div>
-                <div class="user-plan" id="user-plan">Free plan · Unlimited scans</div>
+                <div class="user-plan" id="user-plan">Free plan Â· Unlimited scans</div>
             </div>
             <button class="logout-btn" id="logout-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -158,3 +159,4 @@
     <script type="module" src="v2-popup.js"></script>
 </body>
 </html>
+

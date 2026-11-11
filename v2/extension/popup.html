@@ -9,7 +9,7 @@
 <body>
   <main>
     <h1>SecureLink V2</h1>
-    <p id="connection" role="status">Checking connection…</p>
+    <p id="connection" role="status">Checking connectionâ€¦</p>
     <button id="connect" type="button">Connect account</button>
     <button id="disconnect" type="button" hidden>Disconnect</button>
     <form id="scan-form">
@@ -22,11 +22,13 @@
     <section id="result" aria-live="polite" hidden>
       <h2>Structural review</h2>
       <p id="result-summary"></p>
+      <div id="result-coverage"></div>
       <ul id="finding-list"></ul>
-      <p class="note">This preview checks URL structure and records a scan. It does not yet query threat intelligence or certify a link as safe.</p>
+      <p class="note">This preview checks URL structure and literal public IPs against a current local Spamhaus DROP snapshot when available. It does not certify a link as safe.</p>
     </section>
     <p class="note">Your extension session lasts up to 12 hours. Disconnect here or revoke it from your SecureLink account.</p>
   </main>
   <script src="popup.js" type="module"></script>
 </body>
 </html>
+
